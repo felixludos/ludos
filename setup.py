@@ -9,7 +9,7 @@ setup(name='gsm',
       license='MIT',
       packages=['gsm'],
       install_requires=[
-            'yaml',
+            'pyyaml',
             'numpy',
       ],
       zip_safe=False)
