@@ -1,8 +1,8 @@
 
-from .structures import Transactionable, adict
+from gsm.structures import Transactionable, adict
 from collections import deque
 
-class Logger(Transactionable):
+class GameLogger(Transactionable):
 	def __init__(self, *players, stdout=False):
 		self.stdout = stdout
 		self.logs = adict({p :deque() for p in players})

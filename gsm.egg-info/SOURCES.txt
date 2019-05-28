@@ -2,7 +2,7 @@ README.md
 gsm/__init__.py
 gsm/containers.py
 gsm/control_flow.py
-gsm/logging.py
+gsm/interface.py
 gsm/persistence.py
 gsm/signals.py
 gsm/util.py
