@@ -50,6 +50,9 @@ class Container(TransactionableObject):
 		return copy
 
 
+class GameState(Container):
+	pass
+
 class GameObject(Container):
 	
 	def __init__(self, name=None, obj_type=None, **kwargs):

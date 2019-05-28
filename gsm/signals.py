@@ -1,6 +1,8 @@
 
 
 
+class GameOver(Exception):
+	pass
 
 class PhaseComplete(Exception):
 	pass

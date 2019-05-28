@@ -1,6 +1,7 @@
 from .structures import xset
 from itertools import product, chain
-
+import uuid
+from IPython.display import display_javascript, display_html
 
 def expand_actions(code):
 	if isinstance(code, set) and len(code) == 1:

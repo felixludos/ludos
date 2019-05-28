@@ -10,6 +10,5 @@ setup(name='gsm',
       packages=['gsm'],
       install_requires=[
             'pyyaml',
-            'numpy',
       ],
       zip_safe=False)

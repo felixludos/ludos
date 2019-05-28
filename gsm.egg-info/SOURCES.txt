@@ -1,7 +1,10 @@
 README.md
+gsm/__init__.py
+gsm/containers.py
 gsm/control_flow.py
+gsm/logging.py
+gsm/persistence.py
 gsm/signals.py
-gsm/structures.py
 gsm/util.py
 gsm.egg-info/PKG-INFO
 gsm.egg-info/SOURCES.txt
