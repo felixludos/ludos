@@ -13,14 +13,14 @@ class UnknownObject(Exception):
 	pass
 
 class Container(TransactionableObject):
-	def __init__(self, iterations=None):
+	def __init__(self, iterations=None, tracker=None):
 		self.data = OrderedDict()
 		if iterations is None:
 			iterations = lambda x: x.values()
 		super().__init__(self, iterations=iterations)
 	
 	def __setattr__(self, key, item):
-		if isinstance(item, Container) or isinstance(item, _primitives):
+		if isinstance(item, (Container,) + _primitives):
 			super().__setattr__(key, item)
 		else:
 			raise UnknownObject(key, item)
