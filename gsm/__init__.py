@@ -1,6 +1,7 @@
-from .structures import adict, idict, xset, tdict, tset, tlist
+# from .structures import adict, idict, xset, tdict, tset, tlist
+from .containers import tdict
 from .persistence import collate, uncollate, save, load
 
-from .core import GameController, GamePhase, GameLogger
+from .core import GameController, GamePhase, GameLogger, GameActions, GameObject
 
 from .util import decode_actions, render_dict

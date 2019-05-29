@@ -3,6 +3,16 @@ from itertools import product, chain
 import uuid
 from IPython.display import display_javascript, display_html
 
+def jsonify(obj):
+	
+	if isinstance(obj, dict):
+		pass
+	elif isinstance(obj, tuple):
+		pass
+	
+
+
+
 def expand_actions(code):
 	if isinstance(code, set) and len(code) == 1:
 		return expand_actions(next(iter(code)))

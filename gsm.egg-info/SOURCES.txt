@@ -1,4 +1,5 @@
 README.md
+setup.py
 gsm/__init__.py
 gsm/containers.py
 gsm/control_flow.py
