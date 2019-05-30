@@ -21,14 +21,14 @@ class Trackable(object):
 		if self._tracker is not None:
 			return self._tracker.signal()
 
-_container_id = 0
+# _container_id = 0
 
 class Container(Trackable, Transactionable):
 	def __init__(self, tracker=None):
 		super().__init__(tracker=tracker)
-		global _container_id
-		self._id = _container_id
-		_container_id += 1
+		# global _container_id
+		# self._id = _container_id
+		# _container_id += 1
 	
 	# def __setattr__(self, key, item):
 	# 	if isinstance(item, (Container,type(None)) + _primitives):
@@ -60,9 +60,10 @@ class Container(Trackable, Transactionable):
 		copy.__setstate__(self.__getstate__())
 		return copy
 
-_valid = {'_tracker', '_id', '_data', '_shadow'}
+# _valid = {'_tracker', '_id', '_data', '_shadow'}
+_valid = {'_tracker', '_data', '_shadow'}
 
-class tdict(Container):
+class tdict(Container, OrderedDict):
 	def __init__(self, *args, **kwargs):
 		super().__init__()
 		self._data = OrderedDict(*args, **kwargs)
@@ -103,19 +104,30 @@ class tdict(Container):
 		self._data = self._shadow
 		
 	def update(self, other):
-		if len(other) and self._tracker is not None:
-			self._tracker.signal()
+		if len(other):
+			self.signal()
 		self._data.update(other)
+	def fromkeys(self, keys, value=None):
+		if len(keys):
+			self.signal()
+		self._data.fromkeys(keys, value)
 		
 	def clear(self):
-		if len(self) and self._tracker is not None:
-			self._tracker.signal()
+		if len(self):
+			self.signal()
 		self._data.clear()
 	
 	def __len__(self):
 		return len(self._data)
-	def __hash__(self):
-		return hash(self._id)
+	# def __hash__(self):
+	# 	return hash(self._id)
+	# def __eq__(self, other):
+	# 	return self._id == other._id
+	
+	def __contains__(self, item):
+		return self._data.__contains__(item)
+	def __reversed__(self):
+		return self._data.__reversed__()
 	
 	def __iter__(self):
 		return iter(self._data)
@@ -127,13 +139,16 @@ class tdict(Container):
 		return self._data.items()
 	
 	def pop(self, key):
-		if len(self) and self._tracker is not None:
-			self._tracker.signal()
+		if len(self):
+			self.signal()
 		return self._data.pop(key)
 	def popitem(self):
-		if len(self) and self._tracker is not None:
-			self._tracker.signal()
+		if len(self):
+			self.signal()
 		return self._data.popitem()
+	def move_to_end(self, key, last=True):
+		self.signal()
+		self._data.move_to_end(key, last)
 	
 	def copy(self):
 		copy = super().copy()
@@ -150,10 +165,10 @@ class tdict(Container):
 		
 		state['_data'] = data
 		if self._tracker is not None:
-			state['_tracker'] = self._tracker._id
+			state['_tracker'] = True#self._tracker._id
 		state['_order'] = list(iter(self))
 		state['_type'] = type(self).__name__
-		state['_id'] = self._id
+		# state['_id'] = self._id
 		return state
 	
 	def __setstate__(self, state):
@@ -162,7 +177,7 @@ class tdict(Container):
 		if '_tracker' in state:
 			assert self._tracker is not None, '_tracker must be set before calling __setstate__'
 		
-		self._id = state['_id']
+		# self._id = state['_id']
 		data = state['_data']
 		for key in state['_order']:
 			value = data[key]
@@ -174,8 +189,14 @@ class tdict(Container):
 					value._tracker = self
 				value.__setstate__(state)
 			self._data[key] = value
-		if self._tracker is not None:
-			self._tracker.signal()
+		self.signal()
+	
+	def get(self, k):
+		return self._data.get(k)
+	def setdefault(self, key, default=None):
+		if key not in self:
+			self.signal()
+		self._data.setdefault(key, default)
 	
 	def __getitem__(self, item):
 		return self._data[item]
@@ -186,8 +207,7 @@ class tdict(Container):
 			self._tracker.signal()
 		self._data[key] = value
 	def __delitem__(self, key):
-		if self._tracker is not None:
-			self._tracker.signal()
+		self.signal()
 		del self._data[key]
 		
 	def __getattr__(self, item):
@@ -209,29 +229,51 @@ class tdict(Container):
 	def __repr__(self):
 		return 'tdict({})'.format(', '.join(['{}:{}'.format(repr(key), repr(value)) for key, value in self.items()]))
 	
+
+class tlist(Container):
+
+	def __init__(self, *args, **kwargs):
+		super().__init__()
+		self._data = list(*args, **kwargs)
+		self._shadow = None
 	
+	def begin(self):
+		raise NotImplementedError
+	
+	def in_transaction(self):
+		raise NotImplementedError
+	
+	def commit(self):
+		raise NotImplementedError
+	
+	def abort(self):
+		raise NotImplementedError
+	
+	def __getitem__(self, item):
+		return self._data[item]
+	def __setitem__(self, key, value):
+		if self._tracker is not None and isinstance(value, Container):
+			value._tracker = self
+		self.signal()
+		self._data[key] = value
+	def __delitem__(self, idx):
+		self.signal()
+		del self._data[idx]
+		
+	def count(self, object):
+		return self._data.count(object)
+	
+	def append(self, item):
+		self.signal()
+		return self._data.append(item)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+class tset(Container):
+	
+	def __init__(self, *args, **kwargs):
+		super().__init__()
+		self._data = list(*args, **kwargs)
+		self._shadow = None
 
 
 
