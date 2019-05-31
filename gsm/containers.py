@@ -60,7 +60,6 @@ class Container(Trackable, Transactionable):
 		copy.__setstate__(self.__getstate__())
 		return copy
 
-# _valid = {'_tracker', '_id', '_data', '_shadow'}
 _valid = {'_tracker', '_data', '_shadow'}
 
 class tdict(Container, OrderedDict):
@@ -104,12 +103,10 @@ class tdict(Container, OrderedDict):
 		self._data = self._shadow
 		
 	def update(self, other):
-		if len(other):
-			self.signal()
+		self.signal()
 		self._data.update(other)
 	def fromkeys(self, keys, value=None):
-		if len(keys):
-			self.signal()
+		self.signal()
 		self._data.fromkeys(keys, value)
 		
 	def clear(self):
@@ -119,10 +116,6 @@ class tdict(Container, OrderedDict):
 	
 	def __len__(self):
 		return len(self._data)
-	# def __hash__(self):
-	# 	return hash(self._id)
-	# def __eq__(self, other):
-	# 	return self._id == other._id
 	
 	def __contains__(self, item):
 		return self._data.__contains__(item)
@@ -139,12 +132,10 @@ class tdict(Container, OrderedDict):
 		return self._data.items()
 	
 	def pop(self, key):
-		if len(self):
-			self.signal()
+		self.signal()
 		return self._data.pop(key)
 	def popitem(self):
-		if len(self):
-			self.signal()
+		self.signal()
 		return self._data.popitem()
 	def move_to_end(self, key, last=True):
 		self.signal()
@@ -177,7 +168,6 @@ class tdict(Container, OrderedDict):
 		if '_tracker' in state:
 			assert self._tracker is not None, '_tracker must be set before calling __setstate__'
 		
-		# self._id = state['_id']
 		data = state['_data']
 		for key in state['_order']:
 			value = data[key]
@@ -186,8 +176,8 @@ class tdict(Container, OrderedDict):
 				assert info['_type'] in _valid, 'invalid container type: {}'.format(info['_type'])
 				value = eval(info['_type'] + '()')
 				if '_tracker' in info:
-					value._tracker = self
-				value.__setstate__(state)
+					value._tracker = self._tracker
+				value.__setstate__(info)
 			self._data[key] = value
 		self.signal()
 	
@@ -201,10 +191,9 @@ class tdict(Container, OrderedDict):
 	def __getitem__(self, item):
 		return self._data[item]
 	def __setitem__(self, key, value):
-		if self._tracker is not None:
-			if isinstance(value, Container):
-				value._tracker = self
-			self._tracker.signal()
+		if isinstance(value, Container):
+			value._tracker = self._tracker
+		self.signal()
 		self._data[key] = value
 	def __delitem__(self, key):
 		self.signal()
@@ -230,30 +219,84 @@ class tdict(Container, OrderedDict):
 		return 'tdict({})'.format(', '.join(['{}:{}'.format(repr(key), repr(value)) for key, value in self.items()]))
 	
 
-class tlist(Container):
+class tlist(Container, list):
 
 	def __init__(self, *args, **kwargs):
 		super().__init__()
 		self._data = list(*args, **kwargs)
 		self._shadow = None
 	
-	def begin(self):
-		raise NotImplementedError
-	
 	def in_transaction(self):
-		raise NotImplementedError
+		return self._shadow is not None
+	
+	def begin(self):
+		if self.in_transaction():
+			self.abort()
+		
+		self._shadow = self._data
+		
+		for child in iter(self):
+			if isinstance(child, Transactionable):
+				child.begin()
+		
+		self._data = self._data.copy()
 	
 	def commit(self):
-		raise NotImplementedError
+		if not self.in_transaction():
+			return
+		
+		for child in iter(self):
+			if isinstance(child, Transactionable):
+				child.commit()
+		
+		self._shadow = None
 	
 	def abort(self):
-		raise NotImplementedError
+		if not self.in_transaction():
+			return
+		for child in iter(self):
+			if isinstance(child, Transactionable):
+				child.abort()
+		
+		self._data = self._shadow
+	
+	def __getstate__(self):
+		state = {}
+		data = []
+		for element in iter(self):
+			if isinstance(value, Container):
+				value = value.__getstate__()
+			data.append(value)
+		
+		state['_data'] = data
+		if self._tracker is not None:
+			state['_tracker'] = True  # self._tracker._id
+		state['_type'] = type(self).__name__
+		return state
+	
+	def __setstate__(self, state):
+		assert type(self).__name__ == state['_type'], 'invalid type: {}'.format(type(self).__name__)
+		
+		if '_tracker' in state:
+			assert self._tracker is not None, '_tracker must be set before calling __setstate__'
+		
+		# self._id = state['_id']
+		for element in state['_data']:
+			if isinstance(element, dict) and '_type' in element:
+				info = element
+				assert info['_type'] in _valid, 'invalid container type: {}'.format(info['_type'])
+				element = eval(info['_type'] + '()')
+				if '_tracker' in info:
+					element._tracker = self._tracker
+				element.__setstate__(info)
+			self._data.append(element)
+		self.signal()
 	
 	def __getitem__(self, item):
 		return self._data[item]
 	def __setitem__(self, key, value):
-		if self._tracker is not None and isinstance(value, Container):
-			value._tracker = self
+		if isinstance(value, Container):
+			value._tracker = self._tracker
 		self.signal()
 		self._data[key] = value
 	def __delitem__(self, idx):
@@ -266,18 +309,142 @@ class tlist(Container):
 	def append(self, item):
 		self.signal()
 		return self._data.append(item)
-
-
+	
+	def __contains__(self, item):
+		return self._data.__contains__(item)
+	
+	def extend(self, iterable):
+		self.signal()
+		self._data.extend(iterable)
+		
+	def insert(self, index, object):
+		self.signal()
+		self._data.insert(index, object)
+		
+	def remove(self, value):
+		self.signal()
+		self._data.remove(value)
+		
+	def __iter__(self):
+		return iter(self._data)
+	def __reversed__(self):
+		return self._data.__reversed__()
+	
+	def reverse(self):
+		self.signal()
+		self._data.reverse()
+		
+	def pop(self):
+		self.signal()
+		return self._data.reverse()
+		
+	def __len__(self):
+		return len(self._data)
+		
+	def clear(self):
+		self.signal()
+		self._data.clear()
+		
+	def sort(self, key=None, reverse=False):
+		self.signal()
+		self._data.sort(key, reverse)
+		
+	def index(self, object, start=None, stop=None):
+		self._data.index(object, start, stop)
+	
+	def __mul__(self, other):
+		return self._data.__mul__(other)
+	def __rmul__(self, other):
+		return self._data.__rmul__(other)
+	def __add__(self, other):
+		return self._data.__add__(other)
+	def __iadd__(self, other):
+		self.signal()
+		self._data.__iadd__(other)
+	def __imul__(self, other):
+		self.signal()
+		self._data.__imul__(other)
+	
+	
 class tset(Container):
 	
-	def __init__(self, *args, **kwargs):
+	def __init__(self, iterable=[]):
 		super().__init__()
-		self._data = list(*args, **kwargs)
+		self._data = OrderedDict()
+		self._data.fromkeys(iterable)
 		self._shadow = None
+	
+	def in_transaction(self):
+		return self._shadow is not None
+	
+	def begin(self):
+		if self.in_transaction():
+			self.abort()
+		
+		self._shadow = self._data
+		
+		for child in iter(self):
+			if isinstance(child, Transactionable):
+				child.begin()
+		
+		self._data = self._data.copy()
+	
+	def commit(self):
+		if not self.in_transaction():
+			return
+		
+		for child in iter(self):
+			if isinstance(child, Transactionable):
+				child.commit()
+		
+		self._shadow = None
+	
+	def abort(self):
+		if not self.in_transaction():
+			return
+		for child in iter(self):
+			if isinstance(child, Transactionable):
+				child.abort()
+		
+		self._data = self._shadow
+	
+	def __getstate__(self):
+		state = {}
+		data = []
+		for x in iter(self):
+			if isinstance(x, Container):
+				x = x.__getstate__()
+			data.append(x)
+		
+		state['_data'] = {'set':data}
+		if self._tracker is not None:
+			state['_tracker'] = True  # self._tracker._id
+		state['_type'] = type(self).__name__
+		return state
+	
+	def __setstate__(self, state):
+		assert type(self).__name__ == state['_type'], 'invalid type: {}'.format(type(self).__name__)
+		
+		if '_tracker' in state:
+			assert self._tracker is not None, '_tracker must be set before calling __setstate__'
+		
+		# self._id = state['_id']
+		for element in state['_data']['set']:
+			if isinstance(element, dict) and '_type' in element:
+				info = element
+				assert info['_type'] in _valid, 'invalid container type: {}'.format(info['_type'])
+				element = eval(info['_type'] + '()')
+				if '_tracker' in info:
+					element._tracker = self._tracker
+				element.__setstate__(info)
+			self._data.add(element)
+		self.signal()
 
-
-
-
+	def __hash__(self):
+		return id(self)
+	def __eq__(self, other):
+		return id(self) == id(other)
+		
 
 
 
