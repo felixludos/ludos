@@ -418,7 +418,7 @@ class tset(Container):
 		
 		state['_data'] = {'set':data}
 		if self._tracker is not None:
-			state['_tracker'] = True  # self._tracker._id
+			state['_tracker'] = True
 		state['_type'] = type(self).__name__
 		return state
 	
@@ -428,7 +428,6 @@ class tset(Container):
 		if '_tracker' in state:
 			assert self._tracker is not None, '_tracker must be set before calling __setstate__'
 		
-		# self._id = state['_id']
 		for element in state['_data']['set']:
 			if isinstance(element, dict) and '_type' in element:
 				info = element
@@ -445,7 +444,44 @@ class tset(Container):
 	def __eq__(self, other):
 		return id(self) == id(other)
 		
-
+	def copy(self):
+		copy = tset()
+		copy.__setstate__(self.__getstate__())
+		return copy
+		
+	def __sub__(self, other):
+		copy = self.copy()
+		for x in other:
+			copy.discard(x)
+		return copy
+	def __rsub__(self, other):
+		copy = other.copy()
+		for x in self:
+			copy.discard(x)
+		return copy
+	
+	def __and__(self, other):
+		return tset(x for x in self if x in other)
+	
+	def symmetric_difference(self, other):
+		raise NotImplementedError
+	def __ixor__(self, other):
+		raise NotImplementedError
+	def __isub__(self, other):
+		raise NotImplementedError
+	def __or__(self, other):
+		raise NotImplementedError
+	def __ior__(self, other):
+		raise NotImplementedError
+	def __rand__(self, other):
+		raise NotImplementedError
+	def union(self, other):
+		raise NotImplementedError
+	
+	def __contains__(self, item):
+		return self._data.__contains__(item)
+	
+	
 
 
 class GameState(Container):
