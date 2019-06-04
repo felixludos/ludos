@@ -58,13 +58,14 @@ class Container(Trackable, Transactionable):
 	def copy(self):
 		copy = type(self)()
 		copy.__setstate__(self.__getstate__())
+		copy._tracker = None
 		return copy
 
 _valid = {'_tracker', '_data', '_shadow'}
 
 class tdict(Container, OrderedDict):
-	def __init__(self, *args, **kwargs):
-		super().__init__()
+	def __init__(self, *args, _tracker=None, **kwargs):
+		super().__init__(tracker=_tracker)
 		self._data = OrderedDict(*args, **kwargs)
 		self._shadow = None
 		
@@ -117,6 +118,11 @@ class tdict(Container, OrderedDict):
 	def __len__(self):
 		return len(self._data)
 	
+	def __hash__(self):
+		return id(self)
+	def __eq__(self, other):
+		return id(self) == id(other)
+	
 	def __contains__(self, item):
 		return self._data.__contains__(item)
 	def __reversed__(self):
@@ -140,11 +146,6 @@ class tdict(Container, OrderedDict):
 	def move_to_end(self, key, last=True):
 		self.signal()
 		self._data.move_to_end(key, last)
-	
-	def copy(self):
-		copy = super().copy()
-		copy._tracker = self._tracker
-		return copy
 	
 	def __getstate__(self):
 		state = {}
@@ -218,12 +219,12 @@ class tdict(Container, OrderedDict):
 	def __repr__(self):
 		return 'tdict({})'.format(', '.join(['{}:{}'.format(repr(key), repr(value)) for key, value in self.items()]))
 	
-
 class tlist(Container, list):
 
-	def __init__(self, *args, **kwargs):
-		super().__init__()
-		self._data = list(*args, **kwargs)
+	def __init__(self, iterable=[], _tracker=None):
+		super().__init__(tracker=_tracker)
+		self._data = list()
+		self.extend(iterable)
 		self._shadow = None
 	
 	def in_transaction(self):
@@ -264,9 +265,9 @@ class tlist(Container, list):
 		state = {}
 		data = []
 		for element in iter(self):
-			if isinstance(value, Container):
-				value = value.__getstate__()
-			data.append(value)
+			if isinstance(element, Container):
+				element = element.__getstate__()
+			data.append(element)
 		
 		state['_data'] = data
 		if self._tracker is not None:
@@ -303,11 +304,21 @@ class tlist(Container, list):
 		self.signal()
 		del self._data[idx]
 		
+	def __hash__(self):
+		return id(self)
+	def __eq__(self, other):
+		return id(self) == id(other)
+		
 	def count(self, object):
 		return self._data.count(object)
 	
 	def append(self, item):
 		self.signal()
+		self._append(item)
+	
+	def _append(self, item):
+		if isinstance(item, Container):
+			item._tracker = self._tracker
 		return self._data.append(item)
 	
 	def __contains__(self, item):
@@ -315,10 +326,13 @@ class tlist(Container, list):
 	
 	def extend(self, iterable):
 		self.signal()
-		self._data.extend(iterable)
+		for x in iterable:
+			self._append(x)
 		
 	def insert(self, index, object):
 		self.signal()
+		if isinstance(object, Container):
+			object._tracker = self._tracker
 		self._data.insert(index, object)
 		
 	def remove(self, value):
@@ -364,14 +378,19 @@ class tlist(Container, list):
 	def __imul__(self, other):
 		self.signal()
 		self._data.__imul__(other)
-	
+		
+	def __repr__(self):
+		return '[{}]'.format(', '.join(map(repr, self)))
+	def __str__(self):
+		return '[{}]'.format(', '.join(map(str, self)))
 	
 class tset(Container):
 	
-	def __init__(self, iterable=[]):
-		super().__init__()
+	def __init__(self, iterable=[], _tracker=None):
+		super().__init__(tracker=_tracker)
 		self._data = OrderedDict()
-		self._data.fromkeys(iterable)
+		for x in iterable:
+			self._add(x)
 		self._shadow = None
 	
 	def in_transaction(self):
@@ -436,52 +455,150 @@ class tset(Container):
 				if '_tracker' in info:
 					element._tracker = self._tracker
 				element.__setstate__(info)
-			self._data.add(element)
+			self._data[element] = None
 		self.signal()
 
 	def __hash__(self):
 		return id(self)
 	def __eq__(self, other):
 		return id(self) == id(other)
-		
-	def copy(self):
-		copy = tset()
-		copy.__setstate__(self.__getstate__())
+	
+	def __and__(self, other):
+		copy = self.copy()
+		for x in self:
+			if x in other:
+				copy._add(x)
+			else:
+				copy._remove(x)
 		return copy
-		
+	def __or__(self, other):
+		copy = self.copy()
+		copy.update(other)
+		return copy
+	def __xor__(self, other):
+		copy = self.copy()
+		for x in list(other):
+			if x in other:
+				copy._add(x)
+			else:
+				copy._remove(x)
+		return copy
 	def __sub__(self, other):
 		copy = self.copy()
 		for x in other:
 			copy.discard(x)
 		return copy
+	
+	def __rand__(self, other):
+		return self & other
+	def __ror__(self, other):
+		return self | other
+	def __rxor__(self, other):
+		return self ^ other
 	def __rsub__(self, other):
 		copy = other.copy()
 		for x in self:
 			copy.discard(x)
 		return copy
 	
-	def __and__(self, other):
-		return tset(x for x in self if x in other)
+	def difference_update(self, other):
+		self -= other
+	def intersection_update(self, other):
+		self &= other
+	def union_update(self, other):
+		self |= other
+	def symmetric_difference_update(self, other):
+		self ^= other
 	
 	def symmetric_difference(self, other):
-		raise NotImplementedError
-	def __ixor__(self, other):
-		raise NotImplementedError
-	def __isub__(self, other):
-		raise NotImplementedError
-	def __or__(self, other):
-		raise NotImplementedError
-	def __ior__(self, other):
-		raise NotImplementedError
-	def __rand__(self, other):
-		raise NotImplementedError
+		return self ^ other
 	def union(self, other):
-		raise NotImplementedError
+		return self | other
+	def intersection(self, other):
+		return self & other
+	def difference(self, other):
+		return self - other
+	
+	def issubset(self, other):
+		for x in self:
+			if x not in other:
+				return False
+		return True
+	def issuperset(self, other):
+		for x in other:
+			if x not in self:
+				return False
+		return True
+	def isdisjoint(self, other):
+		return not self.issubset(other) and not self.issuperset(other)
+		
+	def __iand__(self, other):
+		self.signal()
+		for x in list(self):
+			if x not in other:
+				self._remove(x)
+	def __ior__(self, other):
+		self.signal()
+		self.update(other)
+	def __ixor__(self, other):
+		self.signal()
+		for x in other:
+			if x in self:
+				self._remove(x)
+			else:
+				self.add(x)
+	def __isub__(self, other):
+		self.signal()
+		for x in other:
+			if x in self:
+				self._remove(x)
+	
+	def pop(self):
+		self.signal()
+		return self._data.popitem()[0]
+	
+	def remove(self, item):
+		self.signal()
+		self._remove(item)
+	def _remove(self, item):
+		del self._data[item]
+		
+	def discard(self, item):
+		if item in self._data:
+			self.remove(item)
 	
 	def __contains__(self, item):
 		return self._data.__contains__(item)
 	
+	def __len__(self):
+		return len(self._data)
 	
+	def __iter__(self):
+		return iter(self._data)
+	
+	def clear(self):
+		self.signal()
+		return self._data.clear()
+	
+	def update(self, other):
+		self.signal()
+		for x in other:
+			self._add(x)
+	
+	def add(self, item):
+		self.signal()
+		self._add(item)
+		
+	def _add(self, item):
+		if isinstance(item, Container):
+			item._tracker = self._tracker
+		self._data[item] = None
+		
+	def __repr__(self):
+		return '{' + ', '.join([repr(x) for x in self]) + '}'
+
+	def __str__(self):
+		return '{' + ', '.join([str(x) for x in self]) + '}'
 
 
 class GameState(Container):
