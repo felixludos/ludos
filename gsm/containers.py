@@ -8,8 +8,8 @@ from .structures import Transactionable
 
 _primitives = (str, int, float, bool)
 
-class UnknownObject(Exception):
-	pass
+# class UnknownObject(Exception):
+# 	pass
 
 class Trackable(object):
 	
@@ -60,8 +60,6 @@ class Container(Trackable, Transactionable):
 		copy.__setstate__(self.__getstate__())
 		copy._tracker = None
 		return copy
-
-_valid = {'_tracker', '_data', '_shadow'}
 
 class tdict(Container, OrderedDict):
 	def __init__(self, *args, _tracker=None, **kwargs):
@@ -174,7 +172,7 @@ class tdict(Container, OrderedDict):
 			value = data[key]
 			if isinstance(value, dict) and '_type' in value:
 				info = data[key]
-				assert info['_type'] in _valid, 'invalid container type: {}'.format(info['_type'])
+				# assert info['_type'] in _valid, 'invalid container type: {}'.format(info['_type'])
 				value = eval(info['_type'] + '()')
 				if '_tracker' in info:
 					value._tracker = self._tracker
@@ -201,17 +199,17 @@ class tdict(Container, OrderedDict):
 		del self._data[key]
 		
 	def __getattr__(self, item):
-		if item in _valid:
+		if item in self.__dict__:
 			return super().__getattribute__(item)
 		return self.__getitem__(item)
 	def __setattr__(self, key, value):
-		if key in _valid:
+		if key in self.__dict__:
 			return super().__setattr__(key, value)
 		return self.__setitem__(key, value)
 	def __delattr__(self, item):
-		if item in _valid:
-			raise Exception('{} cannot be deleted'.format(item))
-			# return super().__delattr__(item)
+		if item in self.__dict__:
+			# raise Exception('{} cannot be deleted'.format(item))
+			return super().__delattr__(item)
 		return self.__getitem__(item)
 	
 	def __str__(self):
@@ -285,7 +283,7 @@ class tlist(Container, list):
 		for element in state['_data']:
 			if isinstance(element, dict) and '_type' in element:
 				info = element
-				assert info['_type'] in _valid, 'invalid container type: {}'.format(info['_type'])
+				# assert info['_type'] in _valid, 'invalid container type: {}'.format(info['_type'])
 				element = eval(info['_type'] + '()')
 				if '_tracker' in info:
 					element._tracker = self._tracker
@@ -450,7 +448,7 @@ class tset(Container):
 		for element in state['_data']['set']:
 			if isinstance(element, dict) and '_type' in element:
 				info = element
-				assert info['_type'] in _valid, 'invalid container type: {}'.format(info['_type'])
+				# assert info['_type'] in _valid, 'invalid container type: {}'.format(info['_type'])
 				element = eval(info['_type'] + '()')
 				if '_tracker' in info:
 					element._tracker = self._tracker
@@ -601,27 +599,27 @@ class tset(Container):
 		return '{' + ', '.join([str(x) for x in self]) + '}'
 
 
-class GameState(Container):
-	pass
-
-class GameObject(Container):
-	
-	def __init__(self, name=None, obj_type=None, **kwargs):
-		super().__init__()
-		self.name = name
-		self.obj_type = obj_type
-		self.__dict__.update(kwargs)
-		
-		global _global_id
-		self._id = _global_id
-		_global_id += 1
-	
-	def __repr__(self):
-		return 'GameObject({})'.format(', '.join(['{}={}'.format(k, type(v).__name__ if isinstance(v,Container) else v)
-		                                          for k,v in self.__dict__.items()]))
-	
-	def __str__(self):
-		return self.name
+# class GameState(Container):
+# 	pass
+#
+# class GameObject(Container):
+#
+# 	def __init__(self, name=None, obj_type=None, **kwargs):
+# 		super().__init__()
+# 		self.name = name
+# 		self.obj_type = obj_type
+# 		self.__dict__.update(kwargs)
+#
+# 		global _global_id
+# 		self._id = _global_id
+# 		_global_id += 1
+#
+# 	def __repr__(self):
+# 		return 'GameObject({})'.format(', '.join(['{}={}'.format(k, type(v).__name__ if isinstance(v,Container) else v)
+# 		                                          for k,v in self.__dict__.items()]))
+#
+# 	def __str__(self):
+# 		return self.name
 
 
 
