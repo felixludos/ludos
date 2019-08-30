@@ -109,14 +109,14 @@ class TransactionableObject(ObjectProxy, Transactionable):
 			self.abort()
 		return None if type is None else type.__name__ == 'AbortTransaction'
 
-def tdict(*args, **kwargs):
-	return TransactionableObject(adict(*args, **kwargs), lambda x: iter(chain(x.keys(), x.values())))
-
-def tlist(*args, **kwargs):
-	return TransactionableObject(list(*args, **kwargs), lambda x: iter(x))
-
-def tset(*args, **kwargs):
-	return TransactionableObject(xset(*args, **kwargs), lambda x: iter(x))
+# def tdict(*args, **kwargs):
+# 	return TransactionableObject(adict(*args, **kwargs), lambda x: iter(chain(x.keys(), x.values())))
+#
+# def tlist(*args, **kwargs):
+# 	return TransactionableObject(list(*args, **kwargs), lambda x: iter(x))
+#
+# def tset(*args, **kwargs):
+# 	return TransactionableObject(xset(*args, **kwargs), lambda x: iter(x))
 
 
 

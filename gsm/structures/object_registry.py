@@ -81,6 +81,6 @@ class iddict(adict): # WARNING: These objects are not garbage collected
 		return '{ ' +', '.join('{}:{}'.format(repr(k) ,repr(v)) for k ,v in self.items() ) +'}'
 
 
-def idict(*args, **kwargs):
-	return TransactionableObject(iddict(*args, **kwargs), lambda x: iter(chain(x.keys(), x.values())))
+# def idict(*args, **kwargs):
+# 	return TransactionableObject(iddict(*args, **kwargs), lambda x: iter(chain(x.keys(), x.values())))
 

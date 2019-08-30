@@ -1,5 +1,5 @@
 
-from ..structures import tdict, tset, tlist
+from ..containers import tdict, tset, tlist
 
 
 class GameObject(tdict):
