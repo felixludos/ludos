@@ -1,4 +1,4 @@
-from .structures import xset
+from gsm.structures import xset
 from itertools import product, chain
 import uuid
 from IPython.display import display_javascript, display_html

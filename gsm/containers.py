@@ -15,7 +15,7 @@ class Trackable(object):
 	
 	def __init__(self, tracker=None):
 		super().__init__()
-		self._tracker = tracker # usually should be set manually --> by GameObject
+		self.__dict__['_tracker'] = tracker # usually should be set manually --> by GameObject
 		
 	def signal(self): # for tracking
 		if self._tracker is not None:
@@ -64,8 +64,8 @@ class Container(Trackable, Transactionable):
 class tdict(Container, OrderedDict):
 	def __init__(self, *args, _tracker=None, **kwargs):
 		super().__init__(tracker=_tracker)
-		self._data = OrderedDict(*args, **kwargs)
-		self._shadow = None
+		self.__dict__['_data'] = OrderedDict(*args, **kwargs)
+		self.__dict__['_shadow'] = None
 		
 	def in_transaction(self):
 		return self._shadow is not None
@@ -346,9 +346,9 @@ class tlist(Container, list):
 		self.signal()
 		self._data.reverse()
 		
-	def pop(self):
+	def pop(self, index):
 		self.signal()
-		return self._data.reverse()
+		return self._data.pop(index)
 		
 	def __len__(self):
 		return len(self._data)

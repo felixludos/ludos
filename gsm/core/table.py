@@ -10,11 +10,14 @@ class GameTable(Transactionable):
 		super().__init__()
 		
 		self.players = players
-		self.table = tdict()
 		self._in_transaction = False
 		self.obj_types = tdict()
 		
 		self.reset()
+	
+	def reset(self):
+		self.table = tdict()
+		self.ID_counter = 0
 	
 	def in_transaction(self):
 		return self._in_transaction
@@ -24,77 +27,59 @@ class GameTable(Transactionable):
 			self.abort()
 		
 		self._in_transaction = True
-		
 		self.table.begin()
-		self.created.begin()
-		self.updated.begin()
-		self.removed.begin()
 	
 	def commit(self):
 		if not self.in_transaction():
 			return
-		
 		self.table.commit()
-		self.created.commit()
-		self.updated.commit()
-		self.removed.commit()
 	
 	def abort(self):
 		if not self.in_transaction():
 			return
-		
 		self.table.abort()
-		self.created.abort()
-		self.updated.abort()
-		self.removed.abort()
 		
-		
-	def reset(self):
-		self.created = tdict({player:tdict() for player in self.players})
-		self.updated = tdict({player:tdict() for player in self.players})
-		self.removed = tdict({player:tdict() for player in self.players})
-		
-	def register_obj_type(self, name, type):
-		self.obj_types[name] = type
+	# IMPORTANT: user can optionally register their own defined subclasses of GameObject here for them to be used
+	def register_obj_type(self, cls, name=None):
+		if name is None:
+			name = cls.__class__.__name__
+		self.obj_types[name] = cls
 		
 	def _get_type(self, obj_type=None):
 		if obj_type is None or obj_type not in self.obj_types:
 			return GameObject
 		return self.obj_types[obj_type]
 		
-	def create(self, obj_type, visible=None, _id=None, **kwargs):
+	# IMPORTANT: used to check whether object is still valid
+	def check(self, key):
+		return key in self.table
 		
-		if visible is None:
+	# IMPORTANT: user should use this function to create new all game objects
+	def create(self, obj_type, visible=None, ID=None, **kwargs):
+		
+		if visible is None: # by default visible to all players
 			visible = tset(self.players)
 		
 		otype = self._get_type(obj_type)
 		
-		obj = otype(obj_type=obj_type, visible=visible, **kwargs)
+		if ID is None:
+			ID = self.ID_counter
+			self.ID_counter += 1
 		
-		if _id is not None:
-			obj._id = _id
+		obj = otype(ID=ID, obj_type=obj_type, visible=visible, **kwargs)
 		
 		self.table[obj._id] = obj
-		self.created[obj._id] = obj
 		
 		return obj
 	
+	# this function should usually be called automatically
 	def update(self, key, value):
 		self.table[key] = value
-		self.updated[key] = value
 	
+	# IMPORTANT: user should use this function to create remove any game object
 	def remove(self, key):
-		self.removed[key] = self.table[key]
 		del self.table[key]
 	
-	def pull(self, player):
-		
-		
-		
-		pass
-	
-	def get_full(self, player=None):
-		return self._format_table(self.table, player=player)
 	def get_types(self):
 		return self.obj_types.keys()
 	
@@ -102,16 +87,11 @@ class GameTable(Transactionable):
 		pass
 	
 	def __getitem__(self, item):
-		return self.objects[item]
+		return self.table[item]
 	
 	def __setitem__(self, key, value):
-		self.objects[key] = value
-		if key in self.objects:
-			self.updated[key] = value
-		else:
-			self.created[key] = value
+		self.table[key] = value
 	
 	def __delitem__(self, key):
-		self.removed[key] = self.objects[key]
-		del self.objects[key]
+		del self.table[key]
 

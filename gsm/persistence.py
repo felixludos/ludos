@@ -1,5 +1,5 @@
 import yaml
-from .structures import adict, xset, idict, tdict, tset, tlist
+# from .structures import adict, xset, idict, tdict, tset, tlist
 
 def collate(raw, remove_space=True, transactionable=True):
 	dicttype, settype, listtype = adict, xset, list

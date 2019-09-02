@@ -23,11 +23,11 @@ class Transactionable(object):
 		raise NotImplementedError
 	
 	# def __enter__(self):
-	# 	self._context = True
+	# 	# self._context = True
 	# 	self.begin()
 	#
 	# def __exit__(self, type, *args):
-	# 	self._context = False
+	# 	# self._context = False
 	# 	if type is None:
 	# 		self.commit()
 	# 	else:

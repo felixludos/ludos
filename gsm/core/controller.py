@@ -1,6 +1,8 @@
 
+from ..containers import tdict, tset, tlist
 from .phase import GamePhase
 from ..control_flow import create_gamestate
+from ..mixins import Named, Typed
 
 class GameController(object):
 	
@@ -33,9 +35,16 @@ class GameController(object):
 	def get_log(self, player):
 		raise NotImplementedError
 	
+	def create_object(self, **props):
+		pass # use table
 	
 	def save_state(self):
 		raise NotImplementedError
 	
 	def load_state(self):
 		raise NotImplementedError
+
+
+class Player(Named, Typed, tdict):
+	def __init__(self, name):
+		super().__init__(name, self.__class__.__name__)
