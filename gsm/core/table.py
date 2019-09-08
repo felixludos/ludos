@@ -46,8 +46,10 @@ class GameTable(Transactionable):
 		self.obj_types[name] = cls
 		
 	def _get_type(self, obj_type=None):
-		if obj_type is None or obj_type not in self.obj_types:
+		if obj_type is None:
 			return GameObject
+		elif obj_type not in self.obj_types:
+			return obj_type
 		return self.obj_types[obj_type]
 		
 	# IMPORTANT: used to check whether object is still valid
@@ -83,8 +85,8 @@ class GameTable(Transactionable):
 	def get_types(self):
 		return self.obj_types.keys()
 	
-	def _format_table(self, table, player=None):
-		pass
+	def pull(self):
+		return self.table
 	
 	def __getitem__(self, item):
 		return self.table[item]

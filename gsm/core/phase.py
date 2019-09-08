@@ -1,18 +1,21 @@
+from ..mixins import Named
+from ..containers import tdict, tlist, tset
 from ..signals import PhaseComplete
 
-class GamePhase(object):
+class GamePhase(Named, tdict):
 	
+	# __init__ can be overridden
 	def __init__(self, name=None):
 		
 		if name is None:
-			name = type(self).__name__
-		self.name = name
+			name = self.__class__.__name__
+		super().__init__(name)
 	
-	def execute(self, G, player=None, action=None): # must be implemented
+	def execute(self, C, player=None, action=None): # must be implemented
 		raise NotImplementedError
 	
-	def encode(self, G): # by default no actions are necessary
-		raise PhaseComplete
+	def encode(self, C): # by default no actions are necessary
+		raise PhaseComplete # otherwise this should return a GameActions instance
 
 
 class EndPhase(GamePhase):

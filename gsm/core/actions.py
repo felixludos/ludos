@@ -32,14 +32,18 @@ def process_actions(raw): # getting a raw encoded set in, outputting a set ready
 	
 
 
-class GameActions(object): # created and returned in phases
+class GameOutput(object): # created and returned in phases
 	
 	def __init__(self):
 		self.reset()
 	
 	def reset(self):
+		# actions
 		self.options = []
-		self.instr = None
+		self.status = None
+		
+		# info
+		self.info = tdict()
 	
 	def save_options(self, actions, desc=None): # each action group/option can have its own description
 		option = {'actions': actions}
@@ -47,31 +51,44 @@ class GameActions(object): # created and returned in phases
 			option['desc'] = desc
 		self.options.append(option)
 	
-	def set_instructions(self, instr): # these instructions are global, for all action groups/options
-		self.instr = instr
+	def set_status(self, status): # these instructions are global, for all action groups/options
+		self.status = status
+	
+	def verify(self, action):
+		raise NotImplementedError # TODO
+	
+	def __len__(self):
+		return len(self.options)
 	
 	def __add__(self, other):
-		new = GameActions()
+		new = GameOutput()
 		new.options = self.options + other.options
-		new.instr = self.instr
-		if self.instr is None:
-			new.instr = other.instr
+		new.status = self.status
+		if self.status is None:
+			new.status = other.status
 		return new
 	
+	def get_info(self):
+		return self.info
+	
 	def pull(self):
-		if self.instr is None and len(self.options) == 1 and 'desc' in self.options[0]:
-			self.instr = self.options[0]['desc']
+		if self.status is None and len(self.options) == 1 and 'desc' in self.options[0]:
+			self.status = self.options[0]['desc']
 			del self.options[0]['desc']
 		
-		options = {'options': jsonify_actions(self.options)}
+		options = {'actions': jsonify_actions(self.options)}
 		
-		if self.instr is not None:
-			options['instructions'] = str(self.instr)
+		if self.status is not None:
+			options['status'] = str(self.status)
 			
 		return options
 
 
 # Advanced action queries
+
+class InvalidAction(Exception):
+	def __init__(self, action):
+		super().__init__('{} is an invalid action'.format(str(action)))
 
 class ActionQuery(Typed):
 	

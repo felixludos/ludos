@@ -1,8 +1,9 @@
 
 from ..containers import tdict, tlist, tset
-from ..structures import Transactionable, adict
+from .object import GameObject
+from ..structures import Transactionable
 from collections import deque
-from ..mixins import Typed
+from ..mixins import Named, Typed
 
 '''
 log formatting:
@@ -13,18 +14,15 @@ log formatting:
 
 
 class GameLogger(Transactionable):
-	def __init__(self, players, stdout=False, leveled=True):
-		self.stdout = stdout
-		self.logs = adict({p: deque() for p in players})
-		self.updates = adict({p: deque() for p in players})
+	def __init__(self, players, indents=True):
+		self.logs = tdict({p: deque() for p in players})
+		self.updates = tdict({p: deque() for p in players})
 		self.collectors = None
 		
-		self.level = 0 if leveled else None
-		
+		self.level = 0 if indents else None
 	
 	def save_state(self):
 		state = {
-			'stdout': self.stdout,
 			'logs': {k: list(v) for k, v in self.logs.items()},
 			'updates': {k: list(v) for k, v in self.updates.items()},
 		}
@@ -33,8 +31,7 @@ class GameLogger(Transactionable):
 		return state
 	
 	def load_state(self, data):
-		self.stdout = data['stdout']
-		self.logs = adict(data['logs'])
+		self.logs = tdict(data['logs'])
 		self.updates = adict(data['updates'])
 		if 'collectors' in data:
 			self.collectors = adict(data['collectors'])
@@ -79,30 +76,47 @@ class GameLogger(Transactionable):
 		if self.level is not None:
 			self.level = max(self.level-n, 0)
 	
-	def write(self, *objs, end='\n', player=None):
-		
-		txt, *objs = objs
-		
-		if not len(objs):
-			if isinstance(txt, LogFormat):
-				objs = {'a1':txt}
-				txt = '{}'
-			elif isinstance(txt, str):
-				obj += end
-				
-		
+	def _process_obj(self, obj):
+		if isinstance(obj, LogFormat):
+			info = {}
+			info.update(obj.get_info())
+			info['type'] = obj.get_type()
+			info['val'] = obj.get_val()
+			return info
 			
+		if isinstance(obj, Player):
+			pass
+			
+		if isinstance(obj, GameObject):
+			info = {}
+			info['type'] = 'obj'
+			info['val'] = obj._id
+			return info
+			
+		if isinstance(obj, Typed):
+			return {'type':obj.get_type(), 'val':str(obj)}
+		return {'type':obj.__class__.__name__, 'val':str(obj)}
+	
+	def write(self, *objs, end='\n', player=None):
+	
+		if len(end):
+			objs.append(end)
+	
+		objs = [self._process_obj(obj) for obj in objs]
 		
-		obj += end
+		if self.level is not None:
+			line = {'level':self.level, 'line':objs}
+		
 		if self.in_transaction():
 			if player is None:
 				for collector in self.collectors.values():
-					collector.append(obj)
+					collector.append(line)
 				return
-			return self.collectors[player].append(obj)
-		self.update(obj, player=player)
-		if self.stdout:
-			print(obj, end='')
+			return self.collectors[player].append(line)
+		self.update(line, player=player)
+	
+	def writef(self, txt, *objs, end='\n', player=None):
+		raise NotImplementedError # TODO
 	
 	def update(self, obj, player=None):
 		
@@ -115,30 +129,46 @@ class GameLogger(Transactionable):
 			log.append(obj)
 	
 	def pull(self, player):
-		log = ''.join(self.updates[player])
+		log = self.updates[player].copy()
 		self.updates[player].clear()
 		return log
 	
 	def get_full(self, player=None):
 		if player is not None:
-			return ''.join(self.logs[player])
-		return adict({p: ''.join(self.logs[p]) for p in self.logs})
+			return self.logs[player].copy()
+		return adict({p: self.logs[p].copy() for p in self.logs})
 
 
 class LogFormat(Typed):
+	
+	def __init__(self, obj_type=None):
+		if obj_type is None:
+			obj_type = self.__class__.__name__
+		super().__init__(obj_type)
+	
+	def get_val(self):
+		raise NotImplementedError
 	
 	def get_info(self): # dev can provide frontend with format instructions, this is added to the info for each line in the log using this LogFormat
 		return tdict() # by default no additional info is sent
 
 class LogWarning(LogFormat):
 	
-	def get_info(self):
-		return tdict(color='yellow') # example
+	def __init__(self, msg):
+		super().__init__('Warning')
+		self.val = msg
+		
+	# def get_info(self):
+	# 	return tdict(color='yellow') # example
 
 class LogError(LogFormat):
+	
+	def __init__(self, msg):
+		super().__init__('Error')
+		self.val = msg
 
-	def get_info(self):
-		return tdict(color='red') # example
+	# def get_info(self):
+	# 	return tdict(color='red') # example
 
 # TODO: add formats for headings, lists, maybe images, ...
 # TODO: make sure frontend can handle some basic/standard format instructions
