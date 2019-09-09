@@ -4,6 +4,7 @@ from .object import GameObject
 from ..structures import Transactionable
 from collections import deque
 from ..mixins import Named, Typed
+from ..util import Player
 
 '''
 log formatting:
@@ -14,32 +15,33 @@ log formatting:
 
 
 class GameLogger(Transactionable):
-	def __init__(self, players, indents=True):
+	def __init__(self, players, indents=True, debug=False):
 		self.logs = tdict({p: deque() for p in players})
 		self.updates = tdict({p: deque() for p in players})
 		self.collectors = None
+		self.debug = False
 		
 		self.level = 0 if indents else None
 	
-	def save_state(self):
-		state = {
+	def __getstate__(self):
+		data = {
 			'logs': {k: list(v) for k, v in self.logs.items()},
 			'updates': {k: list(v) for k, v in self.updates.items()},
 		}
 		if self.collectors is not None:
-			state['collectors'] = {k: list(v) for k, v in self.collectors.items()}
-		return state
+			data['collectors'] = {k: list(v) for k, v in self.collectors.items()}
+		return data
 	
-	def load_state(self, data):
-		self.logs = tdict(data['logs'])
-		self.updates = adict(data['updates'])
-		if 'collectors' in data:
-			self.collectors = adict(data['collectors'])
+	def __setstate__(self, state):
+		self.logs = tdict(state['logs'])
+		self.updates = tdict(state['updates'])
+		if 'collectors' in state:
+			self.collectors = tdict(state['collectors'])
 	
 	def begin(self):
 		if self.in_transaction():
 			self.abort()
-		self.collectors = adict({p: deque() for p in self.updates.keys()})
+		self.collectors = tdict({p: deque() for p in self.updates.keys()})
 	
 	def in_transaction(self):
 		return self.collectors is not None
@@ -97,15 +99,22 @@ class GameLogger(Transactionable):
 			return {'type':obj.get_type(), 'val':str(obj)}
 		return {'type':obj.__class__.__name__, 'val':str(obj)}
 	
-	def write(self, *objs, end='\n', player=None):
+	def write(self, *objs, end='\n', indent_level=None, player=None, debug=False):
+	
+		if debug and not self.debug: # Dont write a debug line unless specified
+			return
+	
+		if indent_level is None:
+			indent_level = self.level
 	
 		if len(end):
 			objs.append(end)
 	
 		objs = [self._process_obj(obj) for obj in objs]
 		
-		if self.level is not None:
-			line = {'level':self.level, 'line':objs}
+		line = {'line':objs}
+		if indent_level is not None:
+			line['level'] = indent_level
 		
 		if self.in_transaction():
 			if player is None:
@@ -136,7 +145,7 @@ class GameLogger(Transactionable):
 	def get_full(self, player=None):
 		if player is not None:
 			return self.logs[player].copy()
-		return adict({p: self.logs[p].copy() for p in self.logs})
+		return tdict({p: self.logs[p].copy() for p in self.logs})
 
 
 class LogFormat(Typed):

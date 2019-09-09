@@ -2,17 +2,7 @@
 from ..containers import tdict, tset, tlist
 from .object import GameObject
 from ..mixins import Typed
-
-def jsonify_actions(obj):
-	if isinstance(obj, (list, tlist)):
-		return [jsonify_actions(o) for o in obj]
-	if isinstance(obj, (dict, tdict)):
-		return {jsonify_actions(k):jsonify_actions(v) for k,v in obj.items()}
-	if isinstance(obj, tuple):
-		return [jsonify_actions(o) for o in obj]
-	if isinstance(obj, (set, tset)):
-		return {'set': [jsonify_actions(o) for o in obj]}
-	return obj
+from ..util import jsonify
 
 def process_actions(raw): # getting a raw encoded set in, outputting a set ready to be jsonified
 	
@@ -32,7 +22,7 @@ def process_actions(raw): # getting a raw encoded set in, outputting a set ready
 	
 
 
-class GameOutput(object): # created and returned in phases
+class GameActions(object): # created and returned in phases
 	
 	def __init__(self):
 		self.reset()
@@ -46,9 +36,9 @@ class GameOutput(object): # created and returned in phases
 		self.info = tdict()
 	
 	def save_options(self, actions, desc=None): # each action group/option can have its own description
-		option = {'actions': actions}
+		option = tdict(actions=actions)
 		if desc is not None:
-			option['desc'] = desc
+			option.desc = desc
 		self.options.append(option)
 	
 	def set_status(self, status): # these instructions are global, for all action groups/options
@@ -61,7 +51,7 @@ class GameOutput(object): # created and returned in phases
 		return len(self.options)
 	
 	def __add__(self, other):
-		new = GameOutput()
+		new = GameActions()
 		new.options = self.options + other.options
 		new.status = self.status
 		if self.status is None:
@@ -76,11 +66,13 @@ class GameOutput(object): # created and returned in phases
 			self.status = self.options[0]['desc']
 			del self.options[0]['desc']
 		
-		options = {'actions': jsonify_actions(self.options)}
+		options = tdict(actions=self.options)
 		
 		if self.status is not None:
-			options['status'] = str(self.status)
+			options.status = str(self.status)
 			
+		options.info = self.info
+		
 		return options
 
 
