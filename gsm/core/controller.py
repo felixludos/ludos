@@ -3,6 +3,7 @@ import sys, os
 import json
 import random
 import traceback
+import yaml
 
 from ..containers import tdict, tset, tlist
 from .actions import InvalidAction
@@ -12,6 +13,7 @@ from .table import GameTable
 from ..control_flow import create_gamestate
 from ..mixins import Named, Typed
 from ..signals import PhaseComplete, PhaseInterrupt, GameOver, ClosedRegistryError, MissingType
+from ..util import unjsonify
 
 # TODO: include a RNG directly in the controller?
 
@@ -26,15 +28,20 @@ class GameController(tdict):
 		self.table = None
 		self.active_players = None
 		self.phase_stack = None
-		self.players = tset()
+		self.players = None
 		self.in_progress = False
+		self.config_files = tdict()
 		
 		self.DEBUG = debug
 	
-	def register_obj_type(self, cls=None, name=None):
+	def register_config(self, name, path):
 		if self.in_progress:
 			raise ClosedRegistryError
-		self.table.register_obj_type(cls=cls, name=name)
+		self.config_files[name] = path
+	def register_obj_type(self, cls=None, name=None, required=None, visible=None):
+		if self.in_progress:
+			raise ClosedRegistryError
+		self.table.register_obj_type(cls=cls, name=name, required=required, visible=visible)
 	def register_phase(self, cls, name=None):
 		if self.in_progress:
 			raise ClosedRegistryError
@@ -73,31 +80,40 @@ class GameController(tdict):
 		self.seed = seed
 		random.seed(seed)
 		
+		config = self._load_config()
+		
 		self.end_info = None
+		self.players = self._create_players(config)
 		self.state = tdict()
 		self.log = GameLogger(tlist(p.name for p in self.players))
 		self.table = GameTable(tlist(p.name for p in self.players))
 		
-		self.phase_stack = self._set_phase_stack() # contains phase instances (potentially with phase specific data)
+		self.phase_stack = self._set_phase_stack(config) # contains phase instances (potentially with phase specific data)
 		
-		self.active_players = self._init_game() # returns output like step
+		self._init_game(config) # builds maps/objects
 		
 		self.in_progress = True
 		
-		self.current = None
-		
 		return self._step(player)
 	
-	# must be implemented
-	def _create_players(self):
+	def _load_config(self):
+		config = tdict()
+		
+		for name, path in self.config_files.items():
+			config[name] = unjsonify(yaml.load(open(path, 'r')))
+			
+		return config
+	
+	# must be implemented - should return a tlist
+	def _create_players(self, config): # TODO: add system for dealing with initial player order
 		raise NotImplementedError
 	
-	# must be implemented to define initial phase sequence - usually ending in End Phase
-	def _set_phase_stack(self):
+	# must be implemented to define initial phase sequence
+	def _set_phase_stack(self, config): # should be in reverse order (returns a tlist stack)
 		return tlist()
 	
-	# This function is implemented by dev to initialize the gamestate and return the game phase sequence
-	def _init_game(self): # set phase_stack (with instances of phases), returns output like step
+	# This function is implemented by dev to initialize the gamestate
+	def _init_game(self, config):
 		raise NotImplementedError
 	
 	def _end_game(self): # return info to be sent at the end of the game
@@ -108,6 +124,8 @@ class GameController(tdict):
 	
 	def _step(self, player, action=None): # returns python objs
 		
+		player = self.get_player(player)
+		
 		try:
 			
 			if not len(self.phase_stack):
@@ -117,7 +135,10 @@ class GameController(tdict):
 			assert self.active_players is not None, 'No players are set to active'
 			
 			if player not in self.active_players:
-				pass  # send waiting_for msg
+				return {
+					'waiting_for': list(self.active_players.keys()),
+					'table': self.table.pull(player),
+				}
 			
 			# check validity of action
 			if not self.active_players[player].verify(action):
@@ -133,10 +154,17 @@ class GameController(tdict):
 				phase = self.phase_stack.pop()
 				try:
 					phase.execute(self, action, player)
+					# get next action
+					out = phase.encode(self)
 				except PhaseComplete:
 					pass
 				except PhaseInterrupt as intr:
-					self.phase_stack.append(intr.get_phase())
+					if intr.stacks():
+						self.phase_stack.append(phase) # keep current phase around
+					new = intr.get_phase()
+					if new in self._phases:
+						new = self._get_phase(new)()
+					self.phase_stack.append(new)
 				else:
 					self.phase_stack.append(phase)
 					break
@@ -144,16 +172,14 @@ class GameController(tdict):
 			if not len(self.phase_stack):
 				raise GameOver
 			
-			# get next action
-			out = self.phase_stack[-1].encode(self)
-			
 		except GameOver:
 			
 			if self.end_info is None:
 				self.end_info = self._end_game()
 				
 			msg = {
-				'end': self.end_info,
+				'end': self.end_info, # TODO: maybe allow dev to give each player a unique end game info
+				'table': self.table.pull(),
 			}
 			
 		except Exception as e:
@@ -164,7 +190,8 @@ class GameController(tdict):
 				'error': {
 					'type': e.__class__.__name__,
 					'msg': traceback.format_exception(*sys.exc_info()),
-				}
+				},
+				'table': self.table.pull(player),
 			}
 			
 		else:
@@ -177,18 +204,25 @@ class GameController(tdict):
 			else:
 				msg = {'waiting_for': list(out.keys())}
 			
-			msg['table'] = self.table.pull()
-		
+			msg['table'] = self.table.pull(player)
+			
+			self.active_players = out
+			
 		return msg
 	
 	def _get_phase(self, name):
 		return self._phases[name]
 	
-	def get_table(self, player):
-		raise NotImplementedError
+	def get_table(self, player=None):
+		return self.table.pull(player)
 	
 	def get_log(self, player):
 		return self.log.get_full(player)
+	
+	def get_player(self, name):
+		for p in self.players:
+			if p.name == name:
+				return p
 	
 	def create_object(self, obj_type, visible=None, ID=None, **props):
 		return self.table.create(obj_type, visible=visible, ID=ID, **props)

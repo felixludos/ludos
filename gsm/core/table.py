@@ -1,9 +1,10 @@
 
 from ..structures import Transactionable
 from ..containers import tdict, tset, tlist
-from ..signals import MissingType
+from ..signals import MissingTypeError, MissingValueError, MissingObjectError
 
 from .object import GameObject
+from .. import util
 
 class GameTable(Transactionable):
 	
@@ -41,19 +42,19 @@ class GameTable(Transactionable):
 		self.table.abort()
 		
 	# IMPORTANT: user can optionally register their own defined subclasses of GameObject here for them to be used
-	def register_obj_type(self, cls=None, name=None):
+	def register_obj_type(self, cls=None, name=None, required=None, visible=None):
 		if cls is None:
 			assert name is not None, 'Must provide either a name or class'
 			cls = GameObject
 		elif name is None:
 			name = cls.__class__.__name__
-		self.obj_types[name] = cls
+		self.obj_types[name] = tdict(cls=cls,
+		                             reqs=required, # props required for creating object
+		                             visible=visible) # props visible to all players always (regardless of obj.visible)
 		
-	def _get_type(self, obj_type=None):
-		if obj_type is None:
-			return GameObject
-		elif obj_type not in self.obj_types:
-			return obj_type
+	def _get_type_info(self, obj_type):
+		if obj_type not in self.obj_types:
+			raise MissingObjectError(obj_type)
 		return self.obj_types[obj_type]
 		
 	# IMPORTANT: used to check whether object is still valid
@@ -61,18 +62,23 @@ class GameTable(Transactionable):
 		return key in self.table
 		
 	# IMPORTANT: user should use this function to create new all game objects
-	def create(self, obj_type, visible=None, ID=None, **kwargs):
+	def create(self, obj_type, visible=None, ID=None, **props):
 		
 		if visible is None: # by default visible to all players
 			visible = tset(self.players)
 		
-		otype = self._get_type(obj_type)
+		info = self._get_type(obj_type)
+		
+		if info.reqs is not None:
+			for req in info.reqs:
+				if req not in props:
+					raise MissingValueError(obj_type, req, *info.reqs)
 		
 		if ID is None:
 			ID = self.ID_counter
 			self.ID_counter += 1
 		
-		obj = otype(ID=ID, obj_type=obj_type, visible=visible, **kwargs)
+		obj = info.cls(ID=ID, obj_type=obj_type, visible=visible, **props)
 		
 		self.table[obj._id] = obj
 		
@@ -89,8 +95,18 @@ class GameTable(Transactionable):
 	def get_types(self):
 		return self.obj_types.keys()
 	
-	def pull(self):
-		return self.table
+	def pull(self, player=None): # returns jsonified obj
+		tbl = util.jsonify(self.table)
+		if player is not None:
+			self._privatize(tbl, player)
+		return tbl
+	def _privatize(self, tbl, player): # tbl must be a deep copy of self.table
+		
+		for ID, obj in tbl:
+			for k, v in obj.items():
+				allowed = self._get_type_info(k['obj_type']).visible
+				if k != 'obj_type' and k != 'visible' and player not in obj['visible'] and (allowed is None or k not in allowed):
+					del obj[k] # remove information not permitted
 	
 	def __getstate__(self):
 		
@@ -126,4 +142,7 @@ class GameTable(Transactionable):
 	
 	def __delitem__(self, key):
 		del self.table[key]
+		
+	def __contains__(self, item):
+		return item in self.table
 

@@ -61,7 +61,7 @@ class GameActions(object): # created and returned in phases
 	def get_info(self):
 		return self.info
 	
-	def pull(self):
+	def pull(self): # returns jsonified obj
 		if self.status is None and len(self.options) == 1 and 'desc' in self.options[0]:
 			self.status = self.options[0]['desc']
 			del self.options[0]['desc']
@@ -73,7 +73,7 @@ class GameActions(object): # created and returned in phases
 			
 		options.info = self.info
 		
-		return options
+		return jsonify(options)
 
 
 # Advanced action queries

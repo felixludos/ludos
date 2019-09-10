@@ -15,8 +15,4 @@ class GamePhase(Named, tdict):
 		raise NotImplementedError
 	
 	def encode(self, C): # by default no actions are necessary
-		raise PhaseComplete # otherwise this should return a GameActions instance
-
-
-class EndPhase(GamePhase):
-	pass
+		raise PhaseComplete # this should usually return a GameActions instance
