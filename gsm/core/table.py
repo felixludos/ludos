@@ -8,18 +8,17 @@ from .. import util
 
 class GameTable(Transactionable):
 	
-	def __init__(self, players):
+	def __init__(self):
 		super().__init__()
 		
-		self.players = players
 		self._in_transaction = False
 		self.obj_types = tdict()
-		
-		self.reset()
 	
-	def reset(self):
+	def reset(self, players):
 		self.table = tdict()
 		self.ID_counter = 0
+		
+		self.players = players
 	
 	def in_transaction(self):
 		return self._in_transaction

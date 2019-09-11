@@ -149,8 +149,11 @@ class tdict(Container, OrderedDict):
 		state = {}
 		data = {}
 		for key, value in self.items():
-			if isinstance(value, Container):
+			try:
 				value = value.__getstate__()
+			except AttributeError:
+				pass
+			
 			data[key] = value
 		
 		state['_data'] = data
@@ -263,8 +266,10 @@ class tlist(Container, list):
 		state = {}
 		data = []
 		for element in iter(self):
-			if isinstance(element, Container):
+			try:
 				element = element.__getstate__()
+			except AttributeError:
+				pass
 			data.append(element)
 		
 		state['_data'] = data
@@ -346,8 +351,10 @@ class tlist(Container, list):
 		self.signal()
 		self._data.reverse()
 		
-	def pop(self, index):
+	def pop(self, index=None):
 		self.signal()
+		if index is None:
+			return self._data.pop()
 		return self._data.pop(index)
 		
 	def __len__(self):
@@ -382,7 +389,7 @@ class tlist(Container, list):
 	def __str__(self):
 		return '[{}]'.format(', '.join(map(str, self)))
 	
-class tset(Container):
+class tset(Container, set):
 	
 	def __init__(self, iterable=[], _tracker=None):
 		super().__init__(tracker=_tracker)
@@ -429,8 +436,10 @@ class tset(Container):
 		state = {}
 		data = []
 		for x in iter(self):
-			if isinstance(x, Container):
+			try:
 				x = x.__getstate__()
+			except AttributeError:
+				pass
 			data.append(x)
 		
 		state['_data'] = {'set':data}

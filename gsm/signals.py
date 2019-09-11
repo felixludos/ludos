@@ -33,3 +33,17 @@ class MissingObjectError(Exception):
 class MissingValueError(Exception):
 	def __init__(self, typ, missing, *reqs):
 		super().__init__('{} is missing {}, requires a value for: {}'.format(typ, missing, ', '.join(reqs)))
+		
+		
+class InvalidAction(Exception):
+	def __init__(self, action):
+		super().__init__('{} is an invalid action'.format(str(action)))
+		
+class ActionMismatch(Exception):
+	pass
+
+class UnknownActionElement(Exception):
+	def __init__(self, obj):
+		super().__init__('Unknown action element: {}, type: {}'.format(str(obj), type(obj)))
+		self.obj = obj
+

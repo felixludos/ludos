@@ -4,6 +4,7 @@ gsm/__init__.py
 gsm/containers.py
 gsm/control_flow.py
 gsm/interface.py
+gsm/mixins.py
 gsm/persistence.py
 gsm/signals.py
 gsm/util.py

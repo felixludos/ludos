@@ -15,11 +15,11 @@ log formatting:
 
 
 class GameLogger(Transactionable):
-	def __init__(self, players, indents=True, debug=False):
+	def __init__(self, players=None, indents=True, debug=False):
 		self.logs = tdict({p: deque() for p in players})
 		self.updates = tdict({p: deque() for p in players})
 		self.collectors = None
-		self.debug = False
+		self.debug = debug
 		
 		self.level = 0 if indents else None
 	

@@ -1,6 +1,7 @@
 
-from gsm import GamePhase, GameActions
-
+import numpy as np
+from gsm import GamePhase, GameActions, GameOver
+from gsm import tset, tdict, tlist
 
 class TurnPhase(GamePhase):
 	
@@ -15,7 +16,7 @@ class TurnPhase(GamePhase):
 			
 			C.state.map[action] = player.val
 			
-			row, col = action
+			row, col = map(int, action)
 			
 			C.create_object('tick', row=row, col=col,
 			                symbol=player.symbol, player=player.name)
@@ -23,9 +24,44 @@ class TurnPhase(GamePhase):
 			C.log.write(player, 'places at: {}, {}'.format(*action))
 			
 			# check for victory
+			L = C.state.map.shape[0]
 			
 			# check rows
 			sums = C.state.map.sum(0)
+			
+			if (sums == L).any():
+				C.state.winner = 1
+				raise GameOver
+			elif (sums == -L).any():
+				C.state.winner = -1
+				raise GameOver
+			
+			# check cols
+			sums = C.state.map.sum(1)
+			
+			if (sums == L).any():
+				C.state.winner = 1
+				raise GameOver
+			elif (sums == -L).any():
+				C.state.winner = -1
+				raise GameOver
+			
+			# check diag
+			diag = np.diag(C.state.map).sum()
+			if diag == L:
+				C.state.winner = 1
+				raise GameOver
+			elif diag == -L:
+				C.state.winner = -1
+				raise GameOver
+			
+			diag = np.diag(np.fliplr(C.state.map)).sum()
+			if diag == L:
+				C.state.winner = 1
+				raise GameOver
+			elif diag == -L:
+				C.state.winner = -1
+				raise GameOver
 			
 	
 	def encode(self, C):
@@ -34,10 +70,18 @@ class TurnPhase(GamePhase):
 		
 		out = GameActions()
 		
+		L = C.state.map.shape[0]
 		
+		r, c = np.mgrid[0:L, 0:L]
+		free = C.state.map == 0
 		
-		return tdict({player:out})
+		# check for draw
+		if free.sum() == 0:
+			C.state.winner = None
+			raise GameOver
 		
-		pass
+		out.save_options(tset(zip(r[free], c[free])), desc='Place a tick into one of these coords (row, col)')
+		
+		return tdict({player.name:out})
 
 

@@ -1,8 +1,9 @@
 import sys, os
+import numpy as np
 import gsm
 from gsm import tdict, tlist, tset
 
-from .phases import TurnPhase
+from phases import TurnPhase
 
 class TicTacToe(gsm.GameController):
 	
@@ -12,23 +13,20 @@ class TicTacToe(gsm.GameController):
 		# register config files
 		self.register_config('basic', 'config/basics.yaml')
 		
+		# register players
+		self.register_player('Player1', val=1)
+		self.register_player('Player2', val=-1)
+		
 		# register game object types
 		self.register_obj_type(name='tick',
 		                       required={'row', 'col',
 		                                 'symbol', 'player'},
 		                       visible={'row', 'col', # all properties are always visible to all players -> full information game
-		                                'symbol', 'player'})
+		                                'symbol', 'player'}
+		                       )
 		
-		# register phases
+		# register possible phases
 		self.register_phase(name='turn', cls=TurnPhase)
-	
-		
-	def _create_players(self, config):
-		
-		return tlist([
-			Player('Player1', symbol=config.basics.characters.p1, val=1), # X
-			Player('Player2', symbol=config.basics.characters.p2, val=-1), # O
-		])
 	
 	def _set_phase_stack(self, config):
 		
@@ -36,7 +34,14 @@ class TicTacToe(gsm.GameController):
 	
 	def _init_game(self, config):
 		
-		side = config.basics.side_length
+		# update player props
+		
+		self.players[0].symbol = config.basic.characters.p1
+		self.players[1].symbol = config.basic.characters.p2
+		
+		# init state
+		
+		side = config.basic.side_length
 		
 		self.state.map = np.zeros((side, side), dtype=int)
 		
@@ -45,6 +50,9 @@ class TicTacToe(gsm.GameController):
 	def _end_game(self):
 		
 		val = self.state.winner
+		
+		if val is None:
+			return tdict(winner=None)
 		
 		for p in self.players:
 			if p.val == val:
