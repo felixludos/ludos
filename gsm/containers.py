@@ -3,62 +3,23 @@ import sys, os, time
 import random
 from itertools import chain
 from collections import OrderedDict
-from .structures import Transactionable
+from .mixins import Transactionable, Trackable, Savable
+from .util import pack_savable, unpack_savable
 
+# _primitives = (str, int, float, bool)
 
-_primitives = (str, int, float, bool)
-
-# class UnknownObject(Exception):
-# 	pass
-
-class Trackable(object):
-	
-	def __init__(self, tracker=None):
-		super().__init__()
-		self.__dict__['_tracker'] = tracker # usually should be set manually --> by GameObject
-		
-	def signal(self): # for tracking
-		if self._tracker is not None:
-			return self._tracker.signal()
-
-# _container_id = 0
-
-class Container(Trackable, Transactionable):
+class Container(Trackable, Transactionable, Savable):
 	def __init__(self, tracker=None):
 		super().__init__(tracker=tracker)
 		# global _container_id
 		# self._id = _container_id
 		# _container_id += 1
 	
-	# def __setattr__(self, key, item):
-	# 	if isinstance(item, (Container,type(None)) + _primitives):
-	# 		super().__setattr__(key, item)
-	# 	else:
-	# 		raise UnknownObject(key, item)
-	
-	def __setstate__(self, state):
-		for key, value in state.items():
-			if isinstance(value, dict) and '_type' in value:
-				info = value
-				value = eval(info['_type'] + '()')
-				del info['_type']
-				value.__setstate__(info)
-			self.__dict__[key] = value
-	
-	def __getstate__(self):
-		state = {}
-		for key, value in self.__dict__.items():
-			if isinstance(value, Container):
-				info = value.__getstate__()
-				info['_type'] = str(type(value).__name__)
-			else:
-				state[key] = value
-		return state
-	
-	def copy(self):
-		copy = type(self)()
+	def copy(self, track=False):
+		copy = type(self)(self._tracker)
 		copy.__setstate__(self.__getstate__())
-		copy._tracker = None
+		if not track:
+			copy._tracker = None
 		return copy
 
 class tdict(Container, OrderedDict):
@@ -147,40 +108,23 @@ class tdict(Container, OrderedDict):
 	
 	def __getstate__(self):
 		state = {}
-		data = {}
-		for key, value in self.items():
-			try:
-				value = value.__getstate__()
-			except AttributeError:
-				pass
-			
-			data[key] = value
+		state['_data'] = {key:pack_savable(value)
+		                  for key, value in self.items()}
 		
-		state['_data'] = data
 		if self._tracker is not None:
-			state['_tracker'] = True#self._tracker._id
+			state['_tracker'] = True
 		state['_order'] = list(iter(self))
-		state['_type'] = type(self).__name__
-		# state['_id'] = self._id
 		return state
 	
 	def __setstate__(self, state):
-		assert type(self).__name__ == state['_type'], 'invalid type: {}'.format(type(self).__name__)
+		# assert type(self).__name__ == state['_type'], 'invalid type: {}'.format(type(self).__name__)
 		
 		if '_tracker' in state:
 			assert self._tracker is not None, '_tracker must be set before calling __setstate__'
 		
-		data = state['_data']
+		self._data.clear()
 		for key in state['_order']:
-			value = data[key]
-			if isinstance(value, dict) and '_type' in value:
-				info = data[key]
-				# assert info['_type'] in _valid, 'invalid container type: {}'.format(info['_type'])
-				value = eval(info['_type'] + '()')
-				if '_tracker' in info:
-					value._tracker = self._tracker
-				value.__setstate__(info)
-			self._data[key] = value
+			self._data[key] = unpack_savable(state['_data'][key], tracker=self._tracker)
 		self.signal()
 	
 	def get(self, k):
@@ -263,37 +207,17 @@ class tlist(Container, list):
 		self._data = self._shadow
 	
 	def __getstate__(self):
-		state = {}
-		data = []
-		for element in iter(self):
-			try:
-				element = element.__getstate__()
-			except AttributeError:
-				pass
-			data.append(element)
-		
-		state['_data'] = data
+		state = {'_data':[pack_savable(elm) for elm in iter(self)]}
 		if self._tracker is not None:
 			state['_tracker'] = True  # self._tracker._id
-		state['_type'] = type(self).__name__
 		return state
 	
 	def __setstate__(self, state):
-		assert type(self).__name__ == state['_type'], 'invalid type: {}'.format(type(self).__name__)
-		
 		if '_tracker' in state:
 			assert self._tracker is not None, '_tracker must be set before calling __setstate__'
 		
-		# self._id = state['_id']
-		for element in state['_data']:
-			if isinstance(element, dict) and '_type' in element:
-				info = element
-				# assert info['_type'] in _valid, 'invalid container type: {}'.format(info['_type'])
-				element = eval(info['_type'] + '()')
-				if '_tracker' in info:
-					element._tracker = self._tracker
-				element.__setstate__(info)
-			self._data.append(element)
+		self._data.clear()
+		self._data.extend(unpack_savable(elm, tracker=self._tracker) for elm in state['_data'])
 		self.signal()
 	
 	def __getitem__(self, item):
@@ -433,36 +357,17 @@ class tset(Container, set):
 		self._data = self._shadow
 	
 	def __getstate__(self):
-		state = {}
-		data = []
-		for x in iter(self):
-			try:
-				x = x.__getstate__()
-			except AttributeError:
-				pass
-			data.append(x)
-		
-		state['_data'] = {'set':data}
+		state = {'_data': [pack_savable(elm) for elm in iter(self)]}
 		if self._tracker is not None:
-			state['_tracker'] = True
-		state['_type'] = type(self).__name__
+			state['_tracker'] = True  # self._tracker._id
 		return state
 	
 	def __setstate__(self, state):
-		assert type(self).__name__ == state['_type'], 'invalid type: {}'.format(type(self).__name__)
-		
 		if '_tracker' in state:
 			assert self._tracker is not None, '_tracker must be set before calling __setstate__'
 		
-		for element in state['_data']['set']:
-			if isinstance(element, dict) and '_type' in element:
-				info = element
-				# assert info['_type'] in _valid, 'invalid container type: {}'.format(info['_type'])
-				element = eval(info['_type'] + '()')
-				if '_tracker' in info:
-					element._tracker = self._tracker
-				element.__setstate__(info)
-			self._data[element] = None
+		self._data.clear()
+		self._data.update(unpack_savable(elm, tracker=self._tracker) for elm in state['_data'])
 		self.signal()
 
 	def __hash__(self):

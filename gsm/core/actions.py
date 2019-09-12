@@ -119,7 +119,7 @@ class GameActions(tdict): # created and returned in phases
 # Advanced action queries
 
 
-class ActionElement(Typed):
+class ActionElement(Typed, tdict):
 	
 	def encode(self):
 		raise NotImplementedError

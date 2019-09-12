@@ -1,8 +1,46 @@
 import yaml
 import numpy as np
 from .containers import tdict
-from .mixins import Named, Typed
+from .mixins import Named, Typed, Savable, Trackable
+from .signals import UnregisteredClassError, LoadInitFailureError
 from .containers import tdict, tset, tlist
+
+
+def pack_savable(obj):
+	try:
+		return {'_type':type(obj), '_data':obj.__getstate__()}
+	except AttributeError:
+		if isinstance(obj, np.ndarray):
+			return {'_type':'numpy.ndarray', '_data': obj.tolist(),
+			        '_dtype': obj.dtype}
+		assert isinstance(obj, (str, int, float, bool)), 'All objects must be Savable subclasses or numpy arrays, or primitives'
+		return obj
+
+def unpack_savable(data, init_fn=None, tracker=None):
+	if isinstance(data, dict) and '_type' in data:
+		if data['_type'] == 'numpy.ndarray':
+			return np.array(data['_data'], dtype=data['_dtype'])
+		
+		# try:
+		# 	cls = Savable._subclasses[data['_type']]
+		# except KeyError:
+		# 	raise UnregisteredClassError(name)
+		cls = Savable.get_cls(name)
+		
+		try:
+			obj = cls() if init_fn is None else init_fn(cls)
+		except TypeError:
+			raise LoadInitFailureError(data['_type'])
+	
+		if isinstance(obj, Trackable): # TODO: clean up
+			obj._tracker = tracker
+	
+		obj.__setstate__(data['_data'])
+		return obj
+	
+	assert isinstance(data, (str, int, float, bool)), 'All objects must be Savable subclasses or numpy arrays, or primitives: {}'.format(data)
+	
+	return data
 
 def jsonify(obj):
 	if isinstance(obj, (list, tlist)):
@@ -35,8 +73,8 @@ def load_config(path):
 	return unjsonify(yaml.load(open(path, 'r')))
 
 class Player(Named, Typed, tdict):
-	def __init__(self, name, **props):
-		super().__init__(name, self.__class__.__name__, **props)
+	def __init__(self, name=None, **props):
+		super().__init__(name=name, obj_type=self.__class__.__name__, **props)
 
 	def __hash__(self):
 		return hash(self.name)

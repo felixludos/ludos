@@ -1,5 +1,5 @@
 
-from ..structures import Transactionable
+from git.gsm.old.structures import Transactionable
 from ..containers import tdict, tset, tlist
 from ..signals import MissingTypeError, MissingValueError, MissingObjectError
 
@@ -13,6 +13,9 @@ class GameTable(Transactionable):
 		
 		self._in_transaction = False
 		self.obj_types = tdict()
+		self.players = None
+		self.table = None
+		self.ID_counter = None
 	
 	def reset(self, players):
 		self.table = tdict()
@@ -63,25 +66,33 @@ class GameTable(Transactionable):
 	# IMPORTANT: user should use this function to create new all game objects
 	def create(self, obj_type, visible=None, ID=None, **props):
 		
-		if visible is None: # by default visible to all players
-			visible = tset(self.players)
-		
 		info = self._get_type(obj_type)
 		
-		if info.reqs is not None:
-			for req in info.reqs:
-				if req not in props:
-					raise MissingValueError(obj_type, req, *info.reqs)
+		obj = self._create(info.cls, visible=visible, ID=ID, **props)
+		self._verify(info.reqs, obj)
+		
+		return obj
+	
+	# only used from loading (no check for reqs)
+	def _create(self, cls, ID=None, visible=None, **props):
+		if visible is None:  # by default visible to all players
+			visible = tset(self.players)
 		
 		if ID is None:
 			ID = self.ID_counter
 			self.ID_counter += 1
 		
-		obj = info.cls(ID=ID, obj_type=obj_type, visible=visible, **props)
+		obj = cls(ID=ID, obj_type=obj_type, visible=visible, **props)
 		
 		self.table[obj._id] = obj
 		
 		return obj
+	
+	def _verify(self, reqs, obj): # check that all requirements for a gameobject are satisfied
+		if reqs is not None:
+			for req in reqs:
+				if req not in obj:
+					raise MissingValueError(obj.get_type(), req, *reqs)
 	
 	# this function should usually be called automatically
 	def update(self, key, value):
@@ -111,12 +122,11 @@ class GameTable(Transactionable):
 		
 		data = {}
 		
+		data['players'] = self.players
 		data['obj_types'] = list(self.obj_types.keys())
 		data['ID_counter'] = self.ID_counter
-		data['table'] = {}
-		
-		for k, v in self.table.items():
-			data[k] = v.obj_type, v.__getstate__()
+		data['table'] = {k:v.__getstate__()
+		                 for k, v in self.table.items()}
 		
 		return data
 	
@@ -125,11 +135,13 @@ class GameTable(Transactionable):
 			if obj_type not in self.obj_types:
 				raise MissingType(self, obj_type)
 		
-		self.reset()
+		self.reset(state['players'])
 		
-		for k, (t, x) in state['table'].items():
-			self.table[k] = self.create(t)
+		for k, x in state['table'].items():
+			info = self._get_type_info(x['_data']['obj_type']) # works because all elements in table are GameObjects --> tdict
+			self.table[k] = self._create(info.cls)
 			self.table[k].__setstate__(x)
+			self._verify(info.reqs, self.table[k])
 			
 		self.ID_counter = state['ID_counter']
 	

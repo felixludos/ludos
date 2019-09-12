@@ -1,7 +1,7 @@
 
 from ..containers import tdict, tlist, tset
 from .object import GameObject
-from ..structures import Transactionable
+from git.gsm.old.structures import Transactionable
 from collections import deque
 from ..mixins import Named, Typed
 from ..util import Player
@@ -14,50 +14,14 @@ log formatting:
 '''
 
 
-class GameLogger(Transactionable):
-	def __init__(self, players=None, indents=True, debug=False):
-		self.logs = tdict({p: deque() for p in players})
-		self.updates = tdict({p: deque() for p in players})
+class GameLogger(tdict):
+	def __init__(self, players=[], indents=True, debug=False):
+		self.logs = tdict({p: tlist() for p in players})
+		self.recent = tdict({p: tlist() for p in players})
 		self.collectors = None
 		self.debug = debug
 		
 		self.level = 0 if indents else None
-	
-	def __getstate__(self):
-		data = {
-			'logs': {k: list(v) for k, v in self.logs.items()},
-			'updates': {k: list(v) for k, v in self.updates.items()},
-		}
-		if self.collectors is not None:
-			data['collectors'] = {k: list(v) for k, v in self.collectors.items()}
-		return data
-	
-	def __setstate__(self, state):
-		self.logs = tdict(state['logs'])
-		self.updates = tdict(state['updates'])
-		if 'collectors' in state:
-			self.collectors = tdict(state['collectors'])
-	
-	def begin(self):
-		if self.in_transaction():
-			self.abort()
-		self.collectors = tdict({p: deque() for p in self.updates.keys()})
-	
-	def in_transaction(self):
-		return self.collectors is not None
-	
-	def commit(self):
-		if not self.in_transaction():
-			return
-		collectors = self.collectors
-		self.collectors = None
-		for p, objs in collectors.items():
-			self.update_all(objs, player=p)
-	
-	def abort(self):
-		if not self.in_transaction():
-			return
-		self.collectors = None
 	
 	def update_all(self, objs, player=None):
 		if player is not None:
@@ -79,25 +43,30 @@ class GameLogger(Transactionable):
 			self.level = max(self.level-n, 0)
 	
 	def _process_obj(self, obj):
+		info = tdict()
 		if isinstance(obj, LogFormat):
-			info = {}
 			info.update(obj.get_info())
-			info['type'] = obj.get_type()
-			info['val'] = obj.get_val()
-			return info
+			info.type = obj.get_type()
+			info.val = obj.get_val()
 			
-		if isinstance(obj, Player):
-			pass
+		elif isinstance(obj, Player):
+			info.type = 'player'
+			info.val = obj.name
 			
-		if isinstance(obj, GameObject):
-			info = {}
-			info['type'] = 'obj'
-			info['val'] = obj._id
-			return info
+		elif isinstance(obj, GameObject):
+			info.type = 'obj'
+			info.obj_type = obj.get_type()
+			info.val = obj._id
 			
-		if isinstance(obj, Typed):
-			return {'type':obj.get_type(), 'val':str(obj)}
-		return {'type':obj.__class__.__name__, 'val':str(obj)}
+		elif isinstance(obj, Typed):
+			info.type = obj.get_type()
+			info.val = str(obj)
+			
+		else:
+			info.type = obj.__class__.__name__
+			info.val = str(obj)
+			
+		return info
 	
 	def write(self, *objs, end='\n', indent_level=None, player=None, debug=False):
 	
@@ -110,32 +79,25 @@ class GameLogger(Transactionable):
 		if len(end):
 			objs.append(end)
 	
-		objs = [self._process_obj(obj) for obj in objs]
+		line = tdict(line=tlist(self._process_obj(obj) for obj in objs))
 		
-		line = {'line':objs}
 		if indent_level is not None:
-			line['level'] = indent_level
+			line.level = indent_level
 		
-		if self.in_transaction():
-			if player is None:
-				for collector in self.collectors.values():
-					collector.append(line)
-				return
-			return self.collectors[player].append(line)
-		self.update(line, player=player)
+		self._log(line, player=player)
 	
-	def writef(self, txt, *objs, end='\n', player=None):
+	def writef(self, txt, *objs, end='\n', player=None, **kwobjs):
 		raise NotImplementedError # TODO
 	
-	def update(self, obj, player=None):
+	def _log(self, obj, player=None):
 		
 		if player is not None:
-			self.updates[player].append(obj)
 			self.logs[player].append(obj)
-			return
-		for update, log in zip(self.updates.values(), self.logs.values()):
-			update.append(obj)
-			log.append(obj)
+			self.recent[player].append(obj)
+		else:
+			for log, recent in zip(self.logs.values(), self.recent.values()):
+				log.append(obj)
+				recent.append(obj)
 	
 	def pull(self, player):
 		log = self.updates[player].copy()

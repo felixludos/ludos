@@ -21,6 +21,9 @@ from ..util import unjsonify, Player
 # TODO: get_status() returns current image, without having to recompute image (cache current image)
 # TODO: for saving GameActions must have a __getstate__ and __setstate__
 # TODO: TEST saving/loading extensively!
+# TODO: implement interface for running/testing games in jupyter
+
+# TODO: get docs started with Read the Docs using Sphinx
 
 class GameController(tdict):
 	
@@ -91,6 +94,8 @@ class GameController(tdict):
 		config = self._load_config()
 		
 		self.end_info = None
+		self.active_players = None
+		
 		self.state = tdict()
 		self.log = GameLogger(tlist(p.name for p in self.players))
 		self.table.reset(tlist(p.name for p in self.players))
@@ -134,10 +139,7 @@ class GameController(tdict):
 			if not len(self.phase_stack):
 				raise GameOver
 			
-			if action is not None:
-			
-				# check validity of player
-				assert self.active_players is not None, 'No players are set to active'
+			if self.active_players is not None:
 				
 				if player not in self.active_players:
 					return {
@@ -147,6 +149,9 @@ class GameController(tdict):
 				
 				# check validity of action
 				action = self.active_players[player].verify(action)
+			
+			else:
+				assert action is None, 'there shouldnt be an action if the game hasnt started'
 			
 			# start transaction
 			self.begin()

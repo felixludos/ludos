@@ -19,7 +19,7 @@ class GameObject(Typed, tdict):
 		self.__dict__['_table'] = table
 		
 	
-	def signal(self): # signal to check if GameObject still exists
+	def signal(self, *args, **kwargs): # signal to check if GameObject still exists
 		if self._table is not None and self._table.check(self._id):
 			raise ZombieObjectException
 	
@@ -36,8 +36,6 @@ class GameObject(Typed, tdict):
 		return '{}(ID={})'.format(self.__class__.__name__, self._id)
 
 
-
-	
 	
 # Generator - for card decks
 
