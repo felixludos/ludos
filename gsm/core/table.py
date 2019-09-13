@@ -1,12 +1,12 @@
 
-from git.gsm.old.structures import Transactionable
-from ..containers import tdict, tset, tlist
+from ..mixins import Transactionable, Savable
+from ..containers import tdict, tset, tlist, pack_savable, unpack_savable
 from ..signals import MissingTypeError, MissingValueError, MissingObjectError
 
 from .object import GameObject
 from .. import util
 
-class GameTable(Transactionable):
+class GameTable(Transactionable, Savable):
 	
 	def __init__(self):
 		super().__init__()
@@ -71,10 +71,6 @@ class GameTable(Transactionable):
 		obj = self._create(info.cls, visible=visible, ID=ID, **props)
 		self._verify(info.reqs, obj)
 		
-		return obj
-	
-	# only used from loading (no check for reqs)
-	def _create(self, cls, ID=None, visible=None, **props):
 		if visible is None:  # by default visible to all players
 			visible = tset(self.players)
 		
@@ -125,8 +121,11 @@ class GameTable(Transactionable):
 		data['players'] = self.players
 		data['obj_types'] = list(self.obj_types.keys())
 		data['ID_counter'] = self.ID_counter
-		data['table'] = {k:v.__getstate__()
-		                 for k, v in self.table.items()}
+		if self.table is not None:
+			data['table'] = {k:pack_savable(v)
+			                 for k, v in self.table.items()}
+		else:
+			data['table'] = None
 		
 		return data
 	
@@ -137,11 +136,13 @@ class GameTable(Transactionable):
 		
 		self.reset(state['players'])
 		
-		for k, x in state['table'].items():
-			info = self._get_type_info(x['_data']['obj_type']) # works because all elements in table are GameObjects --> tdict
-			self.table[k] = self._create(info.cls)
-			self.table[k].__setstate__(x)
-			self._verify(info.reqs, self.table[k])
+		if state['table'] is not None:
+			for k, x in state['table'].items():
+				self.table[k] = unpack_savable(x)
+				self._verify(self._get_type_info(self.table[k].get_type()).reqs,
+				             self.table[k])
+		else:
+			state['table'] = None
 			
 		self.ID_counter = state['ID_counter']
 	

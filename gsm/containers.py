@@ -2,11 +2,62 @@
 import sys, os, time
 import random
 from itertools import chain
+import numpy as np
 from collections import OrderedDict
 from .mixins import Transactionable, Trackable, Savable
-from .util import pack_savable, unpack_savable
 
 # _primitives = (str, int, float, bool)
+
+def pack_savable(obj):
+	
+	if isinstance(obj, Savable):
+		return {'_type': type(obj), '_data': obj.__getstate__()}
+	if isinstance(obj, np.ndarray):
+		return {'_type': 'numpy.ndarray', '_data': obj.tolist(),
+		        '_dtype': obj.dtype}
+	
+	assert isinstance(obj,
+	                  (type(None), str, int, float,bool)
+	                  ), 'All objects must be Savable subclasses or numpy arrays, or primitives: {}'.format(type(obj))
+	return obj
+	
+	try:
+		return {'_type': type(obj), '_data': obj.__getstate__()}
+	except AttributeError:
+		if isinstance(obj, np.ndarray):
+			return {'_type': 'numpy.ndarray', '_data': obj.tolist(),
+			        '_dtype': obj.dtype}
+		assert isinstance(obj, (
+		type(None), str, int, float, bool)), 'All objects must be Savable subclasses or numpy arrays, or primitives: {}'.format(type(obj))
+		return obj
+
+
+def unpack_savable(data, init_fn=None, tracker=None):
+	if isinstance(data, dict) and '_type' in data:
+		if data['_type'] == 'numpy.ndarray':
+			return np.array(data['_data'], dtype=data['_dtype'])
+		
+		# try:
+		# 	cls = Savable._subclasses[data['_type']]
+		# except KeyError:
+		# 	raise UnregisteredClassError(name)
+		cls = Savable.get_cls(name)
+		
+		try:
+			obj = cls() if init_fn is None else init_fn(cls)
+		except TypeError:
+			raise LoadInitFailureError(data['_type'])
+		
+		if isinstance(obj, Trackable):  # TODO: clean up
+			obj._tracker = tracker
+		
+		obj.__setstate__(data['_data'])
+		return obj
+	
+	assert isinstance(data, (
+		type(None), str, int, float, bool)), 'All objects must be Savable subclasses or numpy arrays, or primitives: {}'.format(data)
+	
+	return data
 
 class Container(Trackable, Transactionable, Savable):
 	def __init__(self, tracker=None):
@@ -108,7 +159,7 @@ class tdict(Container, OrderedDict):
 	
 	def __getstate__(self):
 		state = {}
-		state['_data'] = {key:pack_savable(value)
+		state['_dict'] = {key:pack_savable(value)
 		                  for key, value in self.items()}
 		
 		if self._tracker is not None:
@@ -124,7 +175,7 @@ class tdict(Container, OrderedDict):
 		
 		self._data.clear()
 		for key in state['_order']:
-			self._data[key] = unpack_savable(state['_data'][key], tracker=self._tracker)
+			self._data[key] = unpack_savable(state['_dict'][key], tracker=self._tracker)
 		self.signal()
 	
 	def get(self, k):
@@ -207,7 +258,7 @@ class tlist(Container, list):
 		self._data = self._shadow
 	
 	def __getstate__(self):
-		state = {'_data':[pack_savable(elm) for elm in iter(self)]}
+		state = {'_elements':[pack_savable(elm) for elm in iter(self)]}
 		if self._tracker is not None:
 			state['_tracker'] = True  # self._tracker._id
 		return state
@@ -217,7 +268,7 @@ class tlist(Container, list):
 			assert self._tracker is not None, '_tracker must be set before calling __setstate__'
 		
 		self._data.clear()
-		self._data.extend(unpack_savable(elm, tracker=self._tracker) for elm in state['_data'])
+		self._data.extend(unpack_savable(elm, tracker=self._tracker) for elm in state['_elements'])
 		self.signal()
 	
 	def __getitem__(self, item):
@@ -357,7 +408,7 @@ class tset(Container, set):
 		self._data = self._shadow
 	
 	def __getstate__(self):
-		state = {'_data': [pack_savable(elm) for elm in iter(self)]}
+		state = {'_elements': [pack_savable(elm) for elm in iter(self)]}
 		if self._tracker is not None:
 			state['_tracker'] = True  # self._tracker._id
 		return state
@@ -367,7 +418,7 @@ class tset(Container, set):
 			assert self._tracker is not None, '_tracker must be set before calling __setstate__'
 		
 		self._data.clear()
-		self._data.update(unpack_savable(elm, tracker=self._tracker) for elm in state['_data'])
+		self._data.update(unpack_savable(elm, tracker=self._tracker) for elm in state['_elements'])
 		self.signal()
 
 	def __hash__(self):

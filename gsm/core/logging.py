@@ -1,8 +1,6 @@
 
 from ..containers import tdict, tlist, tset
 from .object import GameObject
-from git.gsm.old.structures import Transactionable
-from collections import deque
 from ..mixins import Named, Typed
 from ..util import Player
 
