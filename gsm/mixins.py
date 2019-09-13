@@ -9,10 +9,10 @@ class Savable(object):
 		super().__init_subclass__(**kwargs)
 		cls._subclasses[cls.__name__] = cls
 
-	@staticmethod
-	def get_cls(name):
+	@classmethod
+	def get_cls(cls, name):
 		try:
-			return _subclasses[name]
+			return cls._subclasses[name]
 		except KeyError:
 			raise UnregisteredClassError(name)
 
@@ -67,12 +67,12 @@ class Transactionable(object):
 	# 	return None if type is None else type.__name__ == 'AbortTransaction'
 
 
-class Trackable(object):
-	
-	def __init__(self, tracker=None, **kwargs):
-		super().__init__(**kwargs)
-		self.__dict__['_tracker'] = tracker  # usually should be set manually --> by GameObject
-	
-	def signal(self, *args, **kwargs):  # for tracking
-		if self._tracker is not None:
-			return self._tracker.signal(*args, **kwargs)
+# class Trackable(object):
+#
+# 	def __init__(self, tracker=None, **kwargs):
+# 		super().__init__(**kwargs)
+# 		self.__dict__['_tracker'] = tracker  # usually should be set manually --> by GameObject
+#
+# 	def signal(self, *args, **kwargs):  # for tracking
+# 		if self._tracker is not None:
+# 			return self._tracker.signal(*args, **kwargs)

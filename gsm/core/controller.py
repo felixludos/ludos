@@ -246,6 +246,10 @@ class GameController(tdict):
 		data = {}
 		
 		data['phases'] = list(self._phases.keys())
+		
+		# handle GameTable carefully to load registered GameObject types
+		data['table'] =
+		
 		data['state'] = super().__getstate__()
 		
 		return data
@@ -259,6 +263,8 @@ class GameController(tdict):
 			if name not in self._phases:
 				raise MissingType(self, name)
 			
+		# take special care when handling table
+		
 		super().__setstate__(state['state'])
 
 

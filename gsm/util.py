@@ -1,7 +1,7 @@
 import yaml
 import numpy as np
 from .containers import tdict
-from .mixins import Named, Typed, Savable, Trackable
+from .mixins import Named, Typed, Savable
 from .signals import UnregisteredClassError, LoadInitFailureError
 from .containers import tdict, tset, tlist
 

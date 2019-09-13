@@ -1,36 +1,29 @@
 
 from ..mixins import Named, Typed
-from ..containers import tdict, tset, tlist
+from ..containers import tdict, tset, tlist, unpack_savable, pack_savable
 
-class ZombieObjectException(Exception): # gets thrown when a SETTER is called from a GameObject even after it was removed from the game table
-	def __init__(self, obj):
-		super().__init__('{} has already beem removed from the GameTable'.format(repr(obj)))
 
 class GameObject(Typed, tdict):
 	
-	def __init__(self, ID, obj_type=None, table=None, visible=None, **kwargs):
+	def __init__(self, ID=None, obj_type=None, _table=None, visible=None, **kwargs):
 		
 		if obj_type is None: # default obj_type is name of the class
 			obj_type = self.__class__.__name__
 		
-		super().__init__(obj_type, visible=visible, _tracker=self, **kwargs) # all GameObjects are basically just tdicts with a obj_type and visible attrs and they can use a table to signal track changes
+		super().__init__(obj_type, visible=visible, **kwargs) # all GameObjects are basically just tdicts with a obj_type and visible attrs and they can use a table to signal track changes
 		
 		self.__dict__['_id'] = ID
-		self.__dict__['_table'] = table
+		self.__dict__['_table'] = _table
 		
+	def __getstate__(self):
+		state = super().__getstate__()
+		state['_id'] = self._id
+		return state
 	
-	def signal(self, *args, **kwargs): # signal to check if GameObject still exists
-		if self._table is not None and self._table.check(self._id):
-			raise ZombieObjectException
-	
-	def set_id(self, ID): # this is mostly to change the ID (not for initial set)
-		if self._table is not None and '_id' in self.__dict__ and self._id in self._table:
-			self._table.remove(self._id)
-		
-		self._id = ID
-		
-		if self._table is not None:
-			self._table.update(self._id, self)
+	def __setstate__(self, state):
+		self.__dict__['_id'] = state['_id']
+		del state['_id']
+		super().__setstate__(state)
 		
 	def __repr__(self):
 		return '{}(ID={})'.format(self.__class__.__name__, self._id)
@@ -47,6 +40,16 @@ class GameObjectGenerator(GameObject):
 		if objs is None:
 			objs = []
 		self.__dict__['_objs'] = objs
+		
+	def __getstate__(self):
+		state = super().__getstate__()
+		state['_objs'] = [pack_savable(obj) for obj in self._objs]
+		return state
+	
+	def __setstate__(self, state):
+		self.__dict__['_objs'] = [unpack_savable(data) for data in state['_objs']]
+		del state['_objs']
+		super().__setstate__(state)
 		
 	# should not be overridden, and usually not called by dev
 	def _registered(self, x):

@@ -128,26 +128,20 @@ class ActionElement(Typed, tdict):
 		raise NotImplementedError
 
 class FixedAction(ActionElement):
-	def __init__(self, val): # works for str, int, float
+	def __init__(self, val=None): # works for str, int, float, bool
 		super().__init__(type(val).__name__)
-		self.conv = type(val) # from string to type
 		self.val = val
 
 	def encode(self):
 		return tdict(val=str(self.val))
 	
 	def evaluate(self, q):
-		if self.conv is not None:
-			try:
-				q = self.conv(q)
-			except ValueError:
-				raise ActionMismatch
-		if q == self.val:
+		if q == str(self.val):
 			return self.val
 		raise ActionMismatch
 		
 class ObjectAction(ActionElement):
-	def __init__(self, obj):
+	def __init__(self, obj=None):
 		super().__init__('obj')
 		self.obj = obj
 		

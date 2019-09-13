@@ -63,3 +63,11 @@ class UnregisteredClassError(Exception):
 class LoadInitFailureError(Exception):
 	def __init__(self, obj_type):
 		super().__init__('An instance of {obj_type} was unable to load (make sure {obj_type}.__init__ doesnt have any required arguments)'.format(obj_type=obj_type))
+
+# game table errors
+
+# class ZombieObjectException(Exception): # gets thrown when a SETTER is called from a GameObject even after it was removed from the game table
+# 	def __init__(self, obj):
+# 		super().__init__('{} has already beem removed from the GameTable'.format(repr(obj)))
+
+

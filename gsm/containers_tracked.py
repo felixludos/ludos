@@ -4,68 +4,52 @@ import random
 from itertools import chain
 import numpy as np
 from collections import OrderedDict
-from .signals import LoadInitFailureError
-from .mixins import Transactionable, Savable
+from .mixins import Transactionable, Trackable, Savable
 
 # _primitives = (str, int, float, bool)
 
 def pack_savable(obj):
 	
 	if isinstance(obj, Savable):
-		return {'_type': type(obj).__name__, '_data': obj.__getstate__()}
+		return {'_type': type(obj), '_data': obj.__getstate__()}
 	if isinstance(obj, np.ndarray):
 		return {'_type': 'numpy.ndarray', '_data': obj.tolist(),
 		        '_dtype': obj.dtype}
 	
-	if isinstance(obj, tuple):
-		return {'_type':'tuple', '_entries':[pack_savable(o) for o in obj]}
-	# if isinstance(obj, dict):
-	# 	return {'_type': 'dict', '_pairs':{k:pack_savable(v) for k,v in obj.items()}}
-	# if isinstance(obj, list):
-	# 	return {'_type': 'list', '_entries':[pack_savable(o) for o in obj]}
-	# if isinstance(obj, set):
-	# 	return {'_type': 'set', '_elements':[pack_savable(o) for o in obj]}
-	
-	try:
-		assert isinstance(obj,
-		                  (type(None), str, int, float,bool)
-		                  ), 'All objects must be Savable subclasses or numpy arrays, or primitives: {}'.format(type(obj))
-	except Exception as e:
-		print(obj)
-		raise e
+	assert isinstance(obj,
+	                  (type(None), str, int, float,bool)
+	                  ), 'All objects must be Savable subclasses or numpy arrays, or primitives: {}'.format(type(obj))
 	return obj
 	
-	# try:
-	# 	return {'_type': type(obj).__name__, '_data': obj.__getstate__()}
-	# except AttributeError:
-	# 	if isinstance(obj, np.ndarray):
-	# 		return {'_type': 'numpy.ndarray', '_data': obj.tolist(),
-	# 		        '_dtype': obj.dtype}
-	# 	assert isinstance(obj, (
-	# 	type(None), str, int, float, bool)), 'All objects must be Savable subclasses or numpy arrays, or primitives: {}'.format(type(obj))
-	# 	return obj
+	try:
+		return {'_type': type(obj), '_data': obj.__getstate__()}
+	except AttributeError:
+		if isinstance(obj, np.ndarray):
+			return {'_type': 'numpy.ndarray', '_data': obj.tolist(),
+			        '_dtype': obj.dtype}
+		assert isinstance(obj, (
+		type(None), str, int, float, bool)), 'All objects must be Savable subclasses or numpy arrays, or primitives: {}'.format(type(obj))
+		return obj
 
 
-def unpack_savable(data, init_fn=None):
+def unpack_savable(data, init_fn=None, tracker=None):
 	if isinstance(data, dict) and '_type' in data:
 		if data['_type'] == 'numpy.ndarray':
 			return np.array(data['_data'], dtype=data['_dtype'])
 		
-		if data['_type'] == 'tuple':
-			return (unpack_savable(x) for x in data['_entries'])
-		# if data['_type'] == 'dict':
-		# 	return {k:unpack_savable(v) for k,v in data['_pairs'].items()}
-		# if data['_type'] == 'list':
-		# 	return [unpack_savable(x) for x in data['_entries']]
-		# if data['_type'] == 'set':
-		# 	return {unpack_savable(x) for x in data['_elements']}
-		
-		cls = Savable.get_cls(data['_type'])
+		# try:
+		# 	cls = Savable._subclasses[data['_type']]
+		# except KeyError:
+		# 	raise UnregisteredClassError(name)
+		cls = Savable.get_cls(name)
 		
 		try:
 			obj = cls() if init_fn is None else init_fn(cls)
 		except TypeError:
 			raise LoadInitFailureError(data['_type'])
+		
+		if isinstance(obj, Trackable):  # TODO: clean up
+			obj._tracker = tracker
 		
 		obj.__setstate__(data['_data'])
 		return obj
@@ -75,17 +59,23 @@ def unpack_savable(data, init_fn=None):
 	
 	return data
 
-class Container(Transactionable, Savable):
+class Container(Trackable, Transactionable, Savable):
+	def __init__(self, tracker=None):
+		super().__init__(tracker=tracker)
+		# global _container_id
+		# self._id = _container_id
+		# _container_id += 1
 	
-	def deepcopy(self):
-		copy = type(self)()
+	def copy(self, track=False):
+		copy = type(self)(self._tracker)
 		copy.__setstate__(self.__getstate__())
+		if not track:
+			copy._tracker = None
 		return copy
 
-
 class tdict(Container, OrderedDict):
-	def __init__(self, *args, **kwargs):
-		super().__init__()
+	def __init__(self, *args, _tracker=None, **kwargs):
+		super().__init__(tracker=_tracker)
 		self.__dict__['_data'] = OrderedDict(*args, **kwargs)
 		self.__dict__['_shadow'] = None
 		
@@ -124,19 +114,16 @@ class tdict(Container, OrderedDict):
 		self._data = self._shadow
 		
 	def update(self, other):
+		self.signal()
 		self._data.update(other)
 	def fromkeys(self, keys, value=None):
+		self.signal()
 		self._data.fromkeys(keys, value)
 		
 	def clear(self):
+		if len(self):
+			self.signal()
 		self._data.clear()
-	
-	def copy(self):
-		copy = type(self)()
-		copy._data = self._data.copy()
-		if self._shadow is not None:
-			copy._shadow = self._shadow.copy()
-		return copy
 	
 	def __len__(self):
 		return len(self._data)
@@ -161,35 +148,52 @@ class tdict(Container, OrderedDict):
 		return self._data.items()
 	
 	def pop(self, key):
+		self.signal()
 		return self._data.pop(key)
 	def popitem(self):
+		self.signal()
 		return self._data.popitem()
 	def move_to_end(self, key, last=True):
+		self.signal()
 		self._data.move_to_end(key, last)
 	
 	def __getstate__(self):
 		state = {}
-		state['_pairs'] = {key:pack_savable(value)
+		state['_dict'] = {key:pack_savable(value)
 		                  for key, value in self.items()}
 		
+		if self._tracker is not None:
+			state['_tracker'] = True
 		state['_order'] = list(iter(self))
 		return state
 	
 	def __setstate__(self, state):
+		# assert type(self).__name__ == state['_type'], 'invalid type: {}'.format(type(self).__name__)
+		
+		if '_tracker' in state:
+			assert self._tracker is not None, '_tracker must be set before calling __setstate__'
+		
 		self._data.clear()
 		for key in state['_order']:
-			self._data[key] = unpack_savable(state['_pairs'][key])
+			self._data[key] = unpack_savable(state['_dict'][key], tracker=self._tracker)
+		self.signal()
 	
 	def get(self, k):
 		return self._data.get(k)
 	def setdefault(self, key, default=None):
+		if key not in self:
+			self.signal()
 		self._data.setdefault(key, default)
 	
 	def __getitem__(self, item):
 		return self._data[item]
 	def __setitem__(self, key, value):
+		if isinstance(value, Container):
+			value._tracker = self._tracker
+		self.signal()
 		self._data[key] = value
 	def __delitem__(self, key):
+		self.signal()
 		del self._data[key]
 		
 	def __getattr__(self, item):
@@ -213,10 +217,10 @@ class tdict(Container, OrderedDict):
 	
 class tlist(Container, list):
 
-	def __init__(self, *args, **kwargs):
-		super().__init__()
-		self._data = list(*args, **kwargs)
-		# self.extend(iterable)
+	def __init__(self, iterable=[], _tracker=None):
+		super().__init__(tracker=_tracker)
+		self._data = list()
+		self.extend(iterable)
 		self._shadow = None
 	
 	def in_transaction(self):
@@ -253,26 +257,29 @@ class tlist(Container, list):
 		
 		self._data = self._shadow
 	
-	def copy(self):
-		copy = type(self)()
-		copy._data = self._data.copy()
-		if self._shadow is not None:
-			copy._shadow = self._shadow.copy()
-		return copy
-	
 	def __getstate__(self):
-		state = [pack_savable(elm) for elm in iter(self)]
+		state = {'_elements':[pack_savable(elm) for elm in iter(self)]}
+		if self._tracker is not None:
+			state['_tracker'] = True  # self._tracker._id
 		return state
 	
 	def __setstate__(self, state):
+		if '_tracker' in state:
+			assert self._tracker is not None, '_tracker must be set before calling __setstate__'
+		
 		self._data.clear()
-		self._data.extend(unpack_savable(elm) for elm in state)
+		self._data.extend(unpack_savable(elm, tracker=self._tracker) for elm in state['_elements'])
+		self.signal()
 	
 	def __getitem__(self, item):
 		return self._data[item]
 	def __setitem__(self, key, value):
+		if isinstance(value, Container):
+			value._tracker = self._tracker
+		self.signal()
 		self._data[key] = value
 	def __delitem__(self, idx):
+		self.signal()
 		del self._data[idx]
 		
 	def __hash__(self):
@@ -284,18 +291,30 @@ class tlist(Container, list):
 		return self._data.count(object)
 	
 	def append(self, item):
+		self.signal()
+		self._append(item)
+	
+	def _append(self, item):
+		if isinstance(item, Container):
+			item._tracker = self._tracker
 		return self._data.append(item)
 	
 	def __contains__(self, item):
 		return self._data.__contains__(item)
 	
 	def extend(self, iterable):
-		return self._data.extend(iterable)
+		self.signal()
+		for x in iterable:
+			self._append(x)
 		
 	def insert(self, index, object):
+		self.signal()
+		if isinstance(object, Container):
+			object._tracker = self._tracker
 		self._data.insert(index, object)
 		
 	def remove(self, value):
+		self.signal()
 		self._data.remove(value)
 		
 	def __iter__(self):
@@ -304,9 +323,11 @@ class tlist(Container, list):
 		return self._data.__reversed__()
 	
 	def reverse(self):
+		self.signal()
 		self._data.reverse()
 		
 	def pop(self, index=None):
+		self.signal()
 		if index is None:
 			return self._data.pop()
 		return self._data.pop(index)
@@ -315,9 +336,11 @@ class tlist(Container, list):
 		return len(self._data)
 		
 	def clear(self):
+		self.signal()
 		self._data.clear()
 		
 	def sort(self, key=None, reverse=False):
+		self.signal()
 		self._data.sort(key, reverse)
 		
 	def index(self, object, start=None, stop=None):
@@ -330,8 +353,10 @@ class tlist(Container, list):
 	def __add__(self, other):
 		return self._data.__add__(other)
 	def __iadd__(self, other):
+		self.signal()
 		self._data.__iadd__(other)
 	def __imul__(self, other):
+		self.signal()
 		self._data.__imul__(other)
 		
 	def __repr__(self):
@@ -341,11 +366,11 @@ class tlist(Container, list):
 	
 class tset(Container, set):
 	
-	def __init__(self, iterable=[]):
-		super().__init__()
+	def __init__(self, iterable=[], _tracker=None):
+		super().__init__(tracker=_tracker)
 		self._data = OrderedDict()
 		for x in iterable:
-			self.add(x)
+			self._add(x)
 		self._shadow = None
 	
 	def in_transaction(self):
@@ -382,20 +407,19 @@ class tset(Container, set):
 		
 		self._data = self._shadow
 	
-	def copy(self):
-		copy = type(self)()
-		copy._data = self._data.copy()
-		if self._shadow is not None:
-			copy._shadow = self._shadow.copy()
-		return copy
-	
 	def __getstate__(self):
-		state = [pack_savable(elm) for elm in iter(self)]
+		state = {'_elements': [pack_savable(elm) for elm in iter(self)]}
+		if self._tracker is not None:
+			state['_tracker'] = True  # self._tracker._id
 		return state
 	
 	def __setstate__(self, state):
+		if '_tracker' in state:
+			assert self._tracker is not None, '_tracker must be set before calling __setstate__'
+		
 		self._data.clear()
-		self._data.update(unpack_savable(elm) for elm in state)
+		self._data.update(unpack_savable(elm, tracker=self._tracker) for elm in state['_elements'])
+		self.signal()
 
 	def __hash__(self):
 		return id(self)
@@ -406,9 +430,9 @@ class tset(Container, set):
 		copy = self.copy()
 		for x in self:
 			if x in other:
-				copy.add(x)
+				copy._add(x)
 			else:
-				copy.remove(x)
+				copy._remove(x)
 		return copy
 	def __or__(self, other):
 		copy = self.copy()
@@ -418,9 +442,9 @@ class tset(Container, set):
 		copy = self.copy()
 		for x in list(other):
 			if x in other:
-				copy.add(x)
+				copy._add(x)
 			else:
-				copy.remove(x)
+				copy._remove(x)
 		return copy
 	def __sub__(self, other):
 		copy = self.copy()
@@ -472,26 +496,34 @@ class tset(Container, set):
 		return not self.issubset(other) and not self.issuperset(other)
 		
 	def __iand__(self, other):
+		self.signal()
 		for x in list(self):
 			if x not in other:
-				self.remove(x)
+				self._remove(x)
 	def __ior__(self, other):
+		self.signal()
 		self.update(other)
 	def __ixor__(self, other):
+		self.signal()
 		for x in other:
 			if x in self:
-				self.remove(x)
+				self._remove(x)
 			else:
 				self.add(x)
 	def __isub__(self, other):
+		self.signal()
 		for x in other:
 			if x in self:
-				self.remove(x)
+				self._remove(x)
 	
 	def pop(self):
+		self.signal()
 		return self._data.popitem()[0]
 	
 	def remove(self, item):
+		self.signal()
+		self._remove(item)
+	def _remove(self, item):
 		del self._data[item]
 		
 	def discard(self, item):
@@ -508,13 +540,21 @@ class tset(Container, set):
 		return iter(self._data)
 	
 	def clear(self):
+		self.signal()
 		return self._data.clear()
 	
 	def update(self, other):
+		self.signal()
 		for x in other:
-			self.add(x)
+			self._add(x)
 	
 	def add(self, item):
+		self.signal()
+		self._add(item)
+		
+	def _add(self, item):
+		if isinstance(item, Container):
+			item._tracker = self._tracker
 		self._data[item] = None
 		
 	def __repr__(self):
@@ -522,5 +562,29 @@ class tset(Container, set):
 
 	def __str__(self):
 		return '{' + ', '.join([str(x) for x in self]) + '}'
+
+
+# class GameState(Container):
+# 	pass
+#
+# class GameObject(Container):
+#
+# 	def __init__(self, name=None, obj_type=None, **kwargs):
+# 		super().__init__()
+# 		self.name = name
+# 		self.obj_type = obj_type
+# 		self.__dict__.update(kwargs)
+#
+# 		global _global_id
+# 		self._id = _global_id
+# 		_global_id += 1
+#
+# 	def __repr__(self):
+# 		return 'GameObject({})'.format(', '.join(['{}={}'.format(k, type(v).__name__ if isinstance(v,Container) else v)
+# 		                                          for k,v in self.__dict__.items()]))
+#
+# 	def __str__(self):
+# 		return self.name
+
 
 

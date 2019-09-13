@@ -14,6 +14,7 @@ log formatting:
 
 class GameLogger(tdict):
 	def __init__(self, players=[], indents=True, debug=False):
+		super().__init__()
 		self.logs = tdict({p: tlist() for p in players})
 		self.recent = tdict({p: tlist() for p in players})
 		self.collectors = None

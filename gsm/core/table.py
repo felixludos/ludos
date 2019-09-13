@@ -8,6 +8,14 @@ from .. import util
 
 class GameTable(Transactionable, Savable):
 	
+	# TODO: maybe use singleton to allow access to table instance for anything that has access to the class GameTable
+	# _instance = None
+	# def __new__(cls, *args, **kwargs):
+	# 	if cls._instance is None:
+	# 		obj = super().__new__(cls, *args, **kwargs)
+	# 		cls._instance = obj
+	# 	return cls._instance
+	
 	def __init__(self):
 		super().__init__()
 		
@@ -43,6 +51,7 @@ class GameTable(Transactionable, Savable):
 			return
 		self.table.abort()
 		
+		# TODO: move obj_type registry to the GameController (simplify loading)
 	# IMPORTANT: user can optionally register their own defined subclasses of GameObject here for them to be used
 	def register_obj_type(self, cls=None, name=None, required=None, visible=None):
 		if cls is None:
@@ -78,7 +87,7 @@ class GameTable(Transactionable, Savable):
 			ID = self.ID_counter
 			self.ID_counter += 1
 		
-		obj = cls(ID=ID, obj_type=obj_type, visible=visible, **props)
+		obj = cls(ID=ID, obj_type=obj_type, visible=visible, _table=self, **props)
 		
 		self.table[obj._id] = obj
 		
@@ -132,13 +141,14 @@ class GameTable(Transactionable, Savable):
 	def __setstate__(self, state):
 		for obj_type in state['obj_types']:
 			if obj_type not in self.obj_types:
-				raise MissingType(self, obj_type)
+				raise MissingTypeError(self, obj_type)
 		
 		self.reset(state['players'])
 		
 		if state['table'] is not None:
 			for k, x in state['table'].items():
 				self.table[k] = unpack_savable(x)
+				self.table[k].__dict__['_table'] = self
 				self._verify(self._get_type_info(self.table[k].get_type()).reqs,
 				             self.table[k])
 		else:
