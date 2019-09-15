@@ -20,7 +20,6 @@ class GameTable(Transactionable, Savable):
 		super().__init__()
 		
 		self._in_transaction = False
-		self.obj_types = tdict()
 		self.players = None
 		self.table = None
 		self.ID_counter = None
@@ -50,54 +49,10 @@ class GameTable(Transactionable, Savable):
 		if not self.in_transaction():
 			return
 		self.table.abort()
-		
-		# TODO: move obj_type registry to the GameController (simplify loading)
-	# IMPORTANT: user can optionally register their own defined subclasses of GameObject here for them to be used
-	def register_obj_type(self, cls=None, name=None, required=None, visible=None):
-		if cls is None:
-			assert name is not None, 'Must provide either a name or class'
-			cls = GameObject
-		elif name is None:
-			name = cls.__class__.__name__
-		self.obj_types[name] = tdict(cls=cls,
-		                             reqs=required, # props required for creating object
-		                             visible=visible) # props visible to all players always (regardless of obj.visible)
-		
-	def _get_type_info(self, obj_type):
-		if obj_type not in self.obj_types:
-			raise MissingObjectError(obj_type)
-		return self.obj_types[obj_type]
-		
+	
 	# IMPORTANT: used to check whether object is still valid
 	def check(self, key):
 		return key in self.table
-		
-	# IMPORTANT: user should use this function to create new all game objects
-	def create(self, obj_type, visible=None, ID=None, **props):
-		
-		info = self._get_type(obj_type)
-		
-		obj = self._create(info.cls, visible=visible, ID=ID, **props)
-		self._verify(info.reqs, obj)
-		
-		if visible is None:  # by default visible to all players
-			visible = tset(self.players)
-		
-		if ID is None:
-			ID = self.ID_counter
-			self.ID_counter += 1
-		
-		obj = cls(ID=ID, obj_type=obj_type, visible=visible, _table=self, **props)
-		
-		self.table[obj._id] = obj
-		
-		return obj
-	
-	def _verify(self, reqs, obj): # check that all requirements for a gameobject are satisfied
-		if reqs is not None:
-			for req in reqs:
-				if req not in obj:
-					raise MissingValueError(obj.get_type(), req, *reqs)
 	
 	# this function should usually be called automatically
 	def update(self, key, value):
@@ -106,9 +61,6 @@ class GameTable(Transactionable, Savable):
 	# IMPORTANT: user should use this function to create remove any game object
 	def remove(self, key):
 		del self.table[key]
-	
-	def get_types(self):
-		return self.obj_types.keys()
 	
 	def pull(self, player=None): # returns jsonified obj
 		tbl = util.jsonify(self.table)

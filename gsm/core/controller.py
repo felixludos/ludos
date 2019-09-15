@@ -10,9 +10,10 @@ from .actions import InvalidAction
 from .phase import GamePhase
 from .logging import GameLogger
 from .table import GameTable
+from .object import GameObject
 from ..control_flow import create_gamestate
 from ..mixins import Named, Typed
-from ..signals import PhaseComplete, PhaseInterrupt, GameOver, ClosedRegistryError, MissingTypeError
+from ..signals import PhaseComplete, PhaseInterrupt, GameOver, ClosedRegistryError, MissingTypeError, MissingValueError, MissingObjectError
 from ..util import unjsonify, Player
 
 # TODO: include a RNG directly in the controller?
@@ -22,14 +23,15 @@ from ..util import unjsonify, Player
 # TODO: for saving GameActions must have a __getstate__ and __setstate__
 # TODO: TEST saving/loading extensively!
 # TODO: implement interface for running/testing games in jupyter
-
 # TODO: get docs started with Read the Docs using Sphinx
+# TODO: check for uniqueness of game object IDs -> error handling
 
 class GameController(tdict):
 	
 	def __init__(self, debug=False):
 		super().__init__()
 		self.__dict__['_phases'] = {} # dict of phase classes
+		self.__dict__['_obj_types'] = {} # obj_type classes
 		
 		self.state = None
 		self.log = None
@@ -39,6 +41,7 @@ class GameController(tdict):
 		self.players = tlist()
 		self.in_progress = False
 		self.config_files = tdict()
+		self.obj_reqs = tdict()
 		
 		self.DEBUG = debug
 	
@@ -49,7 +52,14 @@ class GameController(tdict):
 	def register_obj_type(self, cls=None, name=None, required=None, visible=None):
 		if self.in_progress:
 			raise ClosedRegistryError
-		self.table.register_obj_type(cls=cls, name=name, required=required, visible=visible)
+		if cls is None:
+			assert name is not None, 'Must provide either a name or class'
+			cls = GameObject
+		elif name is None:
+			name = cls.__class__.__name__
+		self._obj_types[name] = {'cls':cls,
+		                        'reqs':required,  # props required for creating object
+		                        'visible':visible}  # props visible to all players always (regardless of obj.visible)
 	def register_phase(self, cls, name=None):
 		if self.in_progress:
 			raise ClosedRegistryError
@@ -61,7 +71,7 @@ class GameController(tdict):
 			raise ClosedRegistryError
 		self.players.append(Player(name, **props))
 		
-	def __getstate__(self):
+	def __getstate__(self): # TODO: fix
 		data = {}
 		
 		data['in_progress'] = self.in_progress
@@ -78,7 +88,6 @@ class GameController(tdict):
 		
 		if self.phase_stack is not None:
 			data['phase_stack'] = self.phase_stack.__getstate__()
-			
 	
 	def reset(self, player, seed=None):
 		return json.dumps(self._reset(player, seed))
@@ -225,6 +234,9 @@ class GameController(tdict):
 	def get_table(self, player=None):
 		return self.table.pull(player)
 	
+	def get_types(self):
+		return self.obj_types.keys()
+	
 	def get_log(self, player):
 		return self.log.get_full(player)
 	
@@ -236,7 +248,34 @@ class GameController(tdict):
 		return tlist(p.name for p in self.players)
 	
 	def create_object(self, obj_type, visible=None, ID=None, **props):
-		return self.table.create(obj_type, visible=visible, ID=ID, **props)
+		info = self._get_type(obj_type)
+		
+		obj = self._create(info.cls, visible=visible, ID=ID, **props)
+		self._verify(info.reqs, obj)
+		
+		if visible is None:  # by default visible to all players
+			visible = tset(self.players)
+		
+		if ID is None:
+			ID = self.ID_counter
+			self.ID_counter += 1
+		
+		obj = info.cls(ID=ID, obj_type=obj_type, visible=visible, _table=self.table, **props)
+		
+		self.table.update(obj._id, obj)
+		
+		return obj
+	
+	def _get_type_info(self, obj_type):
+		if obj_type not in self.obj_types:
+			raise MissingObjectError(obj_type)
+		return self._obj_types[obj_type]
+	
+	def _verify(self, reqs, obj):  # check that all requirements for a gameobject are satisfied
+		if reqs is not None:
+			for req in reqs:
+				if req not in obj:
+					raise MissingValueError(obj.get_type(), req, *reqs)
 	
 	def save(self):
 		return json.dumps(self.__getstate__())
