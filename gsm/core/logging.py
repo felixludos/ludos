@@ -1,7 +1,7 @@
 
 from ..basic_containers import tdict, tlist, tset
 from .object import GameObject
-from ..mixins import Named, Typed, Transactionable, Savable
+from ..mixins import Named, Typed, Container
 from ..util import Player
 
 '''
@@ -12,7 +12,7 @@ log formatting:
 '''
 
 
-class GameLogger(Transactionable, Savable):
+class GameLogger(Container):
 	def __init__(self, players=[], indents=True, debug=False):
 		super().__init__()
 		self.logs = tdict({p: tlist() for p in players})
@@ -21,6 +21,14 @@ class GameLogger(Transactionable, Savable):
 		self.debug = debug
 		
 		self.level = 0 if indents else None
+	
+	def __save(self):
+		pack = self.__class__.__pack
+		raise NotImplementedError
+	
+	def __load(self, data):
+		unpack = self.__class__.__unpack
+		raise NotImplementedError
 	
 	def begin(self):
 		if self.in_transaction():
@@ -41,12 +49,6 @@ class GameLogger(Transactionable, Savable):
 		if not self.in_transaction():
 			return
 		
-		raise NotImplementedError
-	
-	def __getstate__(self):
-		raise NotImplementedError
-	
-	def __setstate__(self, state):
 		raise NotImplementedError
 	
 	def update_all(self, objs, player=None):

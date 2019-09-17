@@ -205,8 +205,8 @@ class Transactionable(object):
 	# 		self.abort()
 	# 	return None if type is None else type.__name__ == 'AbortTransaction'
 
-class Container(Transactionable, Savable): # containers are Savable over Transactionable - ie. transactions are part of the state, so setting the state can change the transaction
-	pass
+# class Container(Transactionable, Savable): # containers are Savable over Transactionable - ie. transactions are part of the state, so setting the state can change the transaction
+# 	pass
 
 
 # class Trackable(object):

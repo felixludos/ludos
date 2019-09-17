@@ -1,7 +1,7 @@
 # import json
 from ..basic_containers import tdict, tset, tlist
 from .object import GameObject
-from ..mixins import Typed, Named
+from ..mixins import Typed, Named, Transactionable, Savable
 from ..util import jsonify
 from ..signals import ActionMismatch, UnknownActionElement, InvalidActionError
 from ..viz import _decode_action_set
@@ -42,11 +42,29 @@ def format_actions(raw): # format action sets to be sent to frontend (mostly enc
 	
 	raise UnknownActionElement(raw)
 
-class GameActions(tdict): # created and returned in phases
+class GameActions(Transactionable, Savable): # created and returned in phases
 	
 	def __init__(self):
 		super().__init__()
 		self.reset()
+	
+	def __save(self):
+		pack = self.__class__.__pack
+		
+		data = {}
+		
+		data['options'] = pack(self.options)
+		data['status'] = pack(self.status)
+		data['info'] = pack(self.info)
+		
+		return data
+	
+	def __load(self, data):
+		unpack = self.__class__.__unpack
+		
+		self.options = unpack(data['options'])
+		self.status = unpack(data['status'])
+		self.info = unpack(data['info'])
 	
 	def reset(self):
 		# actions
@@ -119,7 +137,7 @@ class GameActions(tdict): # created and returned in phases
 # Advanced action queries
 
 
-class ActionElement(Typed, tdict):
+class ActionElement(Typed, Transactionable, Savable):
 	
 	def encode(self):
 		raise NotImplementedError
@@ -132,8 +150,14 @@ class FixedAction(ActionElement):
 		super().__init__(type(val).__name__)
 		self.val = val
 
+	def __save(self):
+		return {'val':self.val}
+
+	def __load(self, data):
+		self.val = data['val']
+
 	def encode(self):
-		return tdict(val=str(self.val))
+		return tdict(val=self.val)
 	
 	def evaluate(self, q):
 		if q == str(self.val):
@@ -144,6 +168,12 @@ class ObjectAction(ActionElement):
 	def __init__(self, obj=None):
 		super().__init__('obj')
 		self.obj = obj
+		
+	def __save(self):
+		return {'obj': self.__class__.__pack(self.obj)}
+
+	def __load(self, data):
+		self.obj = self.__class__.__unpack(data['obj'])
 		
 	def encode(self):
 		return tdict(ID=self.obj._id)
@@ -161,6 +191,14 @@ class TextAction(ActionElement): # allows player to enter arbitrary text as acti
 	
 	def __init__(self):
 		super().__init__('text')
+		
+	def __save(self):
+		pack = self.__class__.__pack
+		raise NotImplementedError
+		
+	def __load(self, data):
+		unpack = self.__class__.__unpack
+		raise NotImplementedError
 	
 	def encode(self):
 		raise NotImplementedError # TODO
@@ -173,6 +211,14 @@ class NumberAction(ActionElement): # allows player to choose from a number (floa
 	
 	def __init__(self):
 		super().__init__('number')
+	
+	def __save(self):
+		pack = self.__class__.__pack
+		raise NotImplementedError
+	
+	def __load(self, data):
+		unpack = self.__class__.__unpack
+		raise NotImplementedError
 	
 	def encode(self):
 		raise NotImplementedError  # TODO

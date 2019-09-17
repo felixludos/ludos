@@ -1,9 +1,9 @@
 
-from ..mixins import Named, Typed, Container
+from ..mixins import Named, Typed, Transactionable, Savable
 from ..basic_containers import tdict, tset, tlist
 
 
-class GameObject(Typed, Container):
+class GameObject(Typed, Transactionable, Savable):
 	
 	def __new__(cls, *args, **kwargs):
 		self = super().__new__(cls)
@@ -30,7 +30,6 @@ class GameObject(Typed, Container):
 		self._hidden = tdict()
 		
 	def __save(self):
-		
 		pack = self.__class__.__pack
 		
 		data = {}

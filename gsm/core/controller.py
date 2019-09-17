@@ -76,35 +76,36 @@ class GameController(Named, Transactionable, Savable):
 			self.__dict__[mem].abort()
 		self._in_transaction = True
 	
-	def __getstate__(self):
+	def __save(self):
 		# TODO: dont forget self.name
+		pack = self.__class__.__pack
 		
-		state = {}
+		data = {}
 		
-		# hard registries - only save keys
-		state['_phases'] = list(self._phases.keys())
-		state['_obj_types'] = list(self._obj_types.keys())
-		
-		# soft registries - save data only
-		state['players'] = pack_savable(self.players)
-		state['config_files'] = self.config_files.__getstate__()
-		state['obj_reqs'] = self.obj_reqs.__getstate__()
+		# registries
+		data['_phases'] = pack(self._phases)
+		data['_obj_types'] = pack(self._obj_types)
+		data['players'] = pack(self.players)
+		data['config_files'] = pack(self.config_files)
 		
 		# tmembers - arbitrary Savable instances
 		for mem in self._tmembers:
-			state[mem] = pack_savable(self.__dict__[mem])
+			data[mem] = pack(self.__dict__[mem])
 		
-		return state
+		return data
 	
-	def __setstate__(self, state):
+	def __load(self, data):
+		unpack = self.__class__.__unpack
 		
-		# check hard registries
-		
-		# load soft registries
+		# load registries
+		self._phases = unpack(data['_phases'])
+		self._obj_types = unpack(data['_obj_types'])
+		self.players = unpack(data['players'])
+		self.config_files = unpack(data['config_files'])
 		
 		# unpack tmembers
-		
-		pass
+		for mem in self._tmembers:
+			self.__dict__[mem] = data[mem]
 		
 	def register_config(self, name, path):
 		if self._in_progress:

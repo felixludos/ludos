@@ -1,15 +1,15 @@
-from ..mixins import Named
+from ..mixins import Named, Transactionable, Savable
 from ..basic_containers import tdict, tlist, tset
 from ..signals import PhaseComplete
 
 class GamePhase(Named, tdict):
 	
 	# __init__ can be overridden
-	def __init__(self, name=None):
+	def __init__(self, name=None, **info):
 		
 		if name is None:
 			name = self.__class__.__name__
-		super().__init__(name)
+		super().__init__(name, **info)
 	
 	def execute(self, C, player=None, action=None): # must be implemented
 		raise NotImplementedError

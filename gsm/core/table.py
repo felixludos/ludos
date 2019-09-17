@@ -24,6 +24,14 @@ class GameTable(Transactionable, Savable):
 		
 		self.reset()
 	
+	def __save(self):
+		pack = self.__class__.__pack
+		raise NotImplementedError
+	
+	def __load(self, data):
+		unpack = self.__class__.__unpack
+		raise NotImplementedError
+	
 	def reset(self):
 		self.table = tdict()
 		self.ID_counter = 0
