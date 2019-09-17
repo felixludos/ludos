@@ -1,32 +1,81 @@
 
-from ..mixins import Named, Typed
-from ..containers import tdict, tset, tlist, unpack_savable, pack_savable
+from ..mixins import Named, Typed, Container
+from ..basic_containers import tdict, tset, tlist
 
 
-class GameObject(Typed, tdict):
+class GameObject(Typed, Container):
 	
-	def __init__(self, ID=None, obj_type=None, _table=None, visible=None, **kwargs):
+	def __new__(cls, *args, **kwargs):
+		self = super().__new__(cls)
+		
+		self.__dict__['_id'] = None
+		self.__dict__['_table'] = None
+		
+		self.__dict__['_open'] = None
+		self.__dict__['_public'] = None
+		self.__dict__['_hidden'] = None
+	
+	def __init__(self, ID, _table, visible, obj_type=None, _open=[], **props):
 		
 		if obj_type is None: # default obj_type is name of the class
 			obj_type = self.__class__.__name__
 		
-		super().__init__(obj_type, visible=visible, **kwargs) # all GameObjects are basically just tdicts with a obj_type and visible attrs and they can use a table to signal track changes
+		super().__init__(obj_type) # all GameObjects are basically just tdicts with a obj_type and visible attrs and they can use a table to signal track changes
 		
-		self.__dict__['_id'] = ID
-		self.__dict__['_table'] = _table
+		self._id = ID
+		self._table = _table
 		
-	def __getstate__(self):
-		state = super().__getstate__()
-		state['_id'] = self._id
-		return state
+		self._open = tset(_open)
+		self._public = tdict(visible=visible, **props)
+		self._hidden = tdict()
+		
+	def __save(self):
+		
+		pack = self.__class__.__pack
+		
+		data = {}
+		
+		data['_id'] = pack(self._id) # should always be a str though
+		data['_table'] = pack(self._table)
+		data['_open'] = pack(self._open)
+		data['_public'] = pack(self._public)
+		data['_hidden'] = pack(self._hidden)
+		
+		return data
 	
-	def __setstate__(self, state):
-		self.__dict__['_id'] = state['_id']
-		del state['_id']
-		super().__setstate__(state)
+	def __load(self, data):
+		unpack = self.__class__.__unpack
+		
+		self._id = unpack(data['_id'])
+		self._table = unpack(data['_table'])
+		self._open = unpack(data['_open'])
+		self._public = unpack(data['_public'])
+		self._hidden = unpack(data['_hidden'])
+		
+	def pull(self, player=None):
+		raise NotImplementedError # TODO: remove all cross references
 		
 	def __repr__(self):
-		return '{}(ID={})'.format(self.__class__.__name__, self._id)
+		return '{}(ID={})'.format(self.get_type(), self._id)
+	
+	def __getattribute__(self, item): # TODO: test this! - behavior should default to self._public
+		try:
+			return super().__getattribute__(item)
+		except AttributeError:
+			return self._public.__getattribute__(item)
+		
+	def __setattr__(self, key, value):
+		if key in self.__dict__:
+			return key
+		return self._public.__setattr__(key, value)
+	
+	def __delattr__(self, name):
+		if name in self.__dict__:
+			return super().__delattr__(name)
+		return self._public.__delattr__(name)
+	
+	
+		
 
 
 	

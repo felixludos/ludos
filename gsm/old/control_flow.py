@@ -1,6 +1,6 @@
 import traceback
 import json
-from .signals import PhaseComplete
+from git.gsm.signals import PhaseComplete
 # from .structures import tdict, tset, tlist
 
 

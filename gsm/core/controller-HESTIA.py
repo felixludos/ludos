@@ -7,111 +7,46 @@ import yaml
 
 from ..basic_containers import tdict, tset, tlist
 from .logging import GameLogger
+from .table import GameTable
 from .object import GameObject
-from ..mixins import Named, Transactionable, Savable
-from ..signals import PhaseComplete, PhaseInterrupt, GameOver, ClosedRegistryError, MissingTypeError, MissingValueError, MissingObjectError
+from ..signals import PhaseComplete, PhaseInterrupt, GameOver, ClosedRegistryError, MissingValueError, MissingObjectError
 from ..util import unjsonify, Player
 
-class GameController(Named, Transactionable, Savable):
+# TODO: include a RNG directly in the controller?
+
+# TODO: step() includes key in image to make sure action is taken from a current image (image = full message)
+# TODO: get_status() returns current image, without having to recompute image (cache current image)
+# TODO: for saving GameActions must have a __getstate__ and __setstate__
+# TODO: TEST saving/loading extensively!
+# TODO: implement interface for running/testing games in jupyter
+# TODO: get docs started with Read the Docs using Sphinx
+# TODO: check for uniqueness of game object IDs -> error handling
+
+class GameController(tdict):
 	
-	def __new__(cls, *args, **kwargs):
-		new = super().__new__(cls)
+	def __init__(self, debug=False):
+		super().__init__()
+		self.__dict__['_phases'] = {} # dict of phase classes
+		self.__dict__['_obj_types'] = {} # obj_type classes
 		
-		# meta values (neither for dev nor user) (not including soft registries - they dont change)
-		new._tmembers = {'state', 'log', 'table', 'active_players', 'phase_stack',}
-		return new
-	
-	def __init__(self, name=None, debug=False):
-		if name is None:
-			# TODO: add suggestion about game name
-			name = self.__class__.__name__
-		super().__init__(name)
-		
-		# Hard registries - include python classes (cant directly be saved)
-		self._phases = tdict() # dict of phase classes
-		self._obj_types = tdict() # obj_type classes
-		
-		# Soft registries - only information, but must be provided before game start
-		self.players = tdict()
+		self.state = None
+		self.log = None
+		self.table = GameTable() # needed to register obj_types
+		self.active_players = None
+		self.phase_stack = None
+		self.players = tlist()
+		self.in_progress = False
 		self.config_files = tdict()
 		self.obj_reqs = tdict()
 		
-		# GameState
-		self._in_progress = False # flag for registration to end
-		self._in_transaction = False # flag for transactionable
-		self.DEBUG = debug # flag for dev to use as needed
-		
-		self.state = None
-		self.active_players = None
-		self.phase_stack = None # should only contain instances of GamePhase
-		
-		# Game components
-		self.log = None
-		self.table = None # needed to register obj_types
+		self.DEBUG = debug
 	
-	def begin(self):
-		if self.in_transaction():
-			self.commit()
-			
-		for mem in self._tmembers:
-			self.__dict__[mem].begin()
-		self._in_transaction = True
-	
-	def in_transaction(self):
-		return self._in_transaction
-	
-	def commit(self):
-		if not self.in_transaction():
-			return
-		
-		for mem in self._tmembers:
-			self.__dict__[mem].commit()
-		self._in_transaction = True
-	
-	def abort(self):
-		if not self.in_transaction():
-			return
-		
-		for mem in self._tmembers:
-			self.__dict__[mem].abort()
-		self._in_transaction = True
-	
-	def __getstate__(self):
-		# TODO: dont forget self.name
-		
-		state = {}
-		
-		# hard registries - only save keys
-		state['_phases'] = list(self._phases.keys())
-		state['_obj_types'] = list(self._obj_types.keys())
-		
-		# soft registries - save data only
-		state['players'] = pack_savable(self.players)
-		state['config_files'] = self.config_files.__getstate__()
-		state['obj_reqs'] = self.obj_reqs.__getstate__()
-		
-		# tmembers - arbitrary Savable instances
-		for mem in self._tmembers:
-			state[mem] = pack_savable(self.__dict__[mem])
-		
-		return state
-	
-	def __setstate__(self, state):
-		
-		# check hard registries
-		
-		# load soft registries
-		
-		# unpack tmembers
-		
-		pass
-		
 	def register_config(self, name, path):
-		if self._in_progress:
+		if self.in_progress:
 			raise ClosedRegistryError
 		self.config_files[name] = path
 	def register_obj_type(self, cls=None, name=None, required=None, visible=None):
-		if self._in_progress:
+		if self.in_progress:
 			raise ClosedRegistryError
 		if cls is None:
 			assert name is not None, 'Must provide either a name or class'
@@ -122,15 +57,33 @@ class GameController(Named, Transactionable, Savable):
 		                        'reqs':required,  # props required for creating object
 		                        'visible':visible}  # props visible to all players always (regardless of obj.visible)
 	def register_phase(self, cls, name=None):
-		if self._in_progress:
+		if self.in_progress:
 			raise ClosedRegistryError
 		if name is None:
 			name = cls.__class__.__name__
 		self._phases[name] = cls
 	def register_player(self, name, **props):
-		if self._in_progress:
+		if self.in_progress:
 			raise ClosedRegistryError
 		self.players.append(Player(name, **props))
+		
+	def __getstate__(self): # TODO: fix
+		data = {}
+		
+		data['in_progress'] = self.in_progress
+		data['DEBUG'] = self.DEBUG
+		
+		if self.state is not None:
+			data['state'] = self.state.__getstate__()
+		
+		if self.log is not None:
+			data['log'] = self.log.__getstate__()
+		
+		if self.table is not None:
+			data['table'] = self.table.__getstate__()
+		
+		if self.phase_stack is not None:
+			data['phase_stack'] = self.phase_stack.__getstate__()
 	
 	def reset(self, player, seed=None):
 		return json.dumps(self._reset(player, seed))
@@ -156,7 +109,7 @@ class GameController(Named, Transactionable, Savable):
 		
 		self._init_game(config) # builds maps/objects
 		
-		self._in_progress = True
+		self.in_progress = True
 		
 		return self._step(player)
 	
@@ -278,13 +231,10 @@ class GameController(Named, Transactionable, Savable):
 		return self.table.pull(player)
 	
 	def get_types(self):
-		return self._obj_types.keys()
+		return self.obj_types.keys()
 	
 	def get_log(self, player):
 		return self.log.get_full(player)
-	
-	def get_UI_spec(self): # returns a specification for gUsIm - may be overridden to include extra data
-		raise NotImplementedError # TODO: by default it should return contents of a config file
 	
 	def get_player(self, name):
 		for p in self.players:
@@ -294,14 +244,6 @@ class GameController(Named, Transactionable, Savable):
 		return tlist(p.name for p in self.players)
 	
 	def create_object(self, obj_type, visible=None, ID=None, **props):
-		
-		if isinstance(obj_type, GameObject):
-			pass
-		elif obj_type in self._obj_types:
-			pass
-		else:
-			raise MissingObjectError(obj_type)
-		
 		info = self._get_type(obj_type)
 		
 		obj = self._create(info.cls, visible=visible, ID=ID, **props)
@@ -331,48 +273,26 @@ class GameController(Named, Transactionable, Savable):
 				if req not in obj:
 					raise MissingValueError(obj.get_type(), req, *reqs)
 	
-	def save(self): # returns string
+	def save(self):
 		return json.dumps(self.__getstate__())
 	
 	def __getstate__(self):
 		
 		data = {}
 		
-		# registered items
 		data['phases'] = list(self._phases.keys())
-		data['obj_types'] = list(self._obj_types.keys())
 		
 		# handle GameTable carefully to load registered GameObject types
+		data['table'] =
 		
 		data['state'] = super().__getstate__()
 		
 		return data
-		
-		data = {}
-		
-		data['in_progress'] = self._in_progress
-		data['DEBUG'] = self.DEBUG
-		
-		if self.state is not None:
-			data['state'] = self.state.__getstate__()
-		
-		if self.log is not None:
-			data['log'] = self.log.__getstate__()
-		
-		if self.table is not None:
-			data['table'] = self.table.__getstate__()
-		
-		if self.phase_stack is not None:
-			data['phase_stack'] = self.phase_stack.__getstate__()
 	
 	def load(self, data):
 		self.__setstate__(json.loads(data))
 	
 	def __setstate__(self, state):
-		
-		for obj_type in state['obj_types']:
-			if obj_type not in self.obj_types:
-				raise MissingTypeError(self, obj_type)
 		
 		for name in state['phases']:
 			if name not in self._phases:

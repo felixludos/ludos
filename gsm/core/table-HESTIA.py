@@ -1,8 +1,9 @@
 
 from ..mixins import Transactionable, Savable
-from ..basic_containers import tdict, tset, tlist
+from ..basic_containers import tdict, tset, tlist, pack_savable, unpack_savable
 from ..signals import MissingTypeError, MissingValueError, MissingObjectError
 
+from .object import GameObject
 from .. import util
 
 class GameTable(Transactionable, Savable):
@@ -19,14 +20,15 @@ class GameTable(Transactionable, Savable):
 		super().__init__()
 		
 		self._in_transaction = False
+		self.players = None
 		self.table = None
 		self.ID_counter = None
-		
-		self.reset()
 	
-	def reset(self):
+	def reset(self, players):
 		self.table = tdict()
 		self.ID_counter = 0
+		
+		self.players = players
 	
 	def in_transaction(self):
 		return self._in_transaction
@@ -48,19 +50,13 @@ class GameTable(Transactionable, Savable):
 			return
 		self.table.abort()
 	
-	def get_ID(self):
-		
-		ID = str(self.ID_counter)
-		
-		while not self.is_available(ID):
-			self.ID_counter += 1
-			ID = str(self.ID_counter)
-			
-		self.ID_counter += 1
-		return ID # always returns a str -> all IDs are str
+	# IMPORTANT: used to check whether object is still valid
+	def check(self, key):
+		return key in self.table
 	
-	def is_available(self, ID):
-		return ID not in self.table
+	# this function should usually be called automatically
+	def update(self, key, value):
+		self.table[key] = value
 	
 	# IMPORTANT: user should use this function to create remove any game object
 	def remove(self, key):
@@ -82,19 +78,33 @@ class GameTable(Transactionable, Savable):
 	def __getstate__(self):
 		
 		data = {}
+		
+		data['players'] = self.players
+		data['obj_types'] = list(self.obj_types.keys())
 		data['ID_counter'] = self.ID_counter
-		data['table'] = {k:pack_savable(v)
-		                 for k, v in self.table.items()}
+		if self.table is not None:
+			data['table'] = {k:pack_savable(v)
+			                 for k, v in self.table.items()}
+		else:
+			data['table'] = None
 		
 		return data
 	
 	def __setstate__(self, state):
+		for obj_type in state['obj_types']:
+			if obj_type not in self.obj_types:
+				raise MissingTypeError(self, obj_type)
 		
-		self.reset()
+		self.reset(state['players'])
 		
-		for k, x in state['table'].items():
-			self.table[k] = unpack_savable(x)
-			self.table[k].__dict__['_table'] = self
+		if state['table'] is not None:
+			for k, x in state['table'].items():
+				self.table[k] = unpack_savable(x)
+				self.table[k].__dict__['_table'] = self
+				self._verify(self._get_type_info(self.table[k].get_type()).reqs,
+				             self.table[k])
+		else:
+			state['table'] = None
 			
 		self.ID_counter = state['ID_counter']
 	
@@ -102,13 +112,11 @@ class GameTable(Transactionable, Savable):
 		return self.table[item]
 	
 	def __setitem__(self, key, value):
-		assert isinstance(key, str), 'All IDs must be strings' # TODO: maybe remove for performance?
 		self.table[key] = value
 	
 	def __delitem__(self, key):
 		del self.table[key]
-	
-	# IMPORTANT: used to check whether object is still valid
+		
 	def __contains__(self, item):
 		return item in self.table
 

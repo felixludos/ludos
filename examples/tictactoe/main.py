@@ -3,7 +3,7 @@ import numpy as np
 import gsm
 from gsm import tdict, tlist, tset
 
-from phases import TurnPhase
+from .phases import TurnPhase
 
 class TicTacToe(gsm.GameController):
 	

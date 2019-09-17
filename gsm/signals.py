@@ -42,7 +42,7 @@ class MissingValueError(Exception):
 		
 # action errors
 		
-class InvalidAction(Exception):
+class InvalidActionError(Exception):
 	def __init__(self, action):
 		super().__init__('{} is an invalid action'.format(str(action)))
 		
@@ -55,6 +55,15 @@ class UnknownActionElement(Exception):
 		self.obj = obj
 
 # mixin errors
+
+class ObjectIDReadOnlyError(Exception):
+	def __init__(self):
+		super().__init__('The attribute "_obj_id" is reserved for saving/loading and should not be set')
+
+class SavableClassCollisionError(Exception):
+	def __init__(self, addr, cls):
+		super().__init__('A class with the address {} is already in the class register of Savable'.format(addr))
+		self.cls = cls
 
 class UnregisteredClassError(Exception):
 	def __init__(self, name):

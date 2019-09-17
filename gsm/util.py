@@ -1,13 +1,11 @@
 import yaml
 import numpy as np
-from .containers import tdict
 from .mixins import Named, Typed, Savable
 from .signals import UnregisteredClassError, LoadInitFailureError
-from .containers import tdict, tset, tlist
+from .basic_containers import tdict, tset, tlist
 
 
-
-
+# TODO: fix so it works with cross referencing
 def jsonify(obj):
 	if isinstance(obj, (list, tlist)):
 		return [jsonify(o) for o in obj]

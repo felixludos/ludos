@@ -1,5 +1,5 @@
 from ..mixins import Named
-from ..containers import tdict, tlist, tset
+from ..basic_containers import tdict, tlist, tset
 from ..signals import PhaseComplete
 
 class GamePhase(Named, tdict):

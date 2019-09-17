@@ -1,9 +1,9 @@
 # import json
-from ..containers import tdict, tset, tlist
+from ..basic_containers import tdict, tset, tlist
 from .object import GameObject
 from ..mixins import Typed, Named
 from ..util import jsonify
-from ..signals import ActionMismatch, UnknownActionElement, InvalidAction
+from ..signals import ActionMismatch, UnknownActionElement, InvalidActionError
 from ..viz import _decode_action_set
 
 def process_actions(raw): # process input when saving new action set (mostly turn options into ActionElement instances)
@@ -76,11 +76,11 @@ class GameActions(tdict): # created and returned in phases
 					try:
 						out = (elm.evaluate(a) for elm, a in zip(tpl, action))
 					except ActionMismatch:
-						pass
+						pass # action didnt match
 					else:
 						return out
 					
-		raise InvalidAction(action)
+		raise InvalidActionError(action)
 	
 	def __len__(self):
 		return len(self.options)
