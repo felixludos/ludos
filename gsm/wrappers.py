@@ -57,6 +57,7 @@ class ObjectWrapper(ObjectProxy, Transactionable, Savable):
 			self._self_children.remove(value)
 		return super().__delattr__(item)
 	
+<<<<<<< HEAD
 	# @staticmethod
 	# def _simple_method_wrapper(method, typ, wrapper):
 	# 	def _exec(*args, **kwargs):
@@ -67,6 +68,18 @@ class ObjectWrapper(ObjectProxy, Transactionable, Savable):
 	# 			return wrapper(out)
 	# 		return out
 	# 	return _exec
+=======
+	@staticmethod
+	def _simple_method_wrapper(method, typ, wrapper):
+		def _exec(*args, **kwargs):
+			print('executing', method)
+			out = method(*args, **kwargs)
+			print(type(out), typ, wrapper)
+			if isinstance(out, typ):
+				return wrapper(out)
+			return out
+		return _exec
+>>>>>>> b2f272d4da31f0e0d62e73541a2f8ccd35b37aca
 	
 	
 	@classmethod

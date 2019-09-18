@@ -24,6 +24,7 @@ class GameTable(Transactionable, Savable, Pullable):
 		
 		self.reset()
 	
+
 	def reset(self, players=None):
 		self.table = tdict()
 		self.ID_counter = 0
