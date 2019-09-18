@@ -77,7 +77,6 @@ class GameController(Named, Transactionable, Savable):
 		self._in_transaction = True
 	
 	def __save(self):
-		# TODO: dont forget self.name
 		pack = self.__class__.__pack
 		
 		data = {}
@@ -92,10 +91,14 @@ class GameController(Named, Transactionable, Savable):
 		for mem in self._tmembers:
 			data[mem] = pack(self.__dict__[mem])
 		
+		data['name'] = self.name
+		
 		return data
 	
-	def __load(self, data):
-		unpack = self.__class__.__unpack
+	@classmethod
+	def __load(cls, data):
+		self = cls()
+		unpack = cls.__unpack
 		
 		# load registries
 		self._phases = unpack(data['_phases'])
@@ -106,6 +109,10 @@ class GameController(Named, Transactionable, Savable):
 		# unpack tmembers
 		for mem in self._tmembers:
 			self.__dict__[mem] = data[mem]
+			
+		self.name = data['name']
+		
+		return self
 		
 	def register_config(self, name, path):
 		if self._in_progress:
@@ -240,7 +247,7 @@ class GameController(Named, Transactionable, Savable):
 				self.end_info = self._end_game()
 				
 			msg = {
-				'end': self.end_info, # TODO: maybe allow dev to give each player a unique end game info
+				'end': self.end_info,
 				'table': self.table.pull(),
 			}
 			

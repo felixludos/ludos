@@ -24,14 +24,6 @@ class GameTable(Transactionable, Savable):
 		
 		self.reset()
 	
-	def __save(self):
-		pack = self.__class__.__pack
-		raise NotImplementedError
-	
-	def __load(self, data):
-		unpack = self.__class__.__unpack
-		raise NotImplementedError
-	
 	def reset(self):
 		self.table = tdict()
 		self.ID_counter = 0
@@ -87,30 +79,36 @@ class GameTable(Transactionable, Savable):
 				if k != 'obj_type' and k != 'visible' and player not in obj['visible'] and (allowed is None or k not in allowed):
 					del obj[k] # remove information not permitted
 	
-	def __getstate__(self):
+	def __save(self):
+		
+		pack = self.__class__.__pack
 		
 		data = {}
 		data['ID_counter'] = self.ID_counter
-		data['table'] = {k:pack_savable(v)
+		data['table'] = {k:pack(v)
 		                 for k, v in self.table.items()}
 		
 		return data
 	
-	def __setstate__(self, state):
+	@classmethod
+	def __load(cls, data):
 		
-		self.reset()
+		unpack = cls.__unpack
 		
-		for k, x in state['table'].items():
-			self.table[k] = unpack_savable(x)
-			self.table[k].__dict__['_table'] = self
+		self = cls()
+		
+		for k, x in data['table'].items():
+			self.table[k] = unpack(x)
 			
-		self.ID_counter = state['ID_counter']
+		self.ID_counter = data['ID_counter']
+		
+		return self
 	
 	def __getitem__(self, item):
 		return self.table[item]
 	
 	def __setitem__(self, key, value):
-		assert isinstance(key, str), 'All IDs must be strings' # TODO: maybe remove for performance?
+		# assert isinstance(key, str), 'All IDs must be strings' # TODO: maybe remove for performance?
 		self.table[key] = value
 	
 	def __delitem__(self, key):

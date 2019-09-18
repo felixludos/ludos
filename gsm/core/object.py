@@ -14,6 +14,8 @@ class GameObject(Typed, Transactionable, Savable):
 		self.__dict__['_open'] = None
 		self.__dict__['_public'] = None
 		self.__dict__['_hidden'] = None
+		
+		return self
 	
 	def __init__(self, ID, _table, visible, obj_type=None, _open=[], **props):
 		
@@ -42,14 +44,19 @@ class GameObject(Typed, Transactionable, Savable):
 		
 		return data
 	
-	def __load(self, data):
-		unpack = self.__class__.__unpack
+	@classmethod
+	def __load(cls, data):
+		
+		self = cls.__new__(cls)
+		unpack = cls.__unpack
 		
 		self._id = unpack(data['_id'])
 		self._table = unpack(data['_table'])
 		self._open = unpack(data['_open'])
 		self._public = unpack(data['_public'])
 		self._hidden = unpack(data['_hidden'])
+		
+		return self
 		
 	def pull(self, player=None):
 		raise NotImplementedError # TODO: remove all cross references
@@ -89,15 +96,16 @@ class GameObjectGenerator(GameObject):
 			objs = []
 		self.__dict__['_objs'] = objs
 		
-	def __getstate__(self):
-		state = super().__getstate__()
-		state['_objs'] = [pack_savable(obj) for obj in self._objs]
-		return state
-	
-	def __setstate__(self, state):
-		self.__dict__['_objs'] = [unpack_savable(data) for data in state['_objs']]
-		del state['_objs']
-		super().__setstate__(state)
+	# TODO: update
+	# def __getstate__(self):
+	# 	state = super().__getstate__()
+	# 	state['_objs'] = [pack_savable(obj) for obj in self._objs]
+	# 	return state
+	#
+	# def __setstate__(self, state):
+	# 	self.__dict__['_objs'] = [unpack_savable(data) for data in state['_objs']]
+	# 	del state['_objs']
+	# 	super().__setstate__(state)
 		
 	# should not be overridden, and usually not called by dev
 	def _registered(self, x):

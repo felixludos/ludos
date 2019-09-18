@@ -4,6 +4,7 @@ from .basic_containers import tdict, tlist, tset
 from .util import Player, jsonify, unjsonify
 from .signals import PhaseComplete, PhaseInterrupt, GameOver
 from .mixins import Savable
+from .wrappers import Array
 from .core import *
 #GameController, GamePhase, GameLogger, GameActions, GameObject
 
