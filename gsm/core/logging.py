@@ -1,7 +1,7 @@
 
 from ..basic_containers import tdict, tlist, tset
 from .object import GameObject
-from ..mixins import Named, Typed, Container
+from ..mixins import Named, Typed, Savable, Transactionable
 from ..util import Player
 
 '''
@@ -12,7 +12,7 @@ log formatting:
 '''
 
 
-class GameLogger(Container):
+class GameLogger(Savable, Transactionable):
 	def __init__(self, players=[], indents=True, debug=False):
 		super().__init__()
 		self.logs = tdict({p: tlist() for p in players})
@@ -24,11 +24,29 @@ class GameLogger(Container):
 	
 	def __save(self):
 		pack = self.__class__.__pack
-		raise NotImplementedError
+		
+		data = {}
+		data['logs'] = pack(self.logs)
+		data['recent'] = pack(self.recent)
+		data['collectors'] = pack(self.collectors)
+		data['debug'] = pack(self.debug)
+		data['level'] = pack(self.level)
+		
+		return data
 	
-	def __load(self, data):
-		unpack = self.__class__.__unpack
-		raise NotImplementedError
+	@classmethod
+	def __load(cls, data):
+		unpack = cls.__unpack
+		
+		self = cls()
+		
+		self.logs = unpack(data['logs'])
+		self.recent = unpack(data['recent'])
+		self.collectors = unpack(data['collectors'])
+		self.debug = unpack(data['debug'])
+		self.level = unpack(data['level'])
+	
+		return self
 	
 	def begin(self):
 		if self.in_transaction():
@@ -37,7 +55,7 @@ class GameLogger(Container):
 		raise NotImplementedError
 	
 	def in_transaction(self):
-		return self._in_transaction
+		return self.collectors is not None
 	
 	def commit(self):
 		if not self.in_transaction():

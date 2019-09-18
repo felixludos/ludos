@@ -22,7 +22,7 @@ class Savable(object):
 		cls.__subclasses[name] = cls
 		# cls._subclasses[cls.__name__] = cls
 		
-	def __new__(cls):
+	def __new__(cls, *args, **kwargs):
 		obj = super().__new__(cls)
 		obj.__dict__[cls.__savable_id_attr] = cls.__obj_id_counter # TODO: make thread safe (?)
 		cls.__obj_id_counter += 1
@@ -47,13 +47,6 @@ class Savable(object):
 			return cls.__subclasses[name]
 		except KeyError:
 			raise UnregisteredClassError(name)
-
-	@classmethod
-	def create(cls, name):
-		if name not in cls.__subclasses:
-			raise UnregisteredClassError(name)
-		new = cls.__subclasses[name]
-		return new.__new__(new) # avoid calling __init__ incase of required args
 
 	@classmethod
 	def pack(cls, obj): # top-level for dev/user to call
@@ -102,7 +95,9 @@ class Savable(object):
 	def __pack(cls, obj):
 		refs = cls.__ref_table
 		
-		if isinstance(obj, Savable):
+		if isinstance(obj, _primitives):
+			return obj
+		elif isinstance(obj, Savable):
 			if refs is not None:
 				ref = obj.__getref()
 				if ref not in refs:
@@ -115,9 +110,22 @@ class Savable(object):
 		
 		elif issubclass(obj, Savable):
 			return {'_type': '_class', '_data': Savable._full_name(obj)}
+		
+		elif type(obj) == dict:
+			raise NotImplementedError
+			return {'_type': '_dict', '_data':{k:cls.__pack(v) for k,v in obj.items()}}
+		elif type(obj) == list:
+			raise NotImplementedError
+			return {'_type': '_list', '_data':[cls.__pack(x) for x in obj]}
+		elif type(obj) == set:
+			raise NotImplementedError
+			return {'_type': '_set', '_data': [cls.__pack(x) for x in obj]}
+		elif type(obj) == tuple:
+			raise NotImplementedError
+			return {'_type': '_tuple', '_data': [cls.__pack(x) for x in obj]}
+		
 		else:
-			assert isinstance(obj, _primitives), 'Invalid type: {}'.format(type(obj))
-			return obj
+			raise TypeError('Un recognized type: {}'.format(type(obj)))
 	
 	@classmethod
 	def __unpack(cls, data):
@@ -131,14 +139,27 @@ class Savable(object):
 			typ = data['_type']
 			if typ == '_class':
 				return cls.get_cls(data['_data'])
+			
+			elif typ == '_dict':
+				raise NotImplementedError
+				return {k:cls.__unpack(v) for k,v in data['_data'].items()}
+			elif typ == '_list':
+				raise NotImplementedError
+				return [cls.__unpack(x) for x in data['_data']]
+			elif typ == '_set':
+				raise NotImplementedError
+				return {cls.__unpack(x) for x in data['_data']}
+			elif typ == '_tuple':
+				raise NotImplementedError
+				return (cls.__unpack(x) for x in data['_data'])
+			
 			else: # Savable instance
 				ID = data['_ref']
 				if ID in objs:
 					return objs[ID]
 				else:
 					new = cls.get_cls(typ)
-					obj = new.__new__(new) # create instance without calling __init__
-					obj.__load(refs[ID])
+					obj = new.__load(refs[ID])
 					
 					# move ID from refs to objs - it has been loaded
 					del refs[ID]
@@ -159,7 +180,8 @@ class Savable(object):
 	def __save(self): # should call self.__class__.__pack(obj) on all objects that are relevant to its state
 		raise NotImplementedError
 	
-	def __load(self, data): # should call self.__class__.__unpack(obj) on all objects that are relevant to its state
+	@classmethod
+	def __load(cls, data): # should call cls.__unpack(obj) on all objects that are relevant to its state and return an instance
 		raise NotImplementedError
 
 class Named(object):
@@ -178,6 +200,12 @@ class Typed(object):
 	def get_type(self):
 		return self.obj_type
 
+
+class Pullable(object):
+	
+	def pull(self, player=None):  # output should be full json readable
+		raise NotImplementedError
+	
 
 class Transactionable(object):
 	
@@ -218,3 +246,7 @@ class Transactionable(object):
 # 	def signal(self, *args, **kwargs):  # for tracking
 # 		if self._tracker is not None:
 # 			return self._tracker.signal(*args, **kwargs)
+
+
+
+

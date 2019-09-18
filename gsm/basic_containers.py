@@ -5,21 +5,30 @@ from itertools import chain
 import numpy as np
 from collections import OrderedDict
 from .signals import LoadInitFailureError
-from .mixins import Transactionable, Savable, Container
+from .mixins import Transactionable, Savable
+
+class Container(Transactionable, Savable):
+	pass
+
+def containerify(obj, obj_tbl=None):
+	if isinstance(obj, list):
+		return tlist([containerify(o) for o in obj])
+	if isinstance(obj, dict):
+		if '_set' in obj and len(obj) == 1:
+			return tset([containerify(o) for o in obj['set']])
+		if '_tuple' in obj and len(obj) == 1:
+			return tuple(containerify(o) for o in obj['tuple'])
+		if '_ndarray' in obj and '_dtype' in obj:
+			return np.array(obj['_ndarray'], dtype=obj['_dtype'])
+		return tdict({containerify(k):containerify(v) for k,v in obj.items()})
+	return obj
 
 class tdict(Container, OrderedDict): # keys must be primitives, values can be primitives or Savable instances/subclasses
 	
-	def __new__(cls, *args, **kwargs):
-		obj = super().__new__(cls)
-		
-		obj.__dict__['_data'] = OrderedDict()
-		obj.__dict__['_shadow'] = None
-		
-		return obj
-	
 	def __init__(self, *args, **kwargs):
 		super().__init__()
-		self._data = OrderedDict(*args, **kwargs)
+		self.__dict__['_data'] = OrderedDict(*args, **kwargs)
+		self.__dict__['_shadow'] = None
 		
 	def in_transaction(self):
 		return self._shadow is not None
@@ -116,8 +125,10 @@ class tdict(Container, OrderedDict): # keys must be primitives, values can be pr
 		
 		return data
 	
-	def __load(self, data):
-		unpack = self.__class__.__unpack
+	@classmethod
+	def __load(cls, data):
+		self = cls()
+		unpack = cls.__unpack
 		
 		# TODO: write warning about overwriting state - which can't be aborted
 		# if self.in_transaction():
@@ -132,6 +143,7 @@ class tdict(Container, OrderedDict): # keys must be primitives, values can be pr
 			for key in data['_shadow_order']:
 				self._shadow[key] = unpack(data['_shadow_pairs'][key])
 			
+		return self
 	
 	def get(self, k):
 		return self._data.get(k)
@@ -165,19 +177,10 @@ class tdict(Container, OrderedDict): # keys must be primitives, values can be pr
 		return 'tdict({})'.format(', '.join(['{}:{}'.format(repr(key), repr(value)) for key, value in self.items()]))
 	
 class tlist(Container, list):
-	
-	def __new__(cls, *args, **kwargs):
-		obj = super().__new__(cls)
-		
-		obj._data = list()
-		obj._shadow = None
-		
-		return obj
 
 	def __init__(self, *args, **kwargs):
 		super().__init__()
 		self._data = list(*args, **kwargs)
-		# self.extend(iterable)
 		self._shadow = None
 	
 	def in_transaction(self):
@@ -229,17 +232,21 @@ class tlist(Container, list):
 			state['_shadow'] = [pack(elm) for elm in self._shadow]
 		return state
 	
-	def __load(self, state):
-		unpack = self.__class__.__unpack
+	@classmethod
+	def __load(cls, state):
+		
+		self = cls()
+		unpack = cls.__unpack
 		
 		# TODO: write warning about overwriting state - which can't be aborted
 		# if self.in_transaction():
 		# 	pass
 		
-		self._data.clear()
 		self._data.extend(unpack(elm) for elm in state['_entries'])
 		if '_shadow' in state: # TODO: maybe write warning about loading into a partially completed transaction
 			self._shadow = [unpack(elm) for elm in state['_shadow']]
+			
+		return self
 	
 	def __getitem__(self, item):
 		return self._data[item]
@@ -314,14 +321,6 @@ class tlist(Container, list):
 	
 class tset(Container, set):
 	
-	def __new__(cls, *args, **kwargs):
-		obj = super().__new__(cls)
-		
-		obj._data = OrderedDict()
-		obj._shadow = None
-		
-		return obj
-	
 	def __init__(self, iterable=[]):
 		super().__init__()
 		self._data = OrderedDict()
@@ -378,21 +377,23 @@ class tset(Container, set):
 			state['_shadow'] = [pack(elm) for elm in self._shadow]
 		return state
 	
-	def __load(self, state):
-		unpack = self.__class__.__unpack
+	@classmethod
+	def __load(cls, data):
+		self = cls()
+		unpack = cls.__unpack
 		
 		# TODO: write warning about overwriting state - which can't be aborted
 		# if self.in_transaction():
 		# 	pass
 		
-		self._data.clear()
-		self._data.update(unpack(elm) for elm in state['_elements'])
+		self._data.update(unpack(elm) for elm in data['_elements'])
 		
-		if '_shadow' in state: # TODO: maybe write warning about loading into a partially completed transaction
+		if '_shadow' in data: # TODO: maybe write warning about loading into a partially completed transaction
 			self._shadow = OrderedDict()
-			for elm in state['_shadow']:
+			for elm in data['_shadow']:
 				self._shadow[unpack(elm)] = None
 		
+		return self
 	def __hash__(self):
 		return id(self)
 	def __eq__(self, other):

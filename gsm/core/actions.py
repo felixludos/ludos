@@ -59,12 +59,16 @@ class GameActions(Transactionable, Savable): # created and returned in phases
 		
 		return data
 	
-	def __load(self, data):
-		unpack = self.__class__.__unpack
+	@classmethod
+	def __load(cls, data):
+		self = cls()
+		unpack = cls.__unpack
 		
 		self.options = unpack(data['options'])
 		self.status = unpack(data['status'])
 		self.info = unpack(data['info'])
+		
+		return self
 	
 	def reset(self):
 		# actions
@@ -146,15 +150,16 @@ class ActionElement(Typed, Transactionable, Savable):
 		raise NotImplementedError
 
 class FixedAction(ActionElement):
-	def __init__(self, val=None): # works for str, int, float, bool
+	def __init__(self, val): # works for primitives
 		super().__init__(type(val).__name__)
 		self.val = val
 
 	def __save(self):
-		return {'val':self.val}
+		return self.val
 
-	def __load(self, data):
-		self.val = data['val']
+	@classmethod
+	def __load(cls, data):
+		return cls(data)
 
 	def encode(self):
 		return tdict(val=self.val)
@@ -165,24 +170,25 @@ class FixedAction(ActionElement):
 		raise ActionMismatch
 		
 class ObjectAction(ActionElement):
-	def __init__(self, obj=None):
+	def __init__(self, obj):
 		super().__init__('obj')
 		self.obj = obj
 		
 	def __save(self):
 		return {'obj': self.__class__.__pack(self.obj)}
-
-	def __load(self, data):
-		self.obj = self.__class__.__unpack(data['obj'])
+	
+	@classmethod
+	def __load(cls, data):
+		return cls(cls.__unpack(data['obj']))
 		
 	def encode(self):
 		return tdict(ID=self.obj._id)
 	
 	def evaluate(self, q):
-		try:
-			q = type(self.obj._id)(q)
-		except ValueError:
-			raise ActionMismatch
+		# try:
+		# 	q = type(self.obj._id)(q) # not needed since all IDs should be str (or at least primitives, which json can handle)
+		# except ValueError:
+		# 	raise ActionMismatch
 		if q == self.obj._id:
 			return self.obj
 		raise ActionMismatch
@@ -196,8 +202,9 @@ class TextAction(ActionElement): # allows player to enter arbitrary text as acti
 		pack = self.__class__.__pack
 		raise NotImplementedError
 		
-	def __load(self, data):
-		unpack = self.__class__.__unpack
+	@classmethod
+	def __load(cls, data):
+		unpack = cls.__unpack
 		raise NotImplementedError
 	
 	def encode(self):
@@ -216,8 +223,9 @@ class NumberAction(ActionElement): # allows player to choose from a number (floa
 		pack = self.__class__.__pack
 		raise NotImplementedError
 	
-	def __load(self, data):
-		unpack = self.__class__.__unpack
+	@classmethod
+	def __load(cls, data):
+		unpack = cls.__unpack
 		raise NotImplementedError
 	
 	def encode(self):

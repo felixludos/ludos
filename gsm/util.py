@@ -4,35 +4,6 @@ from .mixins import Named, Typed, Savable
 from .signals import UnregisteredClassError, LoadInitFailureError
 from .basic_containers import tdict, tset, tlist
 
-
-# TODO: fix so it works with cross referencing
-def jsonify(obj):
-	if isinstance(obj, (list, tlist)):
-		return [jsonify(o) for o in obj]
-	if isinstance(obj, (dict, tdict)):
-		return {jsonify(k):jsonify(v) for k,v in obj.items()}
-	if isinstance(obj, tuple):
-		return {'_tuple': [jsonify(o) for o in obj]}
-		# return [jsonify(o) for o in obj]
-	if isinstance(obj, (set, tset)):
-		return {'_set': [jsonify(o) for o in obj]}
-	if isinstance(obj, np.ndarray): # TODO: make this work for obj.dtype = 'obj', maybe recurse elements of .tolist()?
-		return {'_ndarray': obj.tolist(), '_dtype':obj.dtype}
-	return obj
-
-def unjsonify(obj):
-	if isinstance(obj, list):
-		return tlist([unjsonify(o) for o in obj])
-	if isinstance(obj, dict):
-		if '_set' in obj and len(obj) == 1:
-			return tset([unjsonify(o) for o in obj['set']])
-		if '_tuple' in obj and len(obj) == 1:
-			return tuple(unjsonify(o) for o in obj['tuple'])
-		if '_ndarray' in obj and '_dtype' in obj:
-			return np.array(obj['_ndarray'], dtype=obj['_dtype'])
-		return tdict({unjsonify(k):unjsonify(v) for k,v in obj.items()})
-	return obj
-
 def load_config(path):
 	return unjsonify(yaml.load(open(path, 'r')))
 

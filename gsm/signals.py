@@ -75,6 +75,10 @@ class LoadInitFailureError(Exception):
 
 # game table errors
 
+class ObjectIDCollisionError(Exception):
+	def __init__(self, ID):
+		super().__init__('A GameObject with ID {} already exists'.format(ID))
+
 # class ZombieObjectException(Exception): # gets thrown when a SETTER is called from a GameObject even after it was removed from the game table
 # 	def __init__(self, obj):
 # 		super().__init__('{} has already beem removed from the GameTable'.format(repr(obj)))
