@@ -11,8 +11,8 @@ from .object import GameObject
 from .state import GameState
 from .table import GameTable
 from ..mixins import Named, Transactionable, Savable
-from ..signals import PhaseComplete, PhaseInterrupt, GameOver, ClosedRegistryError, MissingTypeError, MissingValueError, MissingObjectError
-from ..util import Player
+from ..signals import PhaseComplete, PhaseInterrupt, GameOver, InvalidKeyError, ClosedRegistryError, MissingTypeError, MissingValueError, MissingObjectError
+from ..util import Player, RandomGenerator
 
 class GameController(Named, Transactionable, Savable):
 	
@@ -20,7 +20,7 @@ class GameController(Named, Transactionable, Savable):
 		new = super().__new__(cls)
 		
 		# meta values (neither for dev nor user) (not including soft registries - they dont change)
-		new._tmembers = {'state', 'log', 'table', 'active_players', 'phase_stack',}
+		new._tmembers = {'state', 'log', 'table', 'active_players', 'phase_stack', 'keys', 'RNG', '_images'}
 		return new
 	
 	def __init__(self, name=None, debug=False):
@@ -40,6 +40,9 @@ class GameController(Named, Transactionable, Savable):
 		self._in_progress = False # flag for registration to end
 		self._in_transaction = False # flag for transactionable
 		self.DEBUG = debug # flag for dev to use as needed
+		self.keys = tdict() # a one time permission to call step() (with a valid action)
+		self.RNG = RandomGenerator()
+		self._images = tdict()
 		
 		self.state = None
 		self.active_players = None
@@ -131,16 +134,17 @@ class GameController(Named, Transactionable, Savable):
 			raise ClosedRegistryError
 		self.players[name] = Player(name, **props)
 	
-	def reset(self, player, seed=None):
-		return json.dumps(self._reset(player, seed))
+	def reset(self, seed=None):
+		return json.dumps(self._reset(seed))
 		
-	def _reset(self, player, seed=None):
+		
+	def _reset(self, seed=None):
 		
 		if seed is None:
 			seed = random.getrandbits(64)
 		
 		self.seed = seed
-		random.seed(seed)
+		self.RNG = RandomGenerator(self.seed)
 		
 		config = self._load_config()
 		
@@ -156,6 +160,8 @@ class GameController(Named, Transactionable, Savable):
 		self._init_game(config) # builds maps/objects
 		
 		self._in_progress = True
+		
+		player = self._select_player()
 		
 		return self._step(player)
 	
@@ -178,12 +184,20 @@ class GameController(Named, Transactionable, Savable):
 	def _end_game(self): # return info to be sent at the end of the game
 		raise NotImplementedError
 	
-	def step(self, player=None, action=None): # returns json bytes (str)
-		return json.dumps(self._step(player=None, action=None))
+	def _select_player(self):
+		raise NotImplementedError
 	
-	def _step(self, player=None, action=None): # returns python objs (but json readable)
+	def step(self, player, action=None, key=None): # returns json bytes (str)
+		msg = json.dumps(self._step(player=player, action=action))
+		self._images[player] = msg
+		return msg
+	
+	def _step(self, player, action=None, key=None): # returns python objs (but json readable)
 		
 		try:
+			
+			if action is not None and (key is None or key != self.keys[player]):
+				raise InvalidKeyError
 			
 			if not len(self.phase_stack):
 				raise GameOver
@@ -191,10 +205,12 @@ class GameController(Named, Transactionable, Savable):
 			if self.active_players is not None:
 				
 				if player not in self.active_players:
-					return {
+					msg = {
 						'waiting_for': list(self.active_players.keys()),
 						'table': self.table.pull(player),
 					}
+					self._images[player] = msg
+					return msg
 				
 				# check validity of action
 				action = self.active_players[player].verify(action)
@@ -250,22 +266,38 @@ class GameController(Named, Transactionable, Savable):
 					'msg': ''.join(traceback.format_exception(*sys.exc_info())),
 				},
 				'table': self.table.pull(player),
+				'key': self._gen_key(player),
 			}
 			
 		else:
 			self.commit()
 			# format output message
-			msg = {}
-			
-			if player in out:
-				msg = out[player].pull()
-			else:
-				msg = {'waiting_for': list(out.keys())}
-			
-			msg['table'] = self.table.pull(player)
-			
+
 			self.active_players = out
+			self._images.clear()
 			
+			msg = self._compose_msg(player)
+		
+		self._images[player] = msg
+		
+		return msg
+	
+	def _gen_key(self, player=None):
+		key = hex(self.RNG.getrandbits(64))
+		if player is not None:
+			self.keys[player] = key
+		return key
+	
+	def _compose_msg(self, player):
+		
+		if player in self.active_players:
+			msg = self.active_players[player].pull()
+			msg['key'] = self._gen_key(player)
+		else:
+			msg = {'waiting_for': list(self.active_players.keys())}
+		
+		msg['table'] = self.table.pull(player)
+		
 		return msg
 	
 	def _get_phase(self, name):
@@ -274,8 +306,11 @@ class GameController(Named, Transactionable, Savable):
 	def get_table(self, player=None):
 		return self.table.pull(player)
 	
-	def get_types(self):
-		return self._obj_types.keys()
+	def get_status(self, player):
+		
+		
+		
+		return
 	
 	def get_log(self, player):
 		return self.log.get_full(player)
@@ -294,61 +329,11 @@ class GameController(Named, Transactionable, Savable):
 		return self.table.create(obj_type=obj_type, visible=visible, ID=ID, **props)
 	
 	def save(self): # returns string
-		return json.dumps(self.__getstate__())
-	
-	def __save(self):
-		raise NotImplementedError
-	
-		data = {}
-		
-		# registered items
-		data['phases'] = list(self._phases.keys())
-		data['obj_types'] = list(self._obj_types.keys())
-		
-		# handle GameTable carefully to load registered GameObject types
-		
-		data['state'] = super().__getstate__()
-		
-		return data
-		
-		data = {}
-		
-		data['in_progress'] = self._in_progress
-		data['DEBUG'] = self.DEBUG
-		
-		if self.state is not None:
-			data['state'] = self.state.__getstate__()
-		
-		if self.log is not None:
-			data['log'] = self.log.__getstate__()
-		
-		if self.table is not None:
-			data['table'] = self.table.__getstate__()
-		
-		if self.phase_stack is not None:
-			data['phase_stack'] = self.phase_stack.__getstate__()
+		return json.dumps(self.__save())
 	
 	@classmethod
-	def __load(cls, data):
-		raise NotImplementedError
-		
-		for obj_type in state['obj_types']:
-			if obj_type not in self.obj_types:
-				raise MissingTypeError(self, obj_type)
-		
-		for name in state['phases']:
-			if name not in self._phases:
-				raise MissingType(self, name)
-		
-		# take special care when handling table
-		
-		super().__setstate__(state['state'])
-	
 	def load(self, data):
-		self.__setstate__(json.loads(data))
-	
-	def __setstate__(self, state):
-		
+		return self.__load(json.loads(data))
 	
 
 

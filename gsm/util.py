@@ -1,12 +1,73 @@
 import yaml
 import numpy as np
-from .mixins import Named, Typed, Savable
+import random
+from .mixins import Named, Typed, Savable, Transactionable
 from .signals import UnregisteredClassError, LoadInitFailureError
 from .basic_containers import tdict, tset, tlist
 
-def load_config(path):
-	return unjsonify(yaml.load(open(path, 'r')))
+# def load_config(path):
+# 	return unjsonify(yaml.load(open(path, 'r')))
 
+
+class RandomGenerator(random.Random, Savable, Transactionable):
+	
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self._shadow = None
+	
+	def copy(self):
+		copy = random.Random()
+		copy.setstate(self.getstate())
+		return copy
+	
+	def __save(self):
+		pack = self.__class__.__pack
+		
+		data = {}
+		
+		data['state'] = pack(list(self.getstate()))
+		if self._shadow is not None:
+			data['_shadow'] = pack(list(self._shadow))
+		
+		return data
+	
+	@classmethod
+	def __load(cls, data):
+		
+		unpack = cls.__unpack
+		
+		self = cls()
+		
+		self.setstate(tuple(unpack(data['state'])))
+		
+		if '_shadow' in data:
+			self._shadow = tuple(unpack(data['_shadow']))
+		
+		return self
+		
+	
+	def begin(self):
+		if self.in_transaction():
+			self.commit()
+		
+		self._shadow = self.getstate()
+	
+	def in_transaction(self):
+		return self._shadow is not None
+	
+	def commit(self):
+		if not self.in_transaction():
+			return
+			
+		self._shadow = None
+	
+	def abort(self):
+		if not self.in_transaction():
+			return
+			
+		self.setstate(self._shadow)
+		self._shadow = None
+		
 class Player(Named, Typed, tdict):
 	def __init__(self, name=None, **props):
 		super().__init__(name=name, obj_type=self.__class__.__name__, **props)
@@ -65,3 +126,35 @@ class render_dict(object):
 		  document.getElementById('%s').appendChild(renderjson(%s))
 		});
 		""" % (self.uuid, self.json_str), raw=True)
+
+
+# class Empty(Savable, Transactionable):
+#
+# 	def __save(self):
+# 		raise NotImplementedError
+#
+# 	@classmethod
+# 	def __load(cls, data):
+# 		raise NotImplementedError
+#
+# 	def begin(self):
+# 		if self.in_transaction():
+# 			self.commit()
+#
+# 		raise NotImplementedError
+#
+# 	def in_transaction(self):
+# 		raise NotImplementedError
+#
+# 	def commit(self):
+# 		if not self.in_transaction():
+# 			return
+#
+# 		raise NotImplementedError
+#
+# 	def abort(self):
+# 		if not self.in_transaction():
+# 			return
+#
+# 		raise NotImplementedError
+

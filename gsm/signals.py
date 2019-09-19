@@ -23,6 +23,11 @@ class PhaseInterrupt(Exception): # possibly can include an action and player
 	def get_phase(self):
 		return self.phase
 
+# Controller errors
+
+class InvalidKeyError(Exception):
+	pass
+
 # Controller registry errors
 
 class ClosedRegistryError(Exception):
