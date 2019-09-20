@@ -188,29 +188,22 @@ class GameController(Named, Transactionable, Savable):
 		raise NotImplementedError
 	
 	def step(self, player, action=None, key=None): # returns json bytes (str)
-		msg = json.dumps(self._step(player=player, action=action))
-		self._images[player] = msg
-		return msg
+		return json.dumps(self._step(player=player, action=action))
 	
 	def _step(self, player, action=None, key=None): # returns python objs (but json readable)
 		
 		try:
 			
-			if action is not None and (key is None or key != self.keys[player]):
-				raise InvalidKeyError
-			
 			if not len(self.phase_stack):
 				raise GameOver
+			
+			if action is not None and (key is None or key != self.keys[player]):
+				raise InvalidKeyError
 			
 			if self.active_players is not None:
 				
 				if player not in self.active_players:
-					msg = {
-						'waiting_for': list(self.active_players.keys()),
-						'table': self.table.pull(player),
-					}
-					self._images[player] = msg
-					return msg
+					return self._compose_msg(player)
 				
 				# check validity of action
 				action = self.active_players[player].verify(action)
@@ -265,8 +258,6 @@ class GameController(Named, Transactionable, Savable):
 					'type': e.__class__.__name__,
 					'msg': ''.join(traceback.format_exception(*sys.exc_info())),
 				},
-				'table': self.table.pull(player),
-				'key': self._gen_key(player),
 			}
 			
 		else:
@@ -277,8 +268,6 @@ class GameController(Named, Transactionable, Savable):
 			self._images.clear()
 			
 			msg = self._compose_msg(player)
-		
-		self._images[player] = msg
 		
 		return msg
 	
@@ -298,6 +287,8 @@ class GameController(Named, Transactionable, Savable):
 		
 		msg['table'] = self.table.pull(player)
 		
+		self._images[player] = json.dumps(msg)
+		
 		return msg
 	
 	def _get_phase(self, name):
@@ -308,9 +299,10 @@ class GameController(Named, Transactionable, Savable):
 	
 	def get_status(self, player):
 		
+		if player not in self._images:
+			self._compose_msg(player)
 		
-		
-		return
+		return self._images[player]
 	
 	def get_log(self, player):
 		return self.log.get_full(player)
