@@ -1,7 +1,7 @@
 
 from ..basic_containers import tdict, tlist, tset
 from .object import GameObject
-
+from ..writing import RichWriter, LogWriter
 from ..mixins import Named, Typed, Savable, Transactionable
 from ..util import Player
 from string import Formatter
@@ -13,97 +13,65 @@ log formatting:
 - structure - print to different levels (increment or reset)
 '''
 
-class GameLogger(Savable, Transactionable):
-	def __init__(self, players=[], indents=True, debug=False):
-		super().__init__()
-		self.logs = tdict({p: tlist() for p in players})
-		self.recent = tdict({p: tlist() for p in players})
-		self.debug = debug
+class GameLogger(RichWriter):
+	def __init__(self, players=[], indent=None, debug=False):
+		super().__init__(indent=indent, debug=debug)
+		self.writers = tdict({p: LogWriter(indent=indent, debug=debug)
+		                   for p in players})
 		
-		self.level = 0 if indents else None
-		
-		self._in_transactions = False
-	
 	def __save(self):
-		pack = self.__class__.__pack
-		
 		data = {}
-		data['logs'] = pack(self.logs)
-		data['recent'] = pack(self.recent)
-		data['debug'] = pack(self.debug)
-		data['level'] = pack(self.level)
-		
+		data['writers'] =  self.__class__.__pack(self.writers)
 		return data
 	
 	@classmethod
 	def __load(cls, data):
-		unpack = cls.__unpack
-		
 		self = cls()
-		
-		self.logs = unpack(data['logs'])
-		self.recent = unpack(data['recent'])
-		self.debug = unpack(data['debug'])
-		self.level = unpack(data['level'])
-	
+		self.writers = cls.__unpack(data['writers'])
 		return self
 	
 	def begin(self):
 		if self.in_transaction():
 			self.commit()
 		
-		self._in_transactions = True
-		self.logs.begin()
-		self.recent.begin()
-	
-	def in_transaction(self):
-		return self._in_transactions
+		super().begin()
+		self.writers.begin()
 	
 	def commit(self):
 		if not self.in_transaction():
 			return
 		
-		self._in_transactions = False
-		self.logs.commit()
-		self.recent.commit()
+		super().commit()
+		self.writers.commit()
 	
 	def abort(self):
 		if not self.in_transaction():
 			return
 		
-		self._in_transactions = False
-		self.logs.abort()
-		self.recent.abort()
+		super().abort()
+		self.writers.abort()
 	
-	def update_all(self, objs, player=None):
-		if player is not None:
-			self.recent[player].extend(objs)
-			self.logs[player].extend(objs)
-			return
-		for update, log in zip(self.recent.values(), self.logs.values()):
-			update.extend(objs)
-			log.extend(objs)
+	def __getitem__(self, item):
+		return self.writers[item]
 	
-	
-	def _log(self, obj, player=None):
+	def write(self, *args, **kwargs):
 		
-		if player is not None:
-			self.logs[player].append(obj)
-			self.recent[player].append(obj)
-		else:
-			for log, recent in zip(self.logs.values(), self.recent.values()):
-				log.append(obj)
-				recent.append(obj)
+		super().write(*args, **kwargs)
+		
+		for log in self.logs.values():
+			log.extend(self.text)
+			
+		self.text.clear()
 	
 	def pull(self, player):
-		log = self.recent[player].copy()
-		self.recent[player].clear()
-		return log
-	
+		update = self.writers[player].pull()
+		self.writers[player].text.clear()
+		return update
+		
 	def get_full(self, player=None):
-		if player is not None:
-			return self.logs[player].copy()
-		return tdict({p: self.logs[p].copy() for p in self.logs})
+		if player is None:
+			return {p:v.get_log() for p,v in self.writers.items()}
+		return self.writers[player].get_log()
 
 
 

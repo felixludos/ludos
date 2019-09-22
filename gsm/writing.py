@@ -2,7 +2,8 @@
 from string import Formatter
 
 from .basic_containers import tdict, tset, tlist
-from .mixins import Typed, Savable, Transactionable, Pullable
+from .mixins import Typed, Savable, Transactionable, Pullable, Writable
+from .core.object import GameObject # TODO: clean
 from .signals import FormatException
 from .util import Player
 
@@ -18,6 +19,7 @@ class RichWriter(Savable, Transactionable, Pullable):
 		self.debug = debug
 		self.indent_level = indent
 		self._shadow_indent = None
+		self._in_transaction = None
 	
 	def zindent(self):  # reset indent
 		if self.indent_level is not None:
@@ -29,7 +31,7 @@ class RichWriter(Savable, Transactionable, Pullable):
 	
 	def dindent(self, n=1):  # decrement indent
 		if self.indent_level is not None:
-			self.indent_level = max(self.level - n, 0)
+			self.indent_level = max(self.indent_level - n, 0)
 	
 	def _process_obj(self, obj):
 		info = {}
@@ -37,6 +39,10 @@ class RichWriter(Savable, Transactionable, Pullable):
 			info.update(obj.get_info())
 			info['type'] = obj.get_type()
 			info['val'] = obj.get_val()
+		elif isinstance(obj, GameObject):
+			info['type'] = 'obj'
+			info['obj_type'] = obj.get_type()
+			info['val'] = obj._id
 		elif isinstance(obj, Player):
 			info['type'] = 'player'
 			info['val'] = obj.name
@@ -49,13 +55,13 @@ class RichWriter(Savable, Transactionable, Pullable):
 		
 		return info
 	
-	def write(self, *objs, end='\n', indent_level=None, player=None, debug=False):
+	def write(self, *objs, end='\n', indent_level=None, debug=False):
 		
 		if debug and not self.debug:  # Dont write a debug line unless specified
 			return
 		
 		if indent_level is None:
-			indent_level = self.level
+			indent_level = self.indent_level
 		
 		if len(end):
 			objs.append(end)
@@ -67,9 +73,9 @@ class RichWriter(Savable, Transactionable, Pullable):
 		if indent_level is not None:
 			line['level'] = indent_level
 		
-		self._log(line, player=player)
+		self.text.append(line)
 	
-	def writef(self, txt, *objs, end='\n', indent_level=None, player=None, debug=False, **kwobjs):
+	def writef(self, txt, *objs, end='\n', indent_level=None, debug=False, **kwobjs):
 		
 		line = []
 		
@@ -98,7 +104,7 @@ class RichWriter(Savable, Transactionable, Pullable):
 			
 			line.append(obj)
 		
-		self.write(*line, end=end, indent_level=indent_level, player=player, debug=debug)
+		self.write(*line, end=end, indent_level=indent_level, debug=debug)
 	
 	def __save(self):
 		pack = self.__class__.__pack
@@ -109,6 +115,7 @@ class RichWriter(Savable, Transactionable, Pullable):
 		data['indent_level'] = pack(self.indent_level)
 		data['_shadow_indent'] = pack(self._shadow_indent)
 		data['debug'] = pack(self.debug)
+		data['in_transaction'] = pack(self._in_transaction)
 		
 		return data
 
@@ -122,19 +129,20 @@ class RichWriter(Savable, Transactionable, Pullable):
 		self.indent_level = unpack(data['indent_level'])
 		self._shadow_indent = unpack(data['_shadow_indent'])
 		self.debug = unpack(data['debug'])
+		self._in_transaction = unpack(data['in_transaction'])
 		
 		return self
 		
-
 	def begin(self):
 		if self.in_transaction():
 			self.commit()
 
 		self._shadow_indent = self.indent_level
 		self.text.begin()
+		self._in_transaction = True
 
 	def in_transaction(self):
-		return self.text.in_transaction()
+		return self._in_transaction
 
 	def commit(self):
 		if not self.in_transaction():
@@ -142,6 +150,7 @@ class RichWriter(Savable, Transactionable, Pullable):
 
 		self.text.commit()
 		self._shadow_indent = None
+		self._in_transaction = False
 
 	def abort(self):
 		if not self.in_transaction():
@@ -150,14 +159,67 @@ class RichWriter(Savable, Transactionable, Pullable):
 		self.text.abort()
 		self.indent_level = self._shadow_indent
 		self._shadow_indent = None
-		
+		self._in_transaction = False
 		
 	def pull(self):
 		return list(self.text)
 
 
+class LogWriter(RichWriter):
+	
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		
+		self.log = tlist()
+		
+	def begin(self):
+		if self.in_transaction():
+			self.commit()
+
+		super().begin()
+		self.log.begin()
+
+	def commit(self):
+		if not self.in_transaction():
+			return
+
+		super().commit()
+		self.log.commit()
+
+	def abort(self):
+		if not self.in_transaction():
+			return
+
+		super().abort()
+		self.log.abort()
+		
+	def write(self, *args, **kwargs):
+		
+		super().write(*args, **kwargs)
+		
+		self.log.append(self.text[-1])
+		
+	def get_log(self):
+		return list(self.log)
+		
+	def __save(self):
+		
+		data = super().__save()
+		
+		data['log'] = self.__class__.__pack(self.log)
+		
+		return data
+	
+	@classmethod
+	def __load(cls, data):
+		
+		obj = super().__load(data)
+		obj.log = cls.__unpack(data['log'])
+		
+		return obj
+
 # the dev can write instance of RichText, but all written objects are stored as simple objects (dict, list, primitives)
-class RichText(Typed, Savable):
+class RichText(Writable, Savable):
 	
 	def __init__(self, msg, obj_type=None, **info):
 		if obj_type is None:
@@ -170,7 +232,7 @@ class RichText(Typed, Savable):
 		return self.val
 	
 	def get_info(self): # dev can provide frontend with format instructions, this is added to the info for each line in the log using this LogFormat
-		return {} # by default no additional info is sent
+		return self.info # by default no additional info is sent
 	
 	def __save(self):
 		pack = self.__class__.__pack
