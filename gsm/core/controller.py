@@ -240,14 +240,13 @@ class GameController(Named, Transactionable, Savable):
 				raise GameOver
 			
 		except GameOver:
+			self.commit()
 			
 			if self.end_info is None:
+				self._images.clear()
 				self.end_info = self._end_game()
-				
-			msg = {
-				'end': self.end_info,
-				'table': self.table.pull(),
-			}
+			
+			msg = self._compose_msg(player)
 			
 		except Exception as e:
 			self.abort()
@@ -279,13 +278,22 @@ class GameController(Named, Transactionable, Savable):
 	
 	def _compose_msg(self, player):
 		
-		if player in self.active_players:
-			msg = self.active_players[player].pull()
-			msg['key'] = self._gen_key(player)
-		else:
-			msg = {'waiting_for': list(self.active_players.keys())}
+		if self.end_info is not None:
+			# game is already over
+			msg = {
+				'end': self.end_info,
+				'table': self.table.pull(), # full table
+			}
 		
-		msg['table'] = self.table.pull(player)
+		else:
+			
+			if player in self.active_players:
+				msg = self.active_players[player].pull()
+				msg['key'] = self._gen_key(player)
+			else:
+				msg = {'waiting_for': list(self.active_players.keys())}
+			
+			msg['table'] = self.table.pull(player)
 		
 		self._images[player] = json.dumps(msg)
 		
@@ -296,6 +304,9 @@ class GameController(Named, Transactionable, Savable):
 	
 	def get_table(self, player=None):
 		return self.table.pull(player)
+	
+	def get_obj_types(self):
+		return self.table.get_obj_types()
 	
 	def get_status(self, player):
 		

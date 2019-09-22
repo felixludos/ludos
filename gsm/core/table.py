@@ -73,6 +73,9 @@ class GameTable(Transactionable, Savable, Pullable):
 			name = cls.__class__.__name__
 		
 		self.obj_types[name] = cls
+		
+	def get_obj_types(self):
+		return list(self.obj_types.keys())
 	
 	def create(self, obj_type, visible=None, ID=None, **props):
 		

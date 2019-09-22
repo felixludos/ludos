@@ -206,6 +206,15 @@ class Pullable(object):
 	def pull(self, player=None):  # output should be full json readable
 		raise NotImplementedError
 	
+	
+class Writable(Typed):
+	
+	def get_text_val(self):
+		raise NotImplementedError
+	
+	# def get_text_info(self):
+	# 	return {}
+
 
 class Transactionable(object):
 	

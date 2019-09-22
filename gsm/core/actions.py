@@ -2,7 +2,6 @@
 from ..basic_containers import tdict, tset, tlist
 from .object import GameObject
 from ..mixins import Typed, Named, Transactionable, Savable
-from ..util import jsonify
 from ..signals import ActionMismatch, UnknownActionElement, InvalidActionError
 from ..viz import _decode_action_set
 

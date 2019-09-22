@@ -1,6 +1,6 @@
 
 import numpy as np
-from ..mixins import Named, Typed, Transactionable, Savable, Pullable
+from ..mixins import Named, Typed, Writable, Transactionable, Savable, Pullable
 from ..basic_containers import tdict, tset, tlist
 
 

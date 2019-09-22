@@ -88,4 +88,9 @@ class ObjectIDCollisionError(Exception):
 # 	def __init__(self, obj):
 # 		super().__init__('{} has already beem removed from the GameTable'.format(repr(obj)))
 
+# logging
+
+class FormatException(Exception):
+	pass
+
 

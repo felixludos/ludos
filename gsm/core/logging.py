@@ -1,8 +1,10 @@
 
 from ..basic_containers import tdict, tlist, tset
 from .object import GameObject
+
 from ..mixins import Named, Typed, Savable, Transactionable
 from ..util import Player
+from string import Formatter
 
 '''
 log formatting:
@@ -11,16 +13,16 @@ log formatting:
 - structure - print to different levels (increment or reset)
 '''
 
-
 class GameLogger(Savable, Transactionable):
 	def __init__(self, players=[], indents=True, debug=False):
 		super().__init__()
 		self.logs = tdict({p: tlist() for p in players})
 		self.recent = tdict({p: tlist() for p in players})
-		self.collectors = None
 		self.debug = debug
 		
 		self.level = 0 if indents else None
+		
+		self._in_transactions = False
 	
 	def __save(self):
 		pack = self.__class__.__pack
@@ -28,7 +30,6 @@ class GameLogger(Savable, Transactionable):
 		data = {}
 		data['logs'] = pack(self.logs)
 		data['recent'] = pack(self.recent)
-		data['collectors'] = pack(self.collectors)
 		data['debug'] = pack(self.debug)
 		data['level'] = pack(self.level)
 		
@@ -42,7 +43,6 @@ class GameLogger(Savable, Transactionable):
 		
 		self.logs = unpack(data['logs'])
 		self.recent = unpack(data['recent'])
-		self.collectors = unpack(data['collectors'])
 		self.debug = unpack(data['debug'])
 		self.level = unpack(data['level'])
 	
@@ -52,88 +52,38 @@ class GameLogger(Savable, Transactionable):
 		if self.in_transaction():
 			self.commit()
 		
-		raise NotImplementedError
+		self._in_transactions = True
+		self.logs.begin()
+		self.recent.begin()
 	
 	def in_transaction(self):
-		return self.collectors is not None
+		return self._in_transactions
 	
 	def commit(self):
 		if not self.in_transaction():
 			return
 		
-		raise NotImplementedError
+		self._in_transactions = False
+		self.logs.commit()
+		self.recent.commit()
 	
 	def abort(self):
 		if not self.in_transaction():
 			return
 		
-		raise NotImplementedError
+		self._in_transactions = False
+		self.logs.abort()
+		self.recent.abort()
 	
 	def update_all(self, objs, player=None):
 		if player is not None:
-			self.updates[player].extend(objs)
+			self.recent[player].extend(objs)
 			self.logs[player].extend(objs)
 			return
-		for update, log in zip(self.updates.values(), self.logs.values()):
+		for update, log in zip(self.recent.values(), self.logs.values()):
 			update.extend(objs)
 			log.extend(objs)
 	
-	def zindent(self): # reset indent
-		if self.level is not None:
-			self.level = 0
-	def iindent(self, n=1): # increment indent
-		if self.level is not None:
-			self.level += n
-	def dindent(self, n=1): # decrement indent
-		if self.level is not None:
-			self.level = max(self.level-n, 0)
-	
-	def _process_obj(self, obj):
-		info = tdict()
-		if isinstance(obj, LogFormat):
-			info.update(obj.get_info())
-			info.type = obj.get_type()
-			info.val = obj.get_val()
-			
-		elif isinstance(obj, Player):
-			info.type = 'player'
-			info.val = obj.name
-			
-		elif isinstance(obj, GameObject):
-			info.type = 'obj'
-			info.obj_type = obj.get_type()
-			info.val = obj._id
-			
-		elif isinstance(obj, Typed):
-			info.type = obj.get_type()
-			info.val = str(obj)
-			
-		else:
-			info.type = obj.__class__.__name__
-			info.val = str(obj)
-			
-		return info
-	
-	def write(self, *objs, end='\n', indent_level=None, player=None, debug=False):
-	
-		if debug and not self.debug: # Dont write a debug line unless specified
-			return
-	
-		if indent_level is None:
-			indent_level = self.level
-	
-		if len(end):
-			objs.append(end)
-	
-		line = tdict(line=tlist(self._process_obj(obj) for obj in objs))
-		
-		if indent_level is not None:
-			line.level = indent_level
-		
-		self._log(line, player=player)
-	
-	def writef(self, txt, *objs, end='\n', player=None, **kwobjs):
-		raise NotImplementedError # TODO
 	
 	def _log(self, obj, player=None):
 		
@@ -146,8 +96,8 @@ class GameLogger(Savable, Transactionable):
 				recent.append(obj)
 	
 	def pull(self, player):
-		log = self.updates[player].copy()
-		self.updates[player].clear()
+		log = self.recent[player].copy()
+		self.recent[player].clear()
 		return log
 	
 	def get_full(self, player=None):
@@ -156,36 +106,6 @@ class GameLogger(Savable, Transactionable):
 		return tdict({p: self.logs[p].copy() for p in self.logs})
 
 
-class LogFormat(Typed):
-	
-	def __init__(self, obj_type=None):
-		if obj_type is None:
-			obj_type = self.__class__.__name__
-		super().__init__(obj_type)
-	
-	def get_val(self):
-		raise NotImplementedError
-	
-	def get_info(self): # dev can provide frontend with format instructions, this is added to the info for each line in the log using this LogFormat
-		return tdict() # by default no additional info is sent
-
-class LogWarning(LogFormat):
-	
-	def __init__(self, msg):
-		super().__init__('Warning')
-		self.val = msg
-		
-	# def get_info(self):
-	# 	return tdict(color='yellow') # example
-
-class LogError(LogFormat):
-	
-	def __init__(self, msg):
-		super().__init__('Error')
-		self.val = msg
-
-	# def get_info(self):
-	# 	return tdict(color='red') # example
 
 # TODO: add formats for headings, lists, maybe images, ...
 # TODO: make sure frontend can handle some basic/standard format instructions
