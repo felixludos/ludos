@@ -21,7 +21,8 @@ class TurnPhase(GamePhase):
 			C.create_object('tick', row=row, col=col,
 			                symbol=player.symbol, player=player.name)
 			
-			C.log.write(player, 'places at: {}, {}'.format(*action))
+			# C.log.write(player, 'places at: {}, {}'.format(*action))
+			C.log.writef('{} places at: {}, {}', player, *action)
 			
 			# check for victory
 			L = C.state.map.shape[0]
@@ -66,7 +67,7 @@ class TurnPhase(GamePhase):
 	
 	def encode(self, C):
 		
-		player = C.players[C.state.turn_counter % len(C.players)]
+		player = C.state.player_order[C.state.turn_counter % len(C.players)]
 		
 		out = GameActions()
 		
@@ -80,7 +81,12 @@ class TurnPhase(GamePhase):
 			C.state.winner = None
 			raise GameOver
 		
-		out.save_options(tset(zip(r[free], c[free])), desc='Place a tick into one of these coords (row, col)')
+		out.begin()
+		out.update(zip(r[free], c[free]))
+		out.write('Coordinate options')
+		out.commit()
+		
+		out.status.write('Place a tick into one of these coords (row, col)')
 		
 		return tdict({player.name:out})
 

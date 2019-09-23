@@ -98,15 +98,16 @@ class RichWriter(Savable, Transactionable, Pullable):
 		if indent_level is None:
 			indent_level = self.indent_level
 			
-		line = {
-			'line': write(objs, end=end),
-		}
+		line = write(*objs, end=end)
 		
 		if indent_level is not None:
-			line['level'] = indent_level
+			line = {
+				'line': line,
+				'level': indent_level,
+			}
 		
 		self.text.append(line)
-	
+		
 	def writef(self, txt, *objs, end=None, indent_level=None, debug=False, **kwobjs):
 		
 		if debug and not self.debug:  # Dont write a debug line unless specified
@@ -115,13 +116,14 @@ class RichWriter(Savable, Transactionable, Pullable):
 		if indent_level is None:
 			indent_level = self.indent_level
 		
-		line = {
-			'line': writef(txt, *objs, end=end, **kwobjs),
-		}
+		line = writef(txt, *objs, end=end, **kwobjs)
 		
 		if indent_level is not None:
-			line['level'] = indent_level
-		
+			line = {
+				'line': line,
+				'level': indent_level
+			}
+			
 		self.text.append(line)
 	
 	def __save(self):

@@ -5,6 +5,8 @@ from gsm import tdict, tlist, tset
 
 from .phases import TurnPhase
 
+MY_PATH = os.path.dirname(os.path.abspath(__file__))
+
 class TicTacToe(gsm.GameController):
 	
 	def __init__(self, debug=False):
@@ -17,7 +19,7 @@ class TicTacToe(gsm.GameController):
 		                 manager=manager)
 		
 		# register config files
-		self.register_config('basic', 'config/basics.yaml')
+		self.register_config('basic', os.path.join(MY_PATH,'config/basics.yaml'))
 		
 		# register players
 		self.register_player('Player1', val=1)
@@ -54,7 +56,11 @@ class TicTacToe(gsm.GameController):
 		
 		self.state.map = np.zeros((side, side), dtype=int)
 		
-		self.state.turn_counter = 0
+		self.state.turn_counter = -1
+		self.state.player_order = tlist(self.players.values())
+		
+		if self.state.player_order[0].name != self._select_player():
+			self.state.player_order = self.state.player_order[::-1]
 		
 	def _end_game(self):
 		

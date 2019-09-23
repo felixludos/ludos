@@ -102,7 +102,7 @@ class GameManager(Transactionable, Savable, Pullable):
 	def pull(self, player=None):
 		players = {}
 		
-		for name, p in self.players:
+		for name, p in self.players.items():
 			if player is None or player == name:
 				players[name] = {k:obj_jsonify(v) for k, v in p.items() if k not in self.hidden}
 			else:
@@ -115,6 +115,19 @@ class GameManager(Transactionable, Savable, Pullable):
 	
 	def __contains__(self, item):
 		return item in self.players
+	
+	def __iter__(self):
+		return iter(self.players)
+	
+	def keys(self):
+		return self.players.keys()
+	def values(self):
+		return self.players.values()
+	def items(self):
+		return self.players.items()
+	
+	def __len__(self):
+		return len(self.players)
 	
 	def names(self):
 		return list(self.players.keys())

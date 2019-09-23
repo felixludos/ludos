@@ -1,8 +1,78 @@
 
-# from .util import unjsonify
+import json
+import random
 from itertools import chain
-from .basic_containers import tset
+from .basic_containers import tset, tdict, tlist
+from .core.object import obj_unjsonify
+from .core.actions import decode_action_set
+from .util import unjsonify
 
+def _format(obj):
+	return unjsonify(json.loads(obj))
+
+class Ipython_Interface(object):
+	
+	def __init__(self, controller, seed=None):
+		super().__init__()
+		
+		self.ctrl = controller
+		
+		self.msg = None
+		self.table = None
+		if seed is None:
+			seed = random.getrandbits(64)
+		self.rng = random.Random(seed)
+		self.seed = seed
+		
+		
+	def set_player(self, player=None):
+		
+		if player is None:
+			player = self.rng.choice(self.get_players())
+		
+		self.player = player
+		print('Player set to {}'.format(self.player))
+		
+	def get_player(self, player):
+		return _format(self.ctrl.get_player(player))
+	
+	def get_players(self):
+		return _format(self.ctrl.get_players())
+	
+	
+	
+	def get_table(self, player=None):
+		self.table = _format(self.ctrl.get_table(player=player))
+	
+	def get_obj_types(self):
+		return _format(self.ctrl.get_obj_types())
+	
+	def get_log(self, player):
+		return _format(self.ctrl.get_log(player))
+	
+	def get_IU_spec(self):
+		return _format(self.ctrl.get_UI_spec())
+	
+	def get_status(self, player=None):
+		if player is None:
+			player = self.player
+		
+		self.msg = _format(self.ctrl.get_status(player))
+		
+		
+	
+	def reset(self, player=None, seed=None):
+		if player is None:
+			player = self.player
+		self.msg = _format(self.ctrl.reset(player=player, seed=seed))
+		
+		if 'error' in self.msg:
+			print('*** ERROR: {} ***'.format(self.msg.error.type))
+			print(self.msg.error.msg)
+			print('****************************')
+		
+	def step(self):
+		pass
 
 
 def print_response(msg):

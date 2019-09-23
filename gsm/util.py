@@ -31,9 +31,9 @@ def unjsonify(obj, tfm=None):
 		return tlist([unjsonify(o) for o in obj])
 	if isinstance(obj, dict):
 		if len(obj) == 1 and '_tuple' in obj:
-			return (unjsonify(o) for o in obj)
+			return tuple(unjsonify(o) for o in obj['_tuple'])
 		if len(obj) == 1 and '_set' in obj:
-			return tset(unjsonify(o) for o in obj)
+			return tset(unjsonify(o) for o in obj['_set'])
 		
 		return tdict({k:unjsonify(v) for k,v in obj.items()})
 	

@@ -151,7 +151,7 @@ class Savable(object):
 				return {cls.__unpack(x) for x in data['_data']}
 			elif typ == '_tuple':
 				# raise NotImplementedError
-				return (cls.__unpack(x) for x in data['_data'])
+				return tuple(cls.__unpack(x) for x in data['_data'])
 			
 			else: # Savable instance
 				ID = data['_ref']

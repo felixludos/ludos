@@ -62,7 +62,9 @@ class GameController(Named, Transactionable, Savable):
 			self.commit()
 			
 		for mem in self._tmembers:
-			self.__dict__[mem].begin()
+			obj = self.__dict__[mem]
+			if obj is not None:
+				obj.begin()
 		self._in_transaction = True
 	
 	def in_transaction(self):
@@ -73,7 +75,9 @@ class GameController(Named, Transactionable, Savable):
 			return
 		
 		for mem in self._tmembers:
-			self.__dict__[mem].commit()
+			obj = self.__dict__[mem]
+			if obj is not None:
+				obj.commit()
 		self._in_transaction = False
 	
 	def abort(self):
@@ -81,7 +85,9 @@ class GameController(Named, Transactionable, Savable):
 			return
 		
 		for mem in self._tmembers:
-			self.__dict__[mem].abort()
+			obj = self.__dict__[mem]
+			if obj is not None:
+				obj.abort()
 		self._in_transaction = False
 	
 	def __save(self):
@@ -191,8 +197,8 @@ class GameController(Named, Transactionable, Savable):
 		self.active_players = None
 		
 		self.state = GameState()
-		self.log = GameLogger(tset(p.name for p in self.players))
-		self.table.reset(tset(p.name for p in self.players))
+		self.log = GameLogger(tset(self.players.names()))
+		self.table.reset(tset(self.players.names()))
 		
 		self.phase_stack = self._set_phase_stack(config) # contains phase instances (potentially with phase specific data)
 		
@@ -242,7 +248,7 @@ class GameController(Named, Transactionable, Savable):
 						self.phase_stack.append(phase)  # keep current phase around
 					new = intr.get_phase()
 					if new in self._phases:
-						new = self.get_phase(new)
+						new = self.create_phase(new)
 					self.phase_stack.append(new)
 				else:
 					self.phase_stack.append(phase)

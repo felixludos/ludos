@@ -12,7 +12,7 @@ def _expand_actions(code):
 	if isinstance(code, set) and len(code) == 1:
 		return _expand_actions(next(iter(code)))
 	
-	if isinstance(code, str) or isinstance(code, int):
+	if isinstance(code, dict) or isinstance(code, str) or isinstance(code, int):
 		return [code]
 	
 	# tuple case
@@ -106,6 +106,18 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 			return
 
 		self._current = None
+	
+	def __enter__(self):
+		# self._context = True
+		self.begin()
+
+	def __exit__(self, type, *args):
+		# self._context = False
+		if type is None:
+			self.commit()
+		else:
+			self.abort()
+		return None if type is None else type.__name__ == 'AbortTransaction'
 		
 	def write(self, *args, **kwargs):
 		self._desc.write(*args, **kwargs)
@@ -146,7 +158,7 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 	
 	def verify(self, action): # action should be a tuple
 		
-		for option in self.options:
+		for option in self._options:
 			
 			actionset = decode_action_set(option.actions)
 			
@@ -162,11 +174,11 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 		raise InvalidActionError(action)
 	
 	def __len__(self):
-		return len(self.options)
+		return len(self._options)
 	
 	def __add__(self, other):
 		new = GameActions()
-		new.options = self.options + other.options
+		new._options = self._options + other._options
 		new.status.text = self.status.text + other.status.text
 		return new
 		
@@ -176,7 +188,7 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 	def pull(self): # returns jsonified obj
 		
 		options = []
-		for opt in self.options:
+		for opt in self._options:
 			options.append({})
 			options[-1]['actions'] = format_actions(opt.actions)
 			if 'desc' in opt:
