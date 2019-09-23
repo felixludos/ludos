@@ -3,15 +3,65 @@ from string import Formatter
 
 from .basic_containers import tdict, tset, tlist
 from .mixins import Typed, Savable, Transactionable, Pullable, Writable
-from .core.object import GameObject # TODO: clean
 from .signals import FormatException
-from .util import Player
 
 FMT = Formatter()
 
+def _process_obj(obj):
+	info = {}
+	if isinstance(obj, Writable):
+		info.update(obj.get_text_info())
+		info['type'] = obj.get_text_type()
+		info['val'] = obj.get_text_val()
+	elif isinstance(obj, Typed):
+		info['type'] = obj.get_type()
+		info['val'] = str(obj)
+	else:
+		info['type'] = obj.__class__.__name__
+		info['val'] = str(obj)
+	
+	return info
+
+def write(*objs, end='\n'):
+	
+	if end is not None and len(end):
+		objs.append(end)
+	
+	return [_process_obj(obj) for obj in objs]
+
+def writef(txt, *objs, end=None, **kwobjs):
+	line = []
+	
+	pos = 0
+	
+	for pre, info, spec, _ in FMT.parse(txt):
+		
+		line.append(pre)
+		
+		if info is None:
+			continue
+		elif info in kwobjs:
+			obj = kwobjs[info]
+		else:
+			try:
+				obj = objs[int(info)]
+			except ValueError:
+				if info == '':
+					obj = objs[pos]
+					pos += 1
+				else:
+					raise FormatException('Unknown object info, type {}: {}'.format(type(info), info))
+		
+		if spec is not None:
+			obj = obj.__format__(spec)
+		
+		line.append(obj)
+		
+	return write(line, end=end)
+
 class RichWriter(Savable, Transactionable, Pullable):
 	
-	def __init__(self, indent=None, debug=False):
+	def __init__(self, indent=None, debug=False, end='\n'):
 		super().__init__()
 		
 		self.text = tlist()
@@ -20,6 +70,7 @@ class RichWriter(Savable, Transactionable, Pullable):
 		self.indent_level = indent
 		self._shadow_indent = None
 		self._in_transaction = None
+		self.end = end
 	
 	def zindent(self):  # reset indent
 		if self.indent_level is not None:
@@ -33,41 +84,22 @@ class RichWriter(Savable, Transactionable, Pullable):
 		if self.indent_level is not None:
 			self.indent_level = max(self.indent_level - n, 0)
 	
-	def _process_obj(self, obj):
-		info = {}
-		if isinstance(obj, RichText):
-			info.update(obj.get_info())
-			info['type'] = obj.get_type()
-			info['val'] = obj.get_val()
-		elif isinstance(obj, GameObject):
-			info['type'] = 'obj'
-			info['obj_type'] = obj.get_type()
-			info['val'] = obj._id
-		elif isinstance(obj, Player):
-			info['type'] = 'player'
-			info['val'] = obj.name
-		elif isinstance(obj, Typed):
-			info['type'] = obj.get_type()
-			info['val'] = str(obj)
-		else:
-			info['type'] = obj.__class__.__name__
-			info['val'] = str(obj)
+	def clear(self):
+		self.text.clear()
 		
-		return info
+	def __len__(self):
+		return len(self.text)
 	
-	def write(self, *objs, end='\n', indent_level=None, debug=False):
+	def write(self, *objs, end=None, indent_level=None, debug=False):
 		
 		if debug and not self.debug:  # Dont write a debug line unless specified
 			return
 		
 		if indent_level is None:
 			indent_level = self.indent_level
-		
-		if len(end):
-			objs.append(end)
-		
+			
 		line = {
-			'line': [self._process_obj(obj) for obj in objs],
+			'line': write(objs, end=end),
 		}
 		
 		if indent_level is not None:
@@ -75,36 +107,22 @@ class RichWriter(Savable, Transactionable, Pullable):
 		
 		self.text.append(line)
 	
-	def writef(self, txt, *objs, end='\n', indent_level=None, debug=False, **kwobjs):
+	def writef(self, txt, *objs, end=None, indent_level=None, debug=False, **kwobjs):
 		
-		line = []
+		if debug and not self.debug:  # Dont write a debug line unless specified
+			return
 		
-		pos = 0
+		if indent_level is None:
+			indent_level = self.indent_level
 		
-		for pre, info, spec, _ in FMT.parse(txt):
-			
-			line.append(pre)
-			
-			if info is None:
-				continue
-			elif info in kwobjs:
-				obj = kwobjs[info]
-			else:
-				try:
-					obj = objs[int(info)]
-				except ValueError:
-					if info == '':
-						obj = objs[pos]
-						pos += 1
-					else:
-						raise FormatException('Unknown object info, type {}: {}'.format(type(info), info))
-			
-			if spec is not None:
-				obj = obj.__format__(spec)
-			
-			line.append(obj)
+		line = {
+			'line': writef(txt, *objs, end=end, **kwobjs),
+		}
 		
-		self.write(*line, end=end, indent_level=indent_level, debug=debug)
+		if indent_level is not None:
+			line['level'] = indent_level
+		
+		self.text.append(line)
 	
 	def __save(self):
 		pack = self.__class__.__pack
@@ -116,6 +134,7 @@ class RichWriter(Savable, Transactionable, Pullable):
 		data['_shadow_indent'] = pack(self._shadow_indent)
 		data['debug'] = pack(self.debug)
 		data['in_transaction'] = pack(self._in_transaction)
+		data['end'] = pack(self.end)
 		
 		return data
 
@@ -130,6 +149,7 @@ class RichWriter(Savable, Transactionable, Pullable):
 		self._shadow_indent = unpack(data['_shadow_indent'])
 		self.debug = unpack(data['debug'])
 		self._in_transaction = unpack(data['in_transaction'])
+		self.end = unpack(data['end'])
 		
 		return self
 		
@@ -219,19 +239,20 @@ class LogWriter(RichWriter):
 		return obj
 
 # the dev can write instance of RichText, but all written objects are stored as simple objects (dict, list, primitives)
-class RichText(Writable, Savable):
+class RichText(Typed, Writable, Savable):
 	
-	def __init__(self, msg, obj_type=None, **info):
-		if obj_type is None:
-			obj_type = self.__class__.__name__
+	def __init__(self, msg, obj_type='Regular', **info):
 		super().__init__(obj_type)
 		self.val = msg
 		self.info = info
 	
-	def get_val(self):
+	def get_text_type(self):
+		return self.get_type()
+	
+	def get_text_val(self):
 		return self.val
 	
-	def get_info(self): # dev can provide frontend with format instructions, this is added to the info for each line in the log using this LogFormat
+	def get_text_info(self): # dev can provide frontend with format instructions, this is added to the info for each line in the log using this LogFormat
 		return self.info # by default no additional info is sent
 	
 	def __save(self):

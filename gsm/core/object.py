@@ -1,30 +1,35 @@
 
 import numpy as np
-from ..signals import InvalidInitializationError, MissingValueError
+from ..signals import InvalidInitializationError, MissingValueError, UnknownElementError
 from ..mixins import Named, Typed, Writable, Transactionable, Savable, Pullable
 from ..basic_containers import tdict, tset, tlist
-
+from ..util import _primitives, RandomGenerator
 
 # TODO: fix so it works with cross referencing
-def jsonify(obj):
+def obj_jsonify(obj):
+	if isinstance(obj, _primitives):
+		return obj
 	if isinstance(obj, GameObject):
 		return {'_obj': obj._id}
 	if isinstance(obj, list):
-		return [jsonify(o) for o in obj]
+		return [obj_jsonify(o) for o in obj]
 	if isinstance(obj, dict):
-		return {jsonify(k):jsonify(v) for k,v in obj.items()}
+		return {obj_jsonify(k):obj_jsonify(v) for k,v in obj.items()}
 	if isinstance(obj, tuple):
-		return {'_tuple': [jsonify(o) for o in obj]}
+		return {'_tuple': [obj_jsonify(o) for o in obj]}
 		# return [jsonify(o) for o in obj]
 	if isinstance(obj, set):
-		return {'_set': [jsonify(o) for o in obj]}
+		return {'_set': [obj_jsonify(o) for o in obj]}
 	if isinstance(obj, np.ndarray): # TODO: make this work for obj.dtype = 'obj', maybe recurse elements of .tolist()?
 		return {'_ndarray': obj.tolist(), '_dtype':obj.dtype}
-	return obj
+		
+	raise UnknownElementError(obj)
 
-def unjsonify(obj, obj_tbl=None):
+def obj_unjsonify(obj, obj_tbl=None):
+	if isinstance(obj, _primitives):
+		return obj
 	if isinstance(obj, list):
-		return tlist([unjsonify(o) for o in obj])
+		return tlist([obj_unjsonify(o) for o in obj])
 	if isinstance(obj, dict):
 		if '_obj' in obj and len(obj) == 1:
 			if obj_tbl is None:
@@ -32,16 +37,17 @@ def unjsonify(obj, obj_tbl=None):
 			else:
 				return obj
 		if '_set' in obj and len(obj) == 1:
-			return tset([unjsonify(o) for o in obj['set']])
+			return tset([obj_unjsonify(o) for o in obj['set']])
 		if '_tuple' in obj and len(obj) == 1:
-			return tuple(unjsonify(o) for o in obj['tuple'])
+			return tuple(obj_unjsonify(o) for o in obj['tuple'])
 		if '_ndarray' in obj and '_dtype' in obj:
 			return np.array(obj['_ndarray'], dtype=obj['_dtype'])
-		return tdict({unjsonify(k):unjsonify(v) for k,v in obj.items()})
-	return obj
+		return tdict({obj_unjsonify(k):obj_unjsonify(v) for k,v in obj.items()})
+	
+	raise UnknownElementError(obj)
 
 
-class GameObject(Typed, Transactionable, Savable, Pullable):
+class GameObject(Typed, Writable, Transactionable, Savable, Pullable):
 	
 	def __new__(cls, *args, **kwargs):
 		self = super().__new__(cls)
@@ -133,13 +139,20 @@ class GameObject(Typed, Transactionable, Savable, Pullable):
 		
 		return self
 		
+	def get_text_type(self):
+		return 'obj'
+	def get_text_val(self):
+		return self._id
+	def get_text_info(self):
+		return {'obj_type':self.get_type()}
+	
 	def pull(self, player=None):
 		
 		data = {}
 		
 		for k, v in self._public.items():
 			if player is None or player in self.visible or k in self._open:
-				data[k] = jsonify(v)
+				data[k] = obj_jsonify(v)
 				
 		return data
 	
@@ -162,73 +175,89 @@ class GameObject(Typed, Transactionable, Savable, Pullable):
 			return super().__delattr__(name)
 		return self._public.__delattr__(name)
 	
+	def __eq__(self, other):
+		return self._id == other._id
 	
 		
 
-
-	
 # Generator - for card decks
 
 class GameObjectGenerator(GameObject):
 	
-	def __init__(self, ID, objs=None, **kwargs):
-		super().__init__(ID, **kwargs)
-		
-		if objs is None:
-			objs = []
-		self.__dict__['_objs'] = objs
-		
-	# TODO: update
-	# def __getstate__(self):
-	# 	state = super().__getstate__()
-	# 	state['_objs'] = [pack_savable(obj) for obj in self._objs]
-	# 	return state
-	#
-	# def __setstate__(self, state):
-	# 	self.__dict__['_objs'] = [unpack_savable(data) for data in state['_objs']]
-	# 	del state['_objs']
-	# 	super().__setstate__(state)
-		
-	# should not be overridden, and usually not called by dev
+	def __init__(self, objs=[], default=GameObject, **props):
+		super().__init__(**props)
+		self._hidden.objs = tlist(objs)
+		for obj in self._hidden.objs:
+			assert 'obj_type' in obj, 'Every object in the Generator must have an "obj_type"'
+		self._hidden.default = default
+		self._hidden.ID_counter = 0
+	
+	######################
+	# Do NOT Override
+	######################
+	
 	def _registered(self, x):
-		if self._table is not None:
-			self._table.update(x._id, x)
-		return x
+		return self._table.create(ID=self._gen_ID(), **x)
 	
-	# should not be overridden, and usually not called by dev
-	def _erased(self, x):
-		if self._table is not None:
-			self._table.remove(x._id)
-		return x
-	
-	# should be overridden when subclassing
-	def _get(self, n=None):
-		raise NotImplementedError
-	
-	# should be overridden when subclassing
-	def _add(self, objs):
-		raise NotImplementedError
+	def _freed(self, x):
+		self._table.remove(x._id)
 	
 	# should not be overridden
 	def get(self, n=None):
-		
-		xs = self._get(n)
+		objs = tlist(self._registered(x) for x in self._get(1 if n is None else n))
 		
 		if n is None:
-			xs = self._registered(xs)
-		else:
-			xs = [self._registered(x) for x in xs]
-			
-		return xs
+			return objs[0]
+		return objs
 	
 	# should not be overridden
 	def extend(self, objs):
-		return self._add(self._erased(obj) for obj in objs)
+		return self._add(*map(self._erased,objs))
 	
 	# should not be overridden
 	def append(self, obj):
-		return self._add([self._erased(obj)])
+		return self._add(self._erased(obj))
+	
+	######################
+	# Must be Overridden
+	######################
+	
+	# should be overridden when subclassing
+	def _get(self, n=1):  # from self._hidden.objs to []
+		raise NotImplementedError
+	
+	# should be overridden when subclassing
+	def _add(self, *objs):  # from 'objs' to self._hidden.objs
+		raise NotImplementedError
+	
+	######################
+	# Optionally Overridden
+	######################
+	
+	def _gen_ID(self):  # optionally overridden
+		ID = '{}-{}'.format(self._id, self._hidden.ID_counter)
+		self._hidden.ID_counter += 1
+		
+		if not self._table.is_available(ID):
+			return self._gen_ID()
+		return ID
 	
 	
 class SafeGenerator(GameObjectGenerator):
-	pass # TODO: this should change the id of game objects when unregistering
+	
+	def __init__(self, seed, **rest):
+		super().__init__(**rest)
+		
+		self._hidden.seed = seed
+		self._hidden.rng = RandomGenerator(seed=seed)
+		
+	def _gen_ID(self):
+		ID = '{}-{}'.format(self._id, hex(self._hidden.rng.getrandbits(32)))
+		
+		if not self._table.is_available(ID):
+			return self._gen_ID()
+		return ID
+
+
+
+

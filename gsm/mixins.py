@@ -207,10 +207,16 @@ class Pullable(object):
 		raise NotImplementedError
 	
 	
-class Writable(Typed):
+class Writable(object):
 	
 	def get_text_val(self):
 		raise NotImplementedError
+	
+	def get_text_type(self):
+		raise NotImplementedError
+	
+	def get_text_info(self):
+		raise {}
 	
 	# def get_text_info(self):
 	# 	return {}

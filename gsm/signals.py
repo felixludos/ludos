@@ -1,7 +1,11 @@
 
 
 
+# general
 
+class UnknownElementError(Exception):
+	def __init__(self, obj):
+		super().__init__('Cannot un/jsonify {}: {}'.format(type(obj), obj))
 
 # Control flow Exceptions
 

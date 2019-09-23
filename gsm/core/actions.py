@@ -1,9 +1,35 @@
 # import json
+from itertools import product, chain
 from ..basic_containers import tdict, tset, tlist
-from .object import GameObject
-from ..mixins import Typed, Named, Transactionable, Savable
+from .object import obj_jsonify, GameObject
+from ..mixins import Typed, Named, Transactionable, Savable, Pullable
 from ..signals import ActionMismatch, UnknownActionElement, InvalidActionError
-from ..viz import _decode_action_set
+from ..writing import RichWriter
+# from ..util import jsonify
+
+
+def _expand_actions(code):
+	if isinstance(code, set) and len(code) == 1:
+		return _expand_actions(next(iter(code)))
+	
+	if isinstance(code, str) or isinstance(code, int):
+		return [code]
+	
+	# tuple case
+	if isinstance(code, (tuple, list)):
+		return list(product(*map(_expand_actions, code)))
+	if isinstance(code, set):
+		return chain(*map(_expand_actions, code))
+	return code
+def _flatten(bla):
+	output = ()
+	for item in bla:
+		output += _flatten(item) if isinstance(item, (tuple, list)) else (item,)
+	return output
+def decode_action_set(code):
+	code = _expand_actions(code)
+	return tset(map(_flatten, code))
+
 
 def process_actions(raw): # process input when saving new action set (mostly turn options into ActionElement instances)
 	
@@ -12,15 +38,15 @@ def process_actions(raw): # process input when saving new action set (mostly tur
 	if isinstance(raw, set):
 		return tset(process_actions(r) for r in raw)
 	
-	if isinstance(raw, GameObject):
-		return ObjectAction(raw)
-	if type(raw).__module__ == 'numpy': # unwrap numpy types
-		return process_actions(raw.item())
-	if isinstance(raw, (str, int, float)):
-		return FixedAction(raw)
-	
 	if isinstance(raw, ActionElement):
 		return raw
+	if isinstance(raw, GameObject):
+		return ObjectAction(raw)
+	if isinstance(raw, (str, int, float, bool)):
+		return FixedAction(raw)
+	if type(raw).__module__ == 'numpy': # unwrap numpy types
+		return process_actions(raw.item())
+	
 	
 	raise UnknownActionElement(raw)
 	
@@ -28,31 +54,78 @@ def process_actions(raw): # process input when saving new action set (mostly tur
 def format_actions(raw): # format action sets to be sent to frontend (mostly encoding ActionElements)
 	
 	if isinstance(raw, tuple):
-		return tuple(format_actions(r) for r in raw)
+		return {'_tuple': [format_actions(r) for r in raw]}
 	if isinstance(raw, set):
-		return tset(format_actions(r) for r in raw)
+		return {'_set': [format_actions(r) for r in raw]}
 	
 	if isinstance(raw, ActionElement):
-		info = tdict(raw.encode())
-		info.type = raw.get_type()
+		info = raw.encode()
+		info['type'] = raw.get_type()
 		return info
 		
 	# all leaf elements must be ActionElement instances
 	
 	raise UnknownActionElement(raw)
 
-class GameActions(Transactionable, Savable): # created and returned in phases
+
+
+class GameActions(Transactionable, Savable, Pullable): # created and returned in phases
 	
 	def __init__(self):
 		super().__init__()
-		self.reset()
+		self._current = None
+		self._desc = RichWriter(end='')
+		self._options = tlist()
+		
+		self.status = RichWriter(end='') # should be accessed directly by dev
+		self.info = tdict() # should be accessed directly by dev
+	
+	def in_transaction(self):
+		return self._current is not None
+	
+	def begin(self):
+		if self.in_transaction():
+			return
+		
+		self._current = tset()
+		self._desc.clear()
+
+	def commit(self):
+		if not self.in_transaction():
+			return
+
+		opt = tdict(actions=process_actions(self._current))
+		if len(self._desc):
+			opt.desc = self._desc.pull()
+		self._options.append(opt)
+		
+		self._current = None
+
+	def abort(self):
+		if not self.in_transaction():
+			return
+
+		self._current = None
+		
+	def write(self, *args, **kwargs):
+		self._desc.write(*args, **kwargs)
+	def writef(self, *args, **kwargs):
+		self._desc.writef(*args, **kwargs)
+	
+	def __getattribute__(self, item):
+		try:
+			return super().__getattribute__(item)
+		except AttributeError:
+			return self._current.__getattribute__(item)
 	
 	def __save(self):
 		pack = self.__class__.__pack
 		
 		data = {}
 		
-		data['options'] = pack(self.options)
+		data['_current'] = pack(self._current)
+		data['_desc'] = pack(self._desc)
+		data['_options'] = pack(self._options)
 		data['status'] = pack(self.status)
 		data['info'] = pack(self.info)
 		
@@ -63,34 +136,19 @@ class GameActions(Transactionable, Savable): # created and returned in phases
 		self = cls()
 		unpack = cls.__unpack
 		
-		self.options = unpack(data['options'])
+		self._current = unpack(data['_current'])
+		self._desc = unpack(data['_desc'])
+		self._options = unpack(data['options'])
 		self.status = unpack(data['status'])
 		self.info = unpack(data['info'])
 		
 		return self
 	
-	def reset(self):
-		# actions
-		self.options = tlist()
-		self.status = None
-		
-		# info
-		self.info = tdict()
-	
-	def save_options(self, actions, desc=None): # each action group/option can have its own description
-		option = tdict(actions=process_actions(actions))
-		if desc is not None:
-			option.desc = desc
-		self.options.append(option)
-	
-	def set_status(self, status): # these instructions are global, for all action groups/options
-		self.status = status
-	
 	def verify(self, action): # action should be a tuple
 		
 		for option in self.options:
 			
-			actionset = _decode_action_set(option.actions)
+			actionset = decode_action_set(option.actions)
 			
 			for tpl in actionset:
 				if len(tpl) == len(action):
@@ -109,36 +167,35 @@ class GameActions(Transactionable, Savable): # created and returned in phases
 	def __add__(self, other):
 		new = GameActions()
 		new.options = self.options + other.options
-		new.status = self.status
-		if self.status is None:
-			new.status = other.status
+		new.status.text = self.status.text + other.status.text
 		return new
-	
+		
 	def get_info(self):
 		return self.info
 	
 	def pull(self): # returns jsonified obj
-		if self.status is None and len(self.options) == 1 and 'desc' in self.options[0]:
-			self.status = self.options[0]['desc']
-			del self.options[0]['desc']
 		
-		full = tdict(options=tlist())
+		options = []
+		for opt in self.options:
+			options.append({})
+			options[-1]['actions'] = format_actions(opt.actions)
+			if 'desc' in opt:
+				options[-1]['desc'] = opt.desc
 		
-		for opts in self.options:
-			opts = opts.copy()
-			opts.actions = format_actions(opts.actions)
-			full.options.append(opts)
+		out = {
+			'options': options,
+		}
 		
-		if self.status is not None:
-			full.status = str(self.status)
+		if len(self.status):
+			out['status'] = self.status.pull()
 			
-		full.info = self.info
-		
-		return process_actions(full)
+		if len(self.info):
+			out['info'] = obj_jsonify(self.info)
+			
+		return out
 
 
 # Advanced action queries
-
 
 class ActionElement(Typed, Transactionable, Savable):
 	
@@ -161,7 +218,7 @@ class FixedAction(ActionElement):
 		return cls(data)
 
 	def encode(self):
-		return tdict(val=self.val)
+		return {'val':self.val}
 	
 	def evaluate(self, q):
 		if q == str(self.val):
@@ -181,13 +238,9 @@ class ObjectAction(ActionElement):
 		return cls(cls.__unpack(data['obj']))
 		
 	def encode(self):
-		return tdict(ID=self.obj._id)
+		return {'ID':self.obj._id}
 	
 	def evaluate(self, q):
-		# try:
-		# 	q = type(self.obj._id)(q) # not needed since all IDs should be str (or at least primitives, which json can handle)
-		# except ValueError:
-		# 	raise ActionMismatch
 		if q == self.obj._id:
 			return self.obj
 		raise ActionMismatch

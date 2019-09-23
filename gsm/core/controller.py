@@ -7,12 +7,13 @@ import yaml
 
 from ..basic_containers import tdict, tset, tlist, containerify
 from .logging import GameLogger
-from .object import GameObject
+from .object import obj_jsonify
 from .state import GameState
 from .table import GameTable
+from .player import GameManager
 from ..mixins import Named, Transactionable, Savable
 from ..signals import PhaseComplete, PhaseInterrupt, GameOver, InvalidKeyError, ClosedRegistryError, MissingTypeError, MissingValueError, MissingObjectError
-from ..util import Player, RandomGenerator
+from ..util import RandomGenerator
 
 class GameController(Named, Transactionable, Savable):
 	
@@ -20,10 +21,10 @@ class GameController(Named, Transactionable, Savable):
 		new = super().__new__(cls)
 		
 		# meta values (neither for dev nor user) (not including soft registries - they dont change)
-		new._tmembers = {'state', 'log', 'table', 'active_players', 'phase_stack', 'keys', 'RNG', '_images'}
+		new._tmembers = {'state', 'log', 'table', 'active_players', 'phase_stack', 'keys', 'RNG', '_key_rng', '_images', 'players'}
 		return new
 	
-	def __init__(self, name=None, debug=False):
+	def __init__(self, name=None, debug=False, manager=None):
 		if name is None:
 			# TODO: add suggestion about game name
 			name = self.__class__.__name__
@@ -32,14 +33,18 @@ class GameController(Named, Transactionable, Savable):
 		# Hard registries - include python classes (cant directly be saved)
 		self._phases = tdict() # dict of phase classes
 		
+		if manager is None:
+			manager = GameManager()
+		
 		# Soft registries - only information, but must be provided before game start
-		self.players = tdict()
+		self.players = manager
 		self.config_files = tdict()
 		
 		# GameState
 		self._in_progress = False # flag for registration to end
 		self._in_transaction = False # flag for transactionable
 		self.DEBUG = debug # flag for dev to use as needed
+		
 		self.keys = tdict() # a one time permission to call step() (with a valid action)
 		self.RNG = RandomGenerator()
 		self._images = tdict()
@@ -93,9 +98,16 @@ class GameController(Named, Transactionable, Savable):
 		for mem in self._tmembers:
 			data[mem] = pack(self.__dict__[mem])
 		
-		data['name'] = self.name
+		data['name'] = pack(self.name)
+		data['_in_progress'] = pack(self._in_progress)
+		data['_in_transaction'] = pack(self._in_transaction)
+		data['debug'] = pack(self.DEBUG)
+		
 		
 		return data
+	
+	def save(self):  # returns string
+		return json.dumps(self.__save())
 	
 	@classmethod
 	def __load(cls, data):
@@ -111,10 +123,35 @@ class GameController(Named, Transactionable, Savable):
 		for mem in self._tmembers:
 			self.__dict__[mem] = data[mem]
 			
-		self.name = data['name']
+		self.name = unpack(data['name'])
+		self._in_transaction = unpack(data['_in_transaction'])
+		self._in_progress = unpack(data['_in_progress'])
+		self.DEBUG = unpack(data['DEBUG'])
 		
 		return self
+	
+	def load(self, data):
 		
+		obj = self.__class__.__load(json.loads(data))
+		
+		# load registries
+		self._phases = obj._phases
+		self.players = obj.players
+		self.config_files = obj.config_files
+		
+		# unpack tmembers
+		for mem in self._tmembers:
+			self.__dict__[mem] = obj.__dict__[mem]
+		
+		self.name = obj.name
+		self._in_transaction = obj._in_transaction
+		self._in_progress = obj._in_progress
+		self.DEBUG = obj.DEBUG
+	
+	######################
+	# Registration
+	######################
+	
 	def register_config(self, name, path):
 		if self._in_progress:
 			raise ClosedRegistryError
@@ -132,18 +169,20 @@ class GameController(Named, Transactionable, Savable):
 	def register_player(self, name, **props):
 		if self._in_progress:
 			raise ClosedRegistryError
-		self.players[name] = Player(name, **props)
+		self.players.register(name, **props)
 	
-	def reset(self, seed=None):
-		return json.dumps(self._reset(seed))
+	######################
+	# Do NOT Override
+	######################
 		
-		
-	def _reset(self, seed=None):
+	def _reset(self, player, seed=None):
 		
 		if seed is None:
 			seed = random.getrandbits(64)
 		
 		self.seed = seed
+
+		self._key_rng = RandomGenerator(self.seed)
 		self.RNG = RandomGenerator(self.seed)
 		
 		config = self._load_config()
@@ -161,36 +200,9 @@ class GameController(Named, Transactionable, Savable):
 		
 		self._in_progress = True
 		
-		player = self._select_player()
-		
 		return self._step(player)
 	
-	def _load_config(self):
-		config = tdict()
-		
-		for name, path in self.config_files.items():
-			config[name] = containerify(yaml.load(open(path, 'r')))
-			
-		return config
-	
-	# must be implemented to define initial phase sequence
-	def _set_phase_stack(self, config): # should be in reverse order (returns a tlist stack)
-		return tlist()
-	
-	# This function is implemented by dev to initialize the gamestate, and define player order
-	def _init_game(self, config):
-		raise NotImplementedError
-	
-	def _end_game(self): # return info to be sent at the end of the game
-		raise NotImplementedError
-	
-	def _select_player(self):
-		raise NotImplementedError
-	
-	def step(self, player, action=None, key=None): # returns json bytes (str)
-		return json.dumps(self._step(player=player, action=action))
-	
-	def _step(self, player, action=None, key=None): # returns python objs (but json readable)
+	def _step(self, player, action=None, key=None):  # returns python objs (but json readable)
 		
 		try:
 			
@@ -215,7 +227,7 @@ class GameController(Named, Transactionable, Savable):
 			self.begin()
 			
 			# prepare executing acitons
-		
+			
 			# execute action
 			while len(self.phase_stack):
 				phase = self.phase_stack.pop()
@@ -227,18 +239,18 @@ class GameController(Named, Transactionable, Savable):
 					pass
 				except PhaseInterrupt as intr:
 					if intr.stacks():
-						self.phase_stack.append(phase) # keep current phase around
+						self.phase_stack.append(phase)  # keep current phase around
 					new = intr.get_phase()
 					if new in self._phases:
-						new = self._get_phase(new)()
+						new = self.get_phase(new)
 					self.phase_stack.append(new)
 				else:
 					self.phase_stack.append(phase)
 					break
-					
+			
 			if not len(self.phase_stack):
 				raise GameOver
-			
+		
 		except GameOver:
 			self.commit()
 			
@@ -247,7 +259,7 @@ class GameController(Named, Transactionable, Savable):
 				self.end_info = self._end_game()
 			
 			msg = self._compose_msg(player)
-			
+		
 		except Exception as e:
 			self.abort()
 			# error handling
@@ -258,11 +270,11 @@ class GameController(Named, Transactionable, Savable):
 					'msg': ''.join(traceback.format_exception(*sys.exc_info())),
 				},
 			}
-			
+		
 		else:
 			self.commit()
 			# format output message
-
+			
 			self.active_players = out
 			self._images.clear()
 			
@@ -270,8 +282,38 @@ class GameController(Named, Transactionable, Savable):
 		
 		return msg
 	
+	######################
+	# Must be Overridden
+	######################
+	
+	# This function is implemented by dev to initialize the gamestate, and define player order
+	def _init_game(self, config):
+		raise NotImplementedError
+	
+	def _end_game(self): # return info to be sent at the end of the game
+		raise NotImplementedError
+	
+	def _select_player(self):
+		raise NotImplementedError
+		
+	# must be implemented to define initial phase sequence
+	def _set_phase_stack(self, config):  # should be in reverse order (returns a tlist stack)
+		return tlist()
+	
+	######################
+	# Optionally Overridden
+	######################
+	
+	def _load_config(self):
+		config = tdict()
+		
+		for name, path in self.config_files.items():
+			config[name] = containerify(yaml.load(open(path, 'r')))
+		
+		return config
+	
 	def _gen_key(self, player=None):
-		key = hex(self.RNG.getrandbits(64))
+		key = hex(self._key_rng.getrandbits(64))
 		if player is not None:
 			self.keys[player] = key
 		return key
@@ -293,20 +335,32 @@ class GameController(Named, Transactionable, Savable):
 			else:
 				msg = {'waiting_for': list(self.active_players.keys())}
 			
+			msg['players'] = self.players.pull(player)
 			msg['table'] = self.table.pull(player)
 		
 		self._images[player] = json.dumps(msg)
 		
 		return msg
 	
-	def _get_phase(self, name):
-		return self._phases[name]
+	######################
+	# Dev functions (return obj)
+	######################
 	
-	def get_table(self, player=None):
-		return self.table.pull(player)
+	def create_phase(self, name, *args, **kwargs):
+		return self._phases[name](*args, **kwargs)
 	
-	def get_obj_types(self):
-		return self.table.get_obj_types()
+	def create_object(self, obj_type, **spec):
+		return self.table.create(obj_type=obj_type, **spec)
+	
+	######################
+	# User functions (return json str)
+	######################
+	
+	def step(self, player, action=None, key=None):  # returns json bytes (str)
+		return json.dumps(self._step(player=player, action=action, key=key))
+	
+	def reset(self, player, seed=None):
+		return json.dumps(self._reset(player, seed))
 	
 	def get_status(self, player):
 		
@@ -315,28 +369,27 @@ class GameController(Named, Transactionable, Savable):
 		
 		return self._images[player]
 	
+	def get_player(self, player):
+		return json.dumps(obj_jsonify(self.players[player]))
+	
+	def get_players(self):
+		return json.dumps(self.players.names())
+	
+	def get_table(self, player=None):
+		return json.dumps(self.table.pull(player))
+	
+	def get_obj_types(self):
+		return json.dumps(self.table.get_obj_types())
+	
 	def get_log(self, player):
-		return self.log.get_full(player)
+		return json.dumps(self.log.get_full(player))
 	
 	def get_UI_spec(self): # returns a specification for gUsIm - may be overridden to include extra data
 		raise NotImplementedError # TODO: by default it should return contents of a config file
 	
-	def get_player(self, name):
-		for p in self.players:
-			if p.name == name:
-				return p
-	def get_players(self):
-		return tlist(p.name for p in self.players)
 	
-	def create_object(self, obj_type, visible=None, ID=None, **props):
-		return self.table.create(obj_type=obj_type, visible=visible, ID=ID, **props)
 	
-	def save(self): # returns string
-		return json.dumps(self.__save())
 	
-	@classmethod
-	def load(self, data):
-		return self.__load(json.loads(data))
 	
 
 

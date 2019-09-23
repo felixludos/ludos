@@ -3,7 +3,7 @@ from ..basic_containers import tdict, tlist, tset
 from .object import GameObject
 from ..writing import RichWriter, LogWriter
 from ..mixins import Named, Typed, Savable, Transactionable
-from ..util import Player
+# from ..util import Player
 from string import Formatter
 
 '''

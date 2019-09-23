@@ -3,28 +3,6 @@
 from itertools import chain
 from .basic_containers import tset
 
-def _expand_actions(code):
-	if isinstance(code, set) and len(code) == 1:
-		return _expand_actions(next(iter(code)))
-	
-	if isinstance(code, str) or isinstance(code, int):
-		return [code]
-	
-	# tuple case
-	if isinstance(code, (tuple, list)):
-		return list(product(*map(_expand_actions, code)))
-	if isinstance(code, set):
-		return chain(*map(_expand_actions, code))
-	return code
-def _flatten(bla):
-	output = ()
-	for item in bla:
-		output += _flatten(item) if isinstance(item, (tuple, list)) else (item,)
-	return output
-
-def _decode_action_set(code):
-	code = _expand_actions(code)
-	return tset(map(_flatten, code))
 
 
 def print_response(msg):
@@ -41,3 +19,56 @@ def print_response(msg):
 	else:
 		pass
 
+
+def render_format(raw):
+	if isinstance(raw, set):
+		# return list(render_format(el) for el in raw)
+		itr = dict()
+		for i, el in enumerate(raw):
+			itr['s{}'.format(i)] = render_format(el)
+		return itr
+	elif isinstance(raw, dict):
+		return dict((str(k), render_format(v)) for k, v in raw.items())
+	elif isinstance(raw, list):
+		# return list(render_format(el) for el in raw)
+		itr = dict()
+		for i, el in enumerate(raw):
+			itr['l{}'.format(i)] = render_format(el)
+		return itr
+	elif isinstance(raw, tuple):
+		# return list(render_format(el) for el in raw)
+		itr = dict()
+		for i, el in enumerate(raw):
+			itr['t{}'.format(i)] = render_format(el)
+		return itr
+	return str(raw)
+
+
+import uuid
+from IPython.display import display_javascript, display_html
+
+
+class render_dict(object):
+	def __init__(self, json_data):
+		self.json_str = render_format(json_data)
+		
+		# if isinstance(json_data, dict):
+		#     self.json_str = json_data
+		#     #self.json_str = json.dumps(json_data)
+		# else:
+		#     self.json_str = json
+		self.uuid = str(uuid.uuid4())
+	
+	def _ipython_display_(self):
+		display_html('<div id="{}" style="height: 600px; width:100%;"></div>'.format(self.uuid),
+		             raw=True
+		             )
+		display_javascript("""
+		require(["https://rawgit.com/caldwell/renderjson/master/renderjson.js"], function() {
+		  renderjson.set_show_to_level(1)
+		  document.getElementById('%s').appendChild(renderjson(%s))
+		});
+		""" % (self.uuid, self.json_str), raw=True)
+		
+		
+		

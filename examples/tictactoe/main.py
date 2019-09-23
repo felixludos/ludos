@@ -8,7 +8,13 @@ from .phases import TurnPhase
 class TicTacToe(gsm.GameController):
 	
 	def __init__(self, debug=False):
-		super().__init__(debug)
+		
+		# create player manager
+		manager = gsm.GameManager(open={'symbol'},
+		                          hidden={'val'})
+		
+		super().__init__(debug=debug,
+		                 manager=manager)
 		
 		# register config files
 		self.register_config('basic', 'config/basics.yaml')
@@ -21,7 +27,7 @@ class TicTacToe(gsm.GameController):
 		self.register_obj_type(name='tick',
 		                       required={'row', 'col',
 		                                 'symbol', 'player'},
-		                       visible={'row', 'col', # all properties are always visible to all players -> full information game
+		                       open={'row', 'col', # all properties are always visible to all players -> full information game
 		                                'symbol', 'player'}
 		                       )
 		
@@ -30,14 +36,17 @@ class TicTacToe(gsm.GameController):
 	
 	def _set_phase_stack(self, config):
 		
-		return tlist([self._get_phase('turn')()])
+		return tlist([self.create_phase('turn')])
+	
+	def _select_player(self):
+		return self.players['Player1']
 	
 	def _init_game(self, config):
 		
 		# update player props
 		
-		self.players[0].symbol = config.basic.characters.p1
-		self.players[1].symbol = config.basic.characters.p2
+		self.players['Player1'].symbol = config.basic.characters.p1
+		self.players['Player2'].symbol = config.basic.characters.p2
 		
 		# init state
 		

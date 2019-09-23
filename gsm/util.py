@@ -1,13 +1,46 @@
 import yaml
 import numpy as np
 import random
-from .mixins import Named, Typed, Savable, Transactionable
-from .signals import UnregisteredClassError, LoadInitFailureError
+from .mixins import Named, Typed, Savable, Transactionable, _primitives
+from .signals import UnknownElementError
 from .basic_containers import tdict, tset, tlist
 
-# def load_config(path):
-# 	return unjsonify(yaml.load(open(path, 'r')))
 
+def jsonify(obj, tfm=None):
+	if isinstance(obj, _primitives):
+		return obj
+	
+	if isinstance(obj, tuple):
+		return {k: jsonify(v) for k, v in obj.items()}
+	if isinstance(obj, list):
+		return [jsonify(r) for r in obj]
+	if isinstance(obj, tuple):
+		return {'_tuple': [jsonify(r) for r in obj]}
+	if isinstance(obj, set):
+		return {'_set': [jsonify(r) for r in obj]}
+	
+	if tfm is not None:
+		return tfm(obj, jsonify)
+	
+	raise UnknownElementError(obj)
+
+def unjsonify(obj, tfm=None):
+	if isinstance(obj, _primitives):
+		return obj
+	if isinstance(obj, list):
+		return tlist([unjsonify(o) for o in obj])
+	if isinstance(obj, dict):
+		if len(obj) == 1 and '_tuple' in obj:
+			return (unjsonify(o) for o in obj)
+		if len(obj) == 1 and '_set' in obj:
+			return tset(unjsonify(o) for o in obj)
+		
+		return tdict({k:unjsonify(v) for k,v in obj.items()})
+	
+	if tfm is not None:
+		return tfm(obj, unjsonify)
+	
+	raise UnknownElementError(obj)
 
 class RandomGenerator(random.Random, Savable, Transactionable):
 	
@@ -16,8 +49,9 @@ class RandomGenerator(random.Random, Savable, Transactionable):
 		self._shadow = None
 	
 	def copy(self):
-		copy = random.Random()
+		copy = RandomGenerator()
 		copy.setstate(self.getstate())
+		copy._shadow = self._shadow
 		return copy
 	
 	def __save(self):
@@ -44,7 +78,6 @@ class RandomGenerator(random.Random, Savable, Transactionable):
 			self._shadow = tuple(unpack(data['_shadow']))
 		
 		return self
-		
 	
 	def begin(self):
 		if self.in_transaction():
@@ -67,65 +100,24 @@ class RandomGenerator(random.Random, Savable, Transactionable):
 			
 		self.setstate(self._shadow)
 		self._shadow = None
-		
-class Player(Named, Typed, tdict):
-	def __init__(self, name=None, **props):
-		super().__init__(name=name, obj_type=self.__class__.__name__, **props)
-
-	def __hash__(self):
-		return hash(self.name)
-	def __eq__(self, other):
-		return other == self.name
-
-
-def render_format(raw):
-	if isinstance(raw, set):
-		# return list(render_format(el) for el in raw)
-		itr = dict()
-		for i, el in enumerate(raw):
-			itr['s{}'.format(i)] = render_format(el)
-		return itr
-	elif isinstance(raw, dict):
-		return dict((str(k), render_format(v)) for k, v in raw.items())
-	elif isinstance(raw, list):
-		# return list(render_format(el) for el in raw)
-		itr = dict()
-		for i, el in enumerate(raw):
-			itr['l{}'.format(i)] = render_format(el)
-		return itr
-	elif isinstance(raw, tuple):
-		# return list(render_format(el) for el in raw)
-		itr = dict()
-		for i, el in enumerate(raw):
-			itr['t{}'.format(i)] = render_format(el)
-		return itr
-	return str(raw)
-
-
-import uuid
-from IPython.display import display_javascript, display_html
-
-class render_dict(object):
-	def __init__(self, json_data):
-		self.json_str = render_format(json_data)
-		
-		# if isinstance(json_data, dict):
-		#     self.json_str = json_data
-		#     #self.json_str = json.dumps(json_data)
-		# else:
-		#     self.json_str = json
-		self.uuid = str(uuid.uuid4())
 	
-	def _ipython_display_(self):
-		display_html('<div id="{}" style="height: 600px; width:100%;"></div>'.format(self.uuid),
-		             raw=True
-		             )
-		display_javascript("""
-		require(["https://rawgit.com/caldwell/renderjson/master/renderjson.js"], function() {
-		  renderjson.set_show_to_level(1)
-		  document.getElementById('%s').appendChild(renderjson(%s))
-		});
-		""" % (self.uuid, self.json_str), raw=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # class Empty(Savable, Transactionable):
