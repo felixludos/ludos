@@ -1,5 +1,7 @@
 
-from .util import unjsonify
+# from .util import unjsonify
+from itertools import chain
+from .basic_containers import tset
 
 def _expand_actions(code):
 	if isinstance(code, set) and len(code) == 1:

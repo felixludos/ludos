@@ -112,16 +112,16 @@ class Savable(object):
 			return {'_type': '_class', '_data': Savable._full_name(obj)}
 		
 		elif type(obj) == dict:
-			raise NotImplementedError
+			# raise NotImplementedError
 			return {'_type': '_dict', '_data':{k:cls.__pack(v) for k,v in obj.items()}}
 		elif type(obj) == list:
-			raise NotImplementedError
+			# raise NotImplementedError
 			return {'_type': '_list', '_data':[cls.__pack(x) for x in obj]}
 		elif type(obj) == set:
-			raise NotImplementedError
+			# raise NotImplementedError
 			return {'_type': '_set', '_data': [cls.__pack(x) for x in obj]}
 		elif type(obj) == tuple:
-			raise NotImplementedError
+			# raise NotImplementedError
 			return {'_type': '_tuple', '_data': [cls.__pack(x) for x in obj]}
 		
 		else:
@@ -141,16 +141,16 @@ class Savable(object):
 				return cls.get_cls(data['_data'])
 			
 			elif typ == '_dict':
-				raise NotImplementedError
+				# raise NotImplementedError
 				return {k:cls.__unpack(v) for k,v in data['_data'].items()}
 			elif typ == '_list':
-				raise NotImplementedError
+				# raise NotImplementedError
 				return [cls.__unpack(x) for x in data['_data']]
 			elif typ == '_set':
-				raise NotImplementedError
+				# raise NotImplementedError
 				return {cls.__unpack(x) for x in data['_data']}
 			elif typ == '_tuple':
-				raise NotImplementedError
+				# raise NotImplementedError
 				return (cls.__unpack(x) for x in data['_data'])
 			
 			else: # Savable instance

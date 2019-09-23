@@ -41,10 +41,7 @@ class MissingObjectError(Exception):
 	def __init__(self, name):
 		super().__init__('{} is not a recognized GameObject type, have you registered it?'.format(name))
 
-class MissingValueError(Exception):
-	def __init__(self, typ, missing, *reqs):
-		super().__init__('{} is missing {}, requires a value for: {}'.format(typ, missing, ', '.join(reqs)))
-		
+
 # action errors
 		
 class InvalidActionError(Exception):
@@ -58,6 +55,17 @@ class UnknownActionElement(Exception):
 	def __init__(self, obj):
 		super().__init__('Unknown action element: {}, type: {}'.format(str(obj), type(obj)))
 		self.obj = obj
+
+# object errors
+
+class InvalidInitializationError(Exception):
+	def __init__(self):
+		super().__init__('All GameObjects Must be created through the GameTable.create')
+
+class MissingValueError(Exception):
+	def __init__(self, typ, missing, *reqs):
+		super().__init__('{} is missing {}, requires a value for: {}'.format(typ, missing, ', '.join(reqs)))
+
 
 # mixin errors
 

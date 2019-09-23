@@ -1,5 +1,6 @@
 
 import numpy as np
+from ..signals import InvalidInitializationError, MissingValueError
 from ..mixins import Named, Typed, Writable, Transactionable, Savable, Pullable
 from ..basic_containers import tdict, tset, tlist
 
@@ -49,30 +50,30 @@ class GameObject(Typed, Transactionable, Savable, Pullable):
 		self.__dict__['_table'] = None
 		
 		self.__dict__['_open'] = None
+		self.__dict__['_req'] = None
 		self.__dict__['_public'] = None
 		self.__dict__['_hidden'] = None
 		
 		return self
 	
-	def __init__(self, ID, _table, visible, obj_type=None, _open=[], **props):
+	def __init__(self, **props):
 		
-		if obj_type is None: # default obj_type is name of the class
-			obj_type = self.__class__.__name__
+		if self._id is None:
+			InvalidInitializationError()
 		
-		super().__init__(obj_type) # all GameObjects are basically just tdicts with a obj_type and visible attrs and they can use a table to signal track changes
+		super().__init__(**props) # all GameObjects are basically just tdicts with a obj_type and visible attrs and they can use a table to signal track changes
 		
-		self._id = ID
-		self._table = _table
+		self._verify()
 		
-		self._open = tset(_open)
-		self._public = tdict(visible=visible, **props)
-		self._hidden = tdict()
+	def _verify(self):
+		for req in self._req:
+			if req not in self:
+				raise MissingValueError(self.get_type(), req, *self._req)
 		
 	def begin(self):
 		if self.in_transaction():
 			self.commit()
 			
-		self._open.begin()
 		self._public.begin()
 		self._hidden.begin()
 	
@@ -83,7 +84,6 @@ class GameObject(Typed, Transactionable, Savable, Pullable):
 		if not self.in_transaction():
 			return
 		
-		self._open.commit()
 		self._public.commit()
 		self._hidden.commit()
 	
@@ -91,7 +91,6 @@ class GameObject(Typed, Transactionable, Savable, Pullable):
 		if not self.in_transaction():
 			return
 		
-		self._open.abort()
 		self._public.abort()
 		self._hidden.abort()
 		
@@ -100,7 +99,6 @@ class GameObject(Typed, Transactionable, Savable, Pullable):
 		copy = self._table.create(self.get_type(), ID=ID, **self._public)
 		
 		copy._hidden = self._hidden.copy()
-		copy._open = self._open.copy()
 		
 		return copy
 		
@@ -112,6 +110,7 @@ class GameObject(Typed, Transactionable, Savable, Pullable):
 		data['_id'] = pack(self._id) # should always be a str though
 		data['_table'] = pack(self._table)
 		data['_open'] = pack(self._open)
+		data['_req'] = pack(self._req)
 		data['_public'] = pack(self._public)
 		data['_hidden'] = pack(self._hidden)
 		
@@ -126,8 +125,11 @@ class GameObject(Typed, Transactionable, Savable, Pullable):
 		self._id = unpack(data['_id'])
 		self._table = unpack(data['_table'])
 		self._open = unpack(data['_open'])
+		self._req = unpack(data['_req'])
 		self._public = unpack(data['_public'])
 		self._hidden = unpack(data['_hidden'])
+		
+		# self._verify() # TODO: maybe verify req when loading
 		
 		return self
 		

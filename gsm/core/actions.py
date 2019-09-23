@@ -134,7 +134,7 @@ class GameActions(Transactionable, Savable): # created and returned in phases
 			
 		full.info = self.info
 		
-		return jsonify(full)
+		return process_actions(full)
 
 
 # Advanced action queries

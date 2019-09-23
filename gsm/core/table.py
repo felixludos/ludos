@@ -64,7 +64,7 @@ class GameTable(Transactionable, Savable, Pullable):
 		self.ID_counter += 1
 		return ID # always returns a str -> all IDs are str
 	
-	def register_obj_type(self, cls=None, name=None):
+	def register_obj_type(self, cls=None, name=None, open=[], req=[]):
 		
 		if cls is None:
 			assert name is not None, 'Must provide either a name or class'
@@ -72,7 +72,7 @@ class GameTable(Transactionable, Savable, Pullable):
 		elif name is None:
 			name = cls.__class__.__name__
 		
-		self.obj_types[name] = cls
+		self.obj_types[name] = tdict(cls=cls, open=tset(open), req=tset(req))
 		
 	def get_obj_types(self):
 		return list(self.obj_types.keys())
@@ -80,7 +80,7 @@ class GameTable(Transactionable, Savable, Pullable):
 	def create(self, obj_type, visible=None, ID=None, **props):
 		
 		if obj_type in self.obj_types:
-			cls = self.obj_types[obj_type]
+			info = self.obj_types[obj_type]
 		else:
 			raise MissingObjectError(obj_type)
 		
@@ -92,9 +92,17 @@ class GameTable(Transactionable, Savable, Pullable):
 		if visible is None:
 			visible = tset(self.players)
 		
-		# TODO: maybe add obj_type and visible after initialization (not in __init__) to simplify GameObject subclasses for dev
+		obj = info.cls.__new__()
 		
-		obj = cls(obj_type=obj_type, visible=visible, ID=ID, **props)
+		obj._id = ID
+		obj._table = self
+		obj._open = info.open
+		obj._req = info.req
+		
+		obj._public = tdict()
+		obj._hidden = tdict()
+		
+		obj.__init__(visible=visible, **props)
 		
 		self.table[obj._id] = obj
 		
