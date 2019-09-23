@@ -156,10 +156,10 @@ class GameController(Named, Transactionable, Savable):
 		if self._in_progress:
 			raise ClosedRegistryError
 		self.config_files[name] = path
-	def register_obj_type(self, cls=None, name=None):
+	def register_obj_type(self, obj_cls=None, name=None, req=[], open=[]):
 		if self._in_progress:
 			raise ClosedRegistryError
-		self.table.register_obj_type(cls=cls, name=name)
+		self.table.register_obj_type(obj_cls=obj_cls, name=name, req=req, open=open)
 	def register_phase(self, cls, name=None):
 		if self._in_progress:
 			raise ClosedRegistryError

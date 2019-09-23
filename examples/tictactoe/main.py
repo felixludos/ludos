@@ -25,10 +25,10 @@ class TicTacToe(gsm.GameController):
 		
 		# register game object types
 		self.register_obj_type(name='tick',
-		                       required={'row', 'col',
-		                                 'symbol', 'player'},
+		                       req={'row', 'col',
+		                            'symbol', 'player'},
 		                       open={'row', 'col', # all properties are always visible to all players -> full information game
-		                                'symbol', 'player'}
+		                             'symbol', 'player'}
 		                       )
 		
 		# register possible phases

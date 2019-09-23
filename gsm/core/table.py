@@ -64,15 +64,15 @@ class GameTable(Transactionable, Savable, Pullable):
 		self.ID_counter += 1
 		return ID # always returns a str -> all IDs are str
 	
-	def register_obj_type(self, cls=None, name=None, open=[], req=[]):
+	def register_obj_type(self, obj_cls=None, name=None, open=[], req=[]):
 		
-		if cls is None:
+		if obj_cls is None:
 			assert name is not None, 'Must provide either a name or class'
-			cls = GameObject
+			obj_cls = GameObject
 		elif name is None:
-			name = cls.__class__.__name__
+			name = obj_cls.__name__
 		
-		self.obj_types[name] = tdict(cls=cls, open=tset(open), req=tset(req))
+		self.obj_types[name] = tdict(obj_cls=obj_cls, open=tset(open), req=tset(req))
 		
 	def get_obj_types(self):
 		return list(self.obj_types.keys())
@@ -93,7 +93,7 @@ class GameTable(Transactionable, Savable, Pullable):
 		if visible is None:
 			visible = tset(self.players)
 		
-		obj = info.cls.__new__()
+		obj = info.obj_cls.__new__()
 		
 		obj._id = ID
 		obj._table = self
