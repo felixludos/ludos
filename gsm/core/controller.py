@@ -340,7 +340,7 @@ class GameController(Named, Transactionable, Savable):
 	def create_phase(self, name, *args, **kwargs):
 		return self._phases[name](*args, **kwargs)
 	
-	def create_object(self, obj_type, **spec):
+	def create_object(self, obj_type, **spec): # this should delegate right away, all logic in GameTable
 		return self.table.create(obj_type=obj_type, **spec)
 	
 	######################
