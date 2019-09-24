@@ -112,9 +112,6 @@ class GameController(Named, Transactionable, Savable):
 		
 		return data
 	
-	def save(self):  # returns string
-		return json.dumps(self.__save())
-	
 	@classmethod
 	def __load(cls, data):
 		self = cls()
@@ -136,23 +133,7 @@ class GameController(Named, Transactionable, Savable):
 		
 		return self
 	
-	def load(self, data):
-		
-		obj = self.__class__.__load(json.loads(data))
-		
-		# load registries
-		self._phases = obj._phases
-		self.players = obj.players
-		self.config_files = obj.config_files
-		
-		# unpack tmembers
-		for mem in self._tmembers:
-			self.__dict__[mem] = obj.__dict__[mem]
-		
-		self.name = obj.name
-		self._in_transaction = obj._in_transaction
-		self._in_progress = obj._in_progress
-		self.DEBUG = obj.DEBUG
+	
 	
 	######################
 	# Registration
@@ -343,6 +324,10 @@ class GameController(Named, Transactionable, Savable):
 			
 			msg['players'] = self.players.pull(player)
 			msg['table'] = self.table.pull(player)
+			
+		log = self.log.pull(player)
+		if len(log):
+			msg['log'] = log
 		
 		self._images[player] = json.dumps(msg)
 		
@@ -392,6 +377,27 @@ class GameController(Named, Transactionable, Savable):
 	
 	def get_UI_spec(self): # returns a specification for gUsIm - may be overridden to include extra data
 		raise NotImplementedError # TODO: by default it should return contents of a config file
+	
+	def save(self):  # returns string
+		return json.dumps(self.__save())
+	
+	def load(self, data):
+		
+		obj = self.__class__.__load(json.loads(data))
+		
+		# load registries
+		self._phases = obj._phases
+		self.players = obj.players
+		self.config_files = obj.config_files
+		
+		# unpack tmembers
+		for mem in self._tmembers:
+			self.__dict__[mem] = obj.__dict__[mem]
+		
+		self.name = obj.name
+		self._in_transaction = obj._in_transaction
+		self._in_progress = obj._in_progress
+		self.DEBUG = obj.DEBUG
 	
 	
 	

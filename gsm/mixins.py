@@ -216,7 +216,7 @@ class Writable(object):
 		raise NotImplementedError
 	
 	def get_text_info(self):
-		raise {}
+		return {}
 	
 	# def get_text_info(self):
 	# 	return {}

@@ -58,9 +58,18 @@ class GameLogger(RichWriter):
 		
 		super().write(*args, **kwargs)
 		
-		for log in self.logs.values():
-			log.extend(self.text)
+		for log in self.writers.values():
+			log.text.extend(self.text)
 			
+		self.text.clear()
+	
+	def writef(self, *args, **kwargs):
+		
+		super().writef(*args, **kwargs)
+		
+		for log in self.writers.values():
+			log.text.extend(self.text)
+		
 		self.text.clear()
 	
 	def pull(self, player):

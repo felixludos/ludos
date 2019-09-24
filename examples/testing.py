@@ -19,10 +19,11 @@ I = Interface(TicTacToe(), seed=seed)
 I.set_player('Player1')
 
 I.reset(seed=seed)
-
 I.view()
 
 I.select_action()
-
 I.step()
+I.set_player()
+I.get_status()
+I.view()
 

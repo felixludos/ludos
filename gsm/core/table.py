@@ -103,7 +103,7 @@ class GameTable(Transactionable, Savable, Pullable):
 		obj._public = tdict()
 		obj._hidden = tdict(_hidden)
 		
-		obj.__init__(visible=visible, **props)
+		obj.__init__(obj_type=obj_type, visible=visible, **props)
 		
 		self.table[obj._id] = obj
 		

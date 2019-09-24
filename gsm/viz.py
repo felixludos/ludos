@@ -15,10 +15,15 @@ def _format_line(line):
 	txt = []
 	
 	for obj in line:
-		if obj['type'] == 'str':
-			txt.append(obj['val'])
-		else:
-			raise Exception('cant handle: {}'.format(repr(obj)))
+		if isinstance(obj, dict):
+			if obj['type'] == 'player':
+				txt.append('P:{}'.format(obj['val']))
+			elif obj['type'] == 'obj':
+				txt.append('O:{}'.format(obj['val']))
+			else:
+				raise Exception('cant handle: {}'.format(repr(obj)))
+		else: # obj is a str
+			txt.append(str(obj))
 		
 	return ''.join(txt)
 
@@ -70,6 +75,12 @@ class Ipython_Interface(object):
 		self.player = None
 		self.key = None
 		
+	def save(self):
+		return self.ctrl.save()
+	
+	def load(self, data):
+		return self.ctrl.load(data)
+	
 	def set_player(self, player=None):
 		
 		if player is None:
@@ -125,8 +136,8 @@ class Ipython_Interface(object):
 		if 'table' in self.msg:
 			self.table = self.msg.table
 			
-		if 'waiting_for' in self.msg:
-			print('Waiting for: {}'.format(', '.join(self.msg.waiting_for)))
+		# if 'waiting_for' in self.msg:
+		# 	print('Waiting for: {}'.format(', '.join(self.msg.waiting_for)))
 	
 	def reset(self, player=None, seed=None):
 		if player is None:
@@ -150,7 +161,13 @@ class Ipython_Interface(object):
 		if 'table' in self.msg:
 			print('Received table: {} entries'.format(len(self.msg.table)))
 		
-		
+		if 'log' in self.msg:
+			print('-------------')
+			print('Log')
+			print('-------------')
+			
+			print(_format_line(self.msg.log))
+			
 		
 		if 'error' in self.msg:
 			print('*** ERROR: {} ***'.format(self.msg.error.type))
@@ -162,7 +179,12 @@ class Ipython_Interface(object):
 		else:
 			
 			if 'status' in self.msg:
-				print('Status: {}'.format(_format_line(self.msg.status)))
+				status = _format_line(self.msg.status)
+				print('+' + '-' * (len(status) + 2) + '+')
+				print('| {} |'.format(status))
+				print('+' + '-' * (len(status) + 2) + '+')
+				
+				# print('Status: {}'.format(_format_line(self.msg.status)))
 			else:
 				print('No status found')
 		

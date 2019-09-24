@@ -4,10 +4,13 @@ from string import Formatter
 from .basic_containers import tdict, tset, tlist
 from .mixins import Typed, Savable, Transactionable, Pullable, Writable
 from .signals import FormatException
+from .util import _primitives
 
 FMT = Formatter()
 
 def _process_obj(obj):
+	if isinstance(obj, _primitives):
+		return obj
 	info = {}
 	if isinstance(obj, Writable):
 		info.update(obj.get_text_info())
@@ -25,6 +28,7 @@ def _process_obj(obj):
 def write(*objs, end='\n'):
 	
 	if end is not None and len(end):
+		objs = list(objs)
 		objs.append(end)
 	
 	return [_process_obj(obj) for obj in objs]
@@ -52,12 +56,12 @@ def writef(txt, *objs, end=None, **kwobjs):
 				else:
 					raise FormatException('Unknown object info, type {}: {}'.format(type(info), info))
 		
-		if spec is not None:
+		if spec is not None and len(spec):
 			obj = obj.__format__(spec)
 		
 		line.append(obj)
 		
-	return write(line, end=end)
+	return write(*line, end=end)
 
 class RichWriter(Savable, Transactionable, Pullable):
 	
@@ -95,6 +99,9 @@ class RichWriter(Savable, Transactionable, Pullable):
 		if debug and not self.debug:  # Dont write a debug line unless specified
 			return
 		
+		if end is None:
+			end = self.end
+		
 		if indent_level is None:
 			indent_level = self.indent_level
 			
@@ -105,13 +112,16 @@ class RichWriter(Savable, Transactionable, Pullable):
 				'line': line,
 				'level': indent_level,
 			}
-		
-		self.text.extend(line)
+			
+		self.extend(line)
 		
 	def writef(self, txt, *objs, end=None, indent_level=None, debug=False, **kwobjs):
 		
 		if debug and not self.debug:  # Dont write a debug line unless specified
 			return
+		
+		if end is None:
+			end = self.end
 		
 		if indent_level is None:
 			indent_level = self.indent_level
@@ -124,6 +134,9 @@ class RichWriter(Savable, Transactionable, Pullable):
 				'level': indent_level
 			}
 			
+		self.extend(line)
+		
+	def extend(self, line):
 		self.text.extend(line)
 	
 	def __save(self):
@@ -215,11 +228,9 @@ class LogWriter(RichWriter):
 		super().abort()
 		self.log.abort()
 		
-	def write(self, *args, **kwargs):
-		
-		super().write(*args, **kwargs)
-		
-		self.log.append(self.text[-1])
+	def extend(self, line):
+		super().extend(line)
+		self.log.extend(line)
 		
 	def get_log(self):
 		return list(self.log)
