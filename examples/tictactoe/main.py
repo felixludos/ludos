@@ -69,7 +69,7 @@ class TicTacToe(gsm.GameController):
 		if val is None:
 			return tdict(winner=None)
 		
-		for p in self.players:
+		for p in self.players.values():
 			if p.val == val:
 				return tdict(winner=p.name)
 			
