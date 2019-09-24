@@ -93,7 +93,7 @@ class GameTable(Transactionable, Savable, Pullable):
 		if visible is None:
 			visible = tset(self.players)
 		
-		obj = info.obj_cls.__new__()
+		obj = info.obj_cls.__new__(info.obj_cls)
 		
 		obj._id = ID
 		obj._table = self

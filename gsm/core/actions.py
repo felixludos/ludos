@@ -12,7 +12,7 @@ def _expand_actions(code):
 	if isinstance(code, set) and len(code) == 1:
 		return _expand_actions(next(iter(code)))
 	
-	if isinstance(code, dict) or isinstance(code, str) or isinstance(code, int):
+	if isinstance(code, dict) or isinstance(code, ActionElement) or isinstance(code, str) or isinstance(code, int):
 		return [code]
 	
 	# tuple case
@@ -165,7 +165,7 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 			for tpl in actionset:
 				if len(tpl) == len(action):
 					try:
-						out = (elm.evaluate(a) for elm, a in zip(tpl, action))
+						out = tuple(elm.evaluate(a) for elm, a in zip(tpl, action))
 					except ActionMismatch:
 						pass # action didnt match
 					else:
@@ -219,7 +219,8 @@ class ActionElement(Typed, Transactionable, Savable):
 
 class FixedAction(ActionElement):
 	def __init__(self, val): # works for primitives
-		super().__init__(type(val).__name__)
+		# super().__init__(type(val).__name__)
+		super().__init__('fixed')
 		self.val = val
 
 	def __save(self):
@@ -233,9 +234,16 @@ class FixedAction(ActionElement):
 		return {'val':self.val}
 	
 	def evaluate(self, q):
-		if q == str(self.val):
+		if q == self.val:
 			return self.val
 		raise ActionMismatch
+	
+	def __repr__(self):
+		return 'FixedAction({})'.format(repr(self.val))
+	
+
+	def __str__(self):
+		return 'FixedAction({})'.format(str(self.val))
 		
 class ObjectAction(ActionElement):
 	def __init__(self, obj):

@@ -106,7 +106,7 @@ class RichWriter(Savable, Transactionable, Pullable):
 				'level': indent_level,
 			}
 		
-		self.text.append(line)
+		self.text.extend(line)
 		
 	def writef(self, txt, *objs, end=None, indent_level=None, debug=False, **kwobjs):
 		
@@ -124,7 +124,7 @@ class RichWriter(Savable, Transactionable, Pullable):
 				'level': indent_level
 			}
 			
-		self.text.append(line)
+		self.text.extend(line)
 	
 	def __save(self):
 		pack = self.__class__.__pack

@@ -238,7 +238,7 @@ class GameController(Named, Transactionable, Savable):
 			while len(self.phase_stack):
 				phase = self.phase_stack.pop()
 				try:
-					phase.execute(self, player=player, action=action)
+					phase.execute(self, player=self.players[player], action=action)
 					# get next action
 					out = phase.encode(self)
 				except PhaseComplete:

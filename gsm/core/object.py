@@ -67,11 +67,14 @@ class GameObject(Typed, Writable, Transactionable, Savable, Pullable):
 		if self._id is None:
 			InvalidInitializationError()
 		
-		super().__init__(**props) # all GameObjects are basically just tdicts with a obj_type and visible attrs and they can use a table to signal track changes
+		super().__init__() # all GameObjects are basically just tdicts with a obj_type and visible attrs and they can use a table to signal track changes
 		
+		self._public.update(props)
 		self._verify()
 		
 	def _verify(self):
+		assert 'obj_type' in self
+		assert 'visible' in self
 		for req in self._req:
 			if req not in self:
 				raise MissingValueError(self.get_type(), req, *self._req)
@@ -167,13 +170,21 @@ class GameObject(Typed, Writable, Transactionable, Savable, Pullable):
 		
 	def __setattr__(self, key, value):
 		if key in self.__dict__:
-			return key
+			return super().__setattr__(key, value)
 		return self._public.__setattr__(key, value)
+	
+	def __getattr__(self, item):
+		if item in self.__dict__:
+			return super().__getattribute__(item)
+		return self._public.__getattr__(item)
 	
 	def __delattr__(self, name):
 		if name in self.__dict__:
 			return super().__delattr__(name)
 		return self._public.__delattr__(name)
+	
+	def __contains__(self, item):
+		return item in self._public or item in self._hidden
 	
 	def __eq__(self, other):
 		return self._id == other._id
