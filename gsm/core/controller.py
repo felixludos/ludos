@@ -12,7 +12,7 @@ from .state import GameState
 from .table import GameTable
 from .player import GameManager
 from ..mixins import Named, Transactionable, Savable
-from ..signals import PhaseComplete, PhaseInterrupt, GameOver, InvalidKeyError, ClosedRegistryError, MissingTypeError, MissingValueError, MissingObjectError
+from ..signals import PhaseComplete, PhaseInterrupt, GameOver, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
 from ..util import RandomGenerator, jsonify
 
 class GameController(Named, Transactionable, Savable):
@@ -21,10 +21,11 @@ class GameController(Named, Transactionable, Savable):
 		new = super().__new__(cls)
 		
 		# meta values (neither for dev nor user) (not including soft registries - they dont change)
-		new._tmembers = {'state', 'log', 'table', 'active_players', 'phase_stack', 'end_info', 'keys', 'RNG', '_key_rng', '_images', 'players'}
+		new._tmembers = {'state', 'log', 'table', 'active_players', 'phase_stack', 'end_info',
+		                 'keys', 'RNG', '_key_rng', '_images', 'players', 'config'}
 		return new
 	
-	def __init__(self, name=None, debug=False, manager=None):
+	def __init__(self, name=None, debug=False, manager=None, **settings):
 		if name is None:
 			# TODO: add suggestion about game name
 			name = self.__class__.__name__
@@ -51,6 +52,7 @@ class GameController(Named, Transactionable, Savable):
 		
 		self.state = None
 		self.active_players = None
+		self.config = tdict(settings=tdict(settings))
 		self.end_info = None
 		self.phase_stack = None # should only contain instances of GamePhase
 		
@@ -147,6 +149,8 @@ class GameController(Named, Transactionable, Savable):
 	def register_config(self, name, path):
 		if self._in_progress:
 			raise ClosedRegistryError
+		if name in self.config_files:
+			raise RegistryCollisionError(name)
 		self.config_files[name] = path
 	def register_obj_type(self, obj_cls=None, name=None, req=[], open=[]):
 		if self._in_progress:
@@ -157,6 +161,8 @@ class GameController(Named, Transactionable, Savable):
 			raise ClosedRegistryError
 		if name is None:
 			name = cls.__class__.__name__
+		if name in self.config_files:
+			raise RegistryCollisionError(name)
 		self._phases[name] = cls
 	def register_player(self, name, **props):
 		if self._in_progress:
@@ -177,7 +183,9 @@ class GameController(Named, Transactionable, Savable):
 		self._key_rng = RandomGenerator(self.seed)
 		self.RNG = RandomGenerator(self.seed)
 		
-		config = self._load_config()
+		self.config.update(self._load_config())
+		
+		self._pre_setup(self.config)
 		
 		self.end_info = None
 		self.active_players = None
@@ -186,9 +194,9 @@ class GameController(Named, Transactionable, Savable):
 		self.log = GameLogger(tset(self.players.names()))
 		self.table.reset(tset(self.players.names()))
 		
-		self.phase_stack = self._set_phase_stack(config) # contains phase instances (potentially with phase specific data)
+		self.phase_stack = self._set_phase_stack(self.config) # contains phase instances (potentially with phase specific data)
 		
-		self._init_game(config) # builds maps/objects
+		self._init_game(self.config) # builds maps/objects
 		
 		self._in_progress = True
 		
@@ -304,6 +312,9 @@ class GameController(Named, Transactionable, Savable):
 			config[name] = containerify(yaml.load(open(path, 'r')))
 		
 		return config
+	
+	def _pre_setup(self, config): # allows adjusting the registry after loading the config
+		return
 	
 	def _gen_key(self, player=None):
 		key = hex(self._key_rng.getrandbits(64))

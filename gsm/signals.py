@@ -37,6 +37,10 @@ class InvalidKeyError(Exception):
 class ClosedRegistryError(Exception):
 	pass
 
+class RegistryCollisionError(Exception):
+	def __init__(self, key):
+		super().__init__('The key {} has already been registered'.format(key))
+
 class MissingTypeError(Exception):
 	def __init__(self, obj, *typs):
 		super().__init__('Before loading {} you must register: {}'.format(obj.__class__.__name__, ', '.join(typs)))
