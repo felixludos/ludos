@@ -54,7 +54,7 @@ class TicTacToe(gsm.GameController):
 		
 		side = config.basic.side_length
 		
-		self.state.map = np.zeros((side, side), dtype=int)
+		self.state.map = gsm.Array(np.zeros((side, side), dtype=int))
 		
 		self.state.turn_counter = -1
 		self.state.player_order = tlist(self.players.values())

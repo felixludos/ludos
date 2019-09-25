@@ -32,6 +32,7 @@ class GameLogger(RichWriter):
 	
 	def begin(self):
 		if self.in_transaction():
+			return
 			self.commit()
 		
 		super().begin()
@@ -59,7 +60,7 @@ class GameLogger(RichWriter):
 		super().write(*args, **kwargs)
 		
 		for log in self.writers.values():
-			log.text.extend(self.text)
+			log.extend(self.text)
 			
 		self.text.clear()
 	
@@ -68,7 +69,7 @@ class GameLogger(RichWriter):
 		super().writef(*args, **kwargs)
 		
 		for log in self.writers.values():
-			log.text.extend(self.text)
+			log.extend(self.text)
 		
 		self.text.clear()
 	

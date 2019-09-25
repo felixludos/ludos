@@ -170,11 +170,13 @@ class RichWriter(Savable, Transactionable, Pullable):
 		
 	def begin(self):
 		if self.in_transaction():
+			return
 			self.commit()
-
+		
+		self._in_transaction = True
 		self._shadow_indent = self.indent_level
 		self.text.begin()
-		self._in_transaction = True
+		
 
 	def in_transaction(self):
 		return self._in_transaction
@@ -182,19 +184,21 @@ class RichWriter(Savable, Transactionable, Pullable):
 	def commit(self):
 		if not self.in_transaction():
 			return
-
+		
+		self._in_transaction = False
 		self.text.commit()
 		self._shadow_indent = None
-		self._in_transaction = False
+		
 
 	def abort(self):
 		if not self.in_transaction():
 			return
-
+		
+		self._in_transaction = False
 		self.text.abort()
 		self.indent_level = self._shadow_indent
 		self._shadow_indent = None
-		self._in_transaction = False
+		
 		
 	def pull(self):
 		return list(self.text)
@@ -209,6 +213,7 @@ class LogWriter(RichWriter):
 		
 	def begin(self):
 		if self.in_transaction():
+			return
 			self.commit()
 
 		super().begin()

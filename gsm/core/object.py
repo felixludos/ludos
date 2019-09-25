@@ -1,7 +1,7 @@
 
 import numpy as np
 from ..signals import InvalidInitializationError, MissingValueError, UnknownElementError
-from ..mixins import Named, Typed, Writable, Transactionable, Savable, Pullable
+from ..mixins import Named, Typed, Writable, Transactionable, Savable, Pullable, Hashable
 from ..basic_containers import tdict, tset, tlist
 from ..util import _primitives, RandomGenerator
 
@@ -21,33 +21,37 @@ def obj_jsonify(obj):
 	if isinstance(obj, set):
 		return {'_set': [obj_jsonify(o) for o in obj]}
 	if isinstance(obj, np.ndarray): # TODO: make this work for obj.dtype = 'obj', maybe recurse elements of .tolist()?
-		return {'_ndarray': obj.tolist(), '_dtype':obj.dtype}
+		return {'_ndarray': obj_jsonify(obj.tolist()), '_dtype':obj.dtype.name}
 		
 	raise UnknownElementError(obj)
 
 def obj_unjsonify(obj, obj_tbl=None):
 	if isinstance(obj, _primitives):
 		return obj
+	if isinstance(obj, tuple):
+		return tuple([obj_unjsonify(o, obj_tbl) for o in obj])
+	if isinstance(obj, set):
+		return tset([obj_unjsonify(o, obj_tbl) for o in obj])
 	if isinstance(obj, list):
-		return tlist([obj_unjsonify(o) for o in obj])
+		return tlist([obj_unjsonify(o, obj_tbl) for o in obj])
 	if isinstance(obj, dict):
 		if '_obj' in obj and len(obj) == 1:
 			if obj_tbl is None:
-				return obj_tbl[obj['_obj']]
-			else:
 				return obj
+			else:
+				return obj_tbl[obj['_obj']]
 		if '_set' in obj and len(obj) == 1:
-			return tset([obj_unjsonify(o) for o in obj['set']])
+			return tset([obj_unjsonify(o, obj_tbl) for o in obj['set']])
 		if '_tuple' in obj and len(obj) == 1:
-			return tuple(obj_unjsonify(o) for o in obj['tuple'])
+			return tuple(obj_unjsonify(o, obj_tbl) for o in obj['tuple'])
 		if '_ndarray' in obj and '_dtype' in obj:
-			return np.array(obj['_ndarray'], dtype=obj['_dtype'])
-		return tdict({obj_unjsonify(k):obj_unjsonify(v) for k,v in obj.items()})
+			return np.array(obj_unjsonify(obj['_ndarray'], obj_tbl), dtype=obj['_dtype'])
+		return tdict({obj_unjsonify(k, obj_tbl):obj_unjsonify(v, obj_tbl) for k,v in obj.items()})
 	
 	raise UnknownElementError(obj)
 
 
-class GameObject(Typed, Writable, Transactionable, Savable, Pullable):
+class GameObject(Typed, Writable, Hashable, Transactionable, Savable, Pullable):
 	
 	def __new__(cls, *args, **kwargs):
 		self = super().__new__(cls)
@@ -60,16 +64,19 @@ class GameObject(Typed, Writable, Transactionable, Savable, Pullable):
 		self.__dict__['_public'] = None
 		self.__dict__['_hidden'] = None
 		
+		self.__dict__['_in_transaction'] = None
+		
 		return self
 	
-	def __init__(self, **props):
+	def __init__(self, obj_type, visible, **props):
 		
 		if self._id is None:
 			InvalidInitializationError()
 		
-		super().__init__() # all GameObjects are basically just tdicts with a obj_type and visible attrs and they can use a table to signal track changes
+		super().__init__(obj_type) # all GameObjects are basically just tdicts with a obj_type and visible attrs and they can use a table to signal track changes
 		
 		self._public.update(props)
+		self._public.visible = visible
 		self._verify()
 		
 	def _verify(self):
@@ -81,18 +88,21 @@ class GameObject(Typed, Writable, Transactionable, Savable, Pullable):
 		
 	def begin(self):
 		if self.in_transaction():
+			return
 			self.commit()
-			
+		
+		self._in_transaction = True
 		self._public.begin()
 		self._hidden.begin()
 	
 	def in_transaction(self):
-		return self._public.in_transaction()
+		return self._in_transaction
 	
 	def commit(self):
 		if not self.in_transaction():
 			return
 		
+		self._in_transaction = False
 		self._public.commit()
 		self._hidden.commit()
 	
@@ -100,6 +110,7 @@ class GameObject(Typed, Writable, Transactionable, Savable, Pullable):
 		if not self.in_transaction():
 			return
 		
+		self._in_transaction = False
 		self._public.abort()
 		self._hidden.abort()
 		
@@ -145,9 +156,9 @@ class GameObject(Typed, Writable, Transactionable, Savable, Pullable):
 	def get_text_type(self):
 		return 'obj'
 	def get_text_val(self):
-		return self._id
+		return str(self)
 	def get_text_info(self):
-		return {'obj_type':self.get_type()}
+		return {'obj_type':self.get_type(), 'ID':self._id}
 	
 	def pull(self, player=None):
 		
@@ -177,6 +188,10 @@ class GameObject(Typed, Writable, Transactionable, Savable, Pullable):
 		if item in self.__dict__:
 			return super().__getattribute__(item)
 		return self._public.__getattr__(item)
+		try: # TODO: maybe allow accessing hidden values by default
+			return self._public.__getattr__(item)
+		except AttributeError:
+			return self._hidden.__getattr__(item)
 	
 	def __delattr__(self, name):
 		if name in self.__dict__:
@@ -188,6 +203,9 @@ class GameObject(Typed, Writable, Transactionable, Savable, Pullable):
 	
 	def __eq__(self, other):
 		return self._id == other._id
+	
+	def __hash__(self):
+		return hash(self._id)
 	
 		
 

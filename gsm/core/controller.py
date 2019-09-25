@@ -13,7 +13,7 @@ from .table import GameTable
 from .player import GameManager
 from ..mixins import Named, Transactionable, Savable
 from ..signals import PhaseComplete, PhaseInterrupt, GameOver, InvalidKeyError, ClosedRegistryError, MissingTypeError, MissingValueError, MissingObjectError
-from ..util import RandomGenerator
+from ..util import RandomGenerator, jsonify
 
 class GameController(Named, Transactionable, Savable):
 	
@@ -21,7 +21,7 @@ class GameController(Named, Transactionable, Savable):
 		new = super().__new__(cls)
 		
 		# meta values (neither for dev nor user) (not including soft registries - they dont change)
-		new._tmembers = {'state', 'log', 'table', 'active_players', 'phase_stack', 'keys', 'RNG', '_key_rng', '_images', 'players'}
+		new._tmembers = {'state', 'log', 'table', 'active_players', 'phase_stack', 'end_info', 'keys', 'RNG', '_key_rng', '_images', 'players'}
 		return new
 	
 	def __init__(self, name=None, debug=False, manager=None):
@@ -51,6 +51,7 @@ class GameController(Named, Transactionable, Savable):
 		
 		self.state = None
 		self.active_players = None
+		self.end_info = None
 		self.phase_stack = None # should only contain instances of GamePhase
 		
 		# Game components
@@ -59,13 +60,15 @@ class GameController(Named, Transactionable, Savable):
 	
 	def begin(self):
 		if self.in_transaction():
+			return
 			self.commit()
-			
+		
+		self._in_transaction = True
 		for mem in self._tmembers:
 			obj = self.__dict__[mem]
 			if obj is not None:
 				obj.begin()
-		self._in_transaction = True
+		
 	
 	def in_transaction(self):
 		return self._in_transaction
@@ -74,21 +77,23 @@ class GameController(Named, Transactionable, Savable):
 		if not self.in_transaction():
 			return
 		
+		self._in_transaction = False
 		for mem in self._tmembers:
 			obj = self.__dict__[mem]
 			if obj is not None:
 				obj.commit()
-		self._in_transaction = False
+		
 	
 	def abort(self):
 		if not self.in_transaction():
 			return
 		
+		self._in_transaction = False
 		for mem in self._tmembers:
 			obj = self.__dict__[mem]
 			if obj is not None:
 				obj.abort()
-		self._in_transaction = False
+		
 	
 	def __save(self):
 		pack = self.__class__.__pack
@@ -244,6 +249,7 @@ class GameController(Named, Transactionable, Savable):
 			if self.end_info is None:
 				self._images.clear()
 				self.end_info = self._end_game()
+				self._in_progress = False
 			
 			msg = self._compose_msg(player)
 		
@@ -310,7 +316,7 @@ class GameController(Named, Transactionable, Savable):
 		if self.end_info is not None:
 			# game is already over
 			msg = {
-				'end': self.end_info,
+				'end': jsonify(self.end_info),
 				'table': self.table.pull(), # full table
 			}
 		

@@ -1,20 +1,35 @@
 
-
+import numpy as np
 from ... import tdict, tlist, tset
-from ... import GameObject
+from ... import GameObject, Array
 from ._grid_util import quadgrid as _quadgrid
 
-
-def QuadGrid(GameObject):
+def _format_grid(rows, cols, table=None,
+             enable_edges=False, enable_corners=False,
+             
+             grid_obj_type=None, field_obj_type=None,
+             edge_obj_type=None, corner_obj_type=None):
+	
+	
 	pass
 
-def QuadField(GameObject):
+class QuadGrid(GameObject):
+	
+	def __init__(self, fields, rows, cols, **other):
+		super().__init__(fields=fields, rows=rows, cols=cols, **other)
+		
+		self.map = Array(np.empty((rows, cols), dtype='object'))
+		
+		for f in fields.values():
+			self.map[f.row-1, f.col-1] = f
+
+class QuadField(GameObject): # TODO: add aliases/indexing
 	pass
 
-def QuadEdge(GameObject):
+class QuadEdge(GameObject):
 	pass
 
-def QuadCorner(GameObject):
+class QuadCorner(GameObject):
 	pass
 
 
@@ -126,10 +141,12 @@ def make_quadgrid(rows, cols, table=None,
 			grid_obj_type = 'QuadGrid'
 		
 		grid = table.create(obj_type=grid_obj_type,
-		                    fields=fields)
+		                    fields=fields,
+		                    rows=raw.rows, cols=raw.cols)
 	else:
 		grid = tdict(obj_type='grid',
-		             fields=fields)
+		             fields=fields,
+		             rows=raw.rows, cols=raw.cols)
 	
 	# connect fields
 	for f in fields.values():

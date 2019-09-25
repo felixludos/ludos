@@ -17,9 +17,9 @@ def _format_line(line):
 	for obj in line:
 		if isinstance(obj, dict):
 			if obj['type'] == 'player':
-				txt.append('P:{}'.format(obj['val']))
+				txt.append('PLYR:{}'.format(obj['val']))
 			elif obj['type'] == 'obj':
-				txt.append('O:{}'.format(obj['val']))
+				txt.append('OBJ[{}]:{}'.format(obj['ID'], obj['val']))
 			else:
 				raise Exception('cant handle: {}'.format(repr(obj)))
 		else: # obj is a str
@@ -34,6 +34,8 @@ def _format_action(tpl):
 	for obj in tpl:
 		if obj['type'] == 'fixed':
 			action.append(obj['val'])
+		elif obj['type'] == 'obj':
+			action.append('OBJ[{}]:{}'.format(obj['ID'], obj['val']))
 		else:
 			raise Exception('cant handle: {}'.format(repr(obj)))
 		
@@ -47,6 +49,8 @@ def _package_action(action):
 		
 		if obj['type'] == 'fixed':
 			final.append(obj['val'])
+		elif obj['type'] == 'obj':
+			final.append(obj['ID'])
 		else:
 			raise Exception('cant handle: {}'.format(repr(obj)))
 
@@ -55,10 +59,11 @@ def _package_action(action):
 
 class Ipython_Interface(object):
 	
-	def __init__(self, controller, seed=None):
+	def __init__(self, controller, seed=None, full_log=False):
 		super().__init__()
 		
 		self.ctrl = controller
+		self.in_progress = False
 		
 		self.msg = None
 		self.table = None
@@ -66,6 +71,7 @@ class Ipython_Interface(object):
 			seed = random.getrandbits(64)
 		self.rng = random.Random(seed)
 		self.seed = seed
+		self.full_log = full_log
 		
 		self.actions = None
 		self.action = None
@@ -86,12 +92,15 @@ class Ipython_Interface(object):
 		if player is None:
 			if self.msg is None or 'waiting_for' not in self.msg:
 				player = self.rng.choice(self.get_players())
-			player = self.msg.waiting_for.pop()
+			else:
+				player = self.msg.waiting_for.pop()
 		
 		self.player = player
 		print('Player set to {}'.format(self.player))
 		
-	def get_player(self, player):
+	def get_player(self, player=None):
+		if player is None:
+			player = self.player
 		return _format(self.ctrl.get_player(player))
 	
 	def get_players(self):
@@ -103,7 +112,9 @@ class Ipython_Interface(object):
 	def get_obj_types(self):
 		return _format(self.ctrl.get_obj_types())
 	
-	def get_log(self, player):
+	def get_log(self, player=None):
+		if player is None:
+			player = self.player
 		return _format(self.ctrl.get_log(player))
 	
 	def get_IU_spec(self):
@@ -123,6 +134,9 @@ class Ipython_Interface(object):
 			print('*** ERROR: {} ***'.format(self.msg.error.type))
 			print(self.msg.error.msg)
 			print('****************************')
+			
+		if 'end' in self.msg:
+			self.in_progress = False
 		
 		if 'options' in self.msg:
 			self.actions = tlist()
@@ -144,6 +158,7 @@ class Ipython_Interface(object):
 			player = self.player
 		self.msg = _format(self.ctrl.reset(player=player, seed=seed))
 		
+		self.in_progress = True
 		self._process_msg()
 				
 		
@@ -166,7 +181,10 @@ class Ipython_Interface(object):
 			print('Log')
 			print('-------------')
 			
-			print(_format_line(self.msg.log))
+			if self.full_log:
+				print(_format_line(self.get_log())) # TODO: make the same player is called
+			else:
+				print(_format_line(self.msg.log))
 			
 		
 		if 'error' in self.msg:
@@ -176,6 +194,8 @@ class Ipython_Interface(object):
 		
 		if 'waiting_for' in self.msg:
 			print('Waiting for: {}'.format(', '.join(self.msg.waiting_for)))
+		elif 'end' in self.msg:
+			print('--- Game Ended ---')
 		else:
 			
 			if 'status' in self.msg:
@@ -215,6 +235,10 @@ class Ipython_Interface(object):
 		
 	def select_action(self, idx=None):
 		
+		if not self.in_progress:
+			print('No game in progress')
+			return
+		
 		if idx is None:
 			idx = self.rng.randint(0,len(self.actions)-1)
 		
@@ -225,11 +249,17 @@ class Ipython_Interface(object):
 	
 	def step(self):
 		
+		if not self.in_progress:
+			print('No game in progress')
+			return
+		
 		if self.action is None:
 			print('Must first select an action')
+			return
 			
 		if self.key is None:
 			print('No key found')
+			return
 		
 		self.msg = _format(self.ctrl.step(player=self.player, action=_package_action(self.action), key=self.key))
 		

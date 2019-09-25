@@ -35,6 +35,7 @@ class GameTable(Transactionable, Savable, Pullable):
 	
 	def begin(self):
 		if self.in_transaction():
+			return
 			self.commit()
 		
 		self.table.begin()
@@ -43,15 +44,18 @@ class GameTable(Transactionable, Savable, Pullable):
 	def commit(self):
 		if not self.in_transaction():
 			return
-		self.table.commit()
+		
 		self.ID_counter_shadow = None
+		self.table.commit()
+		
 	
 	def abort(self):
 		if not self.in_transaction():
 			return
-		self.table.abort()
+
 		self.ID_counter = self.ID_counter_shadow
 		self.ID_counter_shadow = None
+		self.table.abort()
 	
 	def get_ID(self):
 		

@@ -18,6 +18,7 @@ class ObjectWrapper(ObjectProxy, Transactionable, Savable):
 	
 	def begin(self):
 		if self.in_transaction():
+			return
 			self.commit()
 			
 		self._self_shadow = self.copy()
@@ -30,16 +31,17 @@ class ObjectWrapper(ObjectProxy, Transactionable, Savable):
 		if not self.in_transaction():
 			return
 		
-		self._self_children.commit()
 		self._self_shadow = None
+		self._self_children.commit()
+		
 	
 	def abort(self):
 		if not self.in_transaction():
 			return
 		
-		self._self_children.abort()
 		self.__wrapped__ = self._self_shadow
 		self._self_shadow = None
+		self._self_children.abort()
 		
 	def __repr__(self):
 		return self.__wrapped__.__repr__()
@@ -94,11 +96,12 @@ class Array(ObjectWrapper): # wraps numpy arrays
 		
 		data = {}
 		
-		data['dtype'] = self.dtype
-		data['data'] = self.tolist()
+		data['dtype'] = pack(self.dtype.name)
+		data['data'] = pack(self.tolist())
 		
 		return data
 	
 	@classmethod
-	def __build(self, data):
-		return np.array(data['data'], dtype=data['dtype'])
+	def __build(cls, data):
+		unpack = cls.__unpack
+		return np.array(unpack(data['data']), dtype=unpack(data['dtype']))

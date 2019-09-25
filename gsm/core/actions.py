@@ -2,7 +2,7 @@
 from itertools import product, chain
 from ..basic_containers import tdict, tset, tlist
 from .object import obj_jsonify, GameObject
-from ..mixins import Typed, Named, Transactionable, Savable, Pullable
+from ..mixins import Typed, Named, Transactionable, Savable, Pullable, Hashable
 from ..signals import ActionMismatch, UnknownActionElement, InvalidActionError
 from ..writing import RichWriter
 # from ..util import jsonify
@@ -209,7 +209,7 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 
 # Advanced action queries
 
-class ActionElement(Typed, Transactionable, Savable):
+class ActionElement(Typed, Transactionable, Savable, Hashable):
 	
 	def encode(self):
 		raise NotImplementedError
@@ -258,7 +258,7 @@ class ObjectAction(ActionElement):
 		return cls(cls.__unpack(data['obj']))
 		
 	def encode(self):
-		return {'ID':self.obj._id}
+		return {'ID':self.obj._id, 'val':str(self.obj)}
 	
 	def evaluate(self, q):
 		if q == self.obj._id:

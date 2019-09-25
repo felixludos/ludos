@@ -5,9 +5,9 @@ from itertools import chain
 import numpy as np
 from collections import OrderedDict
 from .signals import LoadInitFailureError
-from .mixins import Transactionable, Savable
+from .mixins import Transactionable, Savable, Hashable
 
-class Container(Transactionable, Savable):
+class Container(Transactionable, Savable, Hashable):
 	pass
 
 def containerify(obj, obj_tbl=None):
@@ -35,34 +35,33 @@ class tdict(Container, OrderedDict): # keys must be primitives, values can be pr
 		
 	def begin(self):
 		if self.in_transaction():
+			return
 			self.commit() # partial transactions are committed
 			
 		self._shadow = self._data
+		self._data = self._data.copy()
 		
 		for child in self.values(): # if keys could be Transactionable instances: chain(self.keys(), self.values())
 			if isinstance(child, Transactionable):
 				child.begin()
 		
-		self._data = self._data.copy()
-		
 	def commit(self):
 		if not self.in_transaction():
 			return
 		
+		self._shadow = None
 		for child in self.values(): # if keys could be Transactionable instances: chain(self.keys(), self.values())
 			if isinstance(child, Transactionable):
 				child.commit()
-				
-		self._shadow = None
 	
 	def abort(self):
 		if not self.in_transaction():
 			return
+		
+		self._data = self._shadow
 		for child in self.values(): # if keys could be Transactionable instances: chain(self.keys(), self.values())
 			if isinstance(child, Transactionable):
 				child.abort()
-		
-		self._data = self._shadow
 		
 	def update(self, other):
 		self._data.update(other)
@@ -188,35 +187,37 @@ class tlist(Container, list):
 	
 	def begin(self):
 		if self.in_transaction():
+			return
 			self.commit() # partial transactions are committed
 		
 		self._shadow = self._data
+		self._data = self._data.copy()
 		
 		for child in iter(self):
 			if isinstance(child, Transactionable):
 				child.begin()
 		
-		self._data = self._data.copy()
+		
 	
 	def commit(self):
 		if not self.in_transaction():
 			return
 		
+		self._shadow = None
+		
 		for child in iter(self):
 			if isinstance(child, Transactionable):
 				child.commit()
-		
-		self._shadow = None
 	
 	def abort(self):
 		if not self.in_transaction():
 			return
+		
+		self._data = self._shadow
 		for child in iter(self):
 			if isinstance(child, Transactionable):
 				child.abort()
 		
-		self._data = self._shadow
-	
 	def copy(self):
 		copy = type(self)()
 		copy._data = self._data.copy()
@@ -333,34 +334,34 @@ class tset(Container, set):
 	
 	def begin(self):
 		if self.in_transaction():
+			return
 			self.commit() # partial transactions are committed
 		
 		self._shadow = self._data
+		self._data = self._data.copy()
 		
 		for child in iter(self):
 			if isinstance(child, Transactionable):
 				child.begin()
-		
-		self._data = self._data.copy()
 	
 	def commit(self):
 		if not self.in_transaction():
 			return
 		
+		self._shadow = None
+		
 		for child in iter(self):
 			if isinstance(child, Transactionable):
 				child.commit()
 		
-		self._shadow = None
-	
 	def abort(self):
 		if not self.in_transaction():
 			return
+		
+		self._data = self._shadow
 		for child in iter(self):
 			if isinstance(child, Transactionable):
 				child.abort()
-		
-		self._data = self._shadow
 	
 	def copy(self):
 		copy = type(self)()

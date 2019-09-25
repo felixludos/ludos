@@ -68,6 +68,7 @@ class GameManager(Transactionable, Savable, Pullable):
 	
 	def begin(self):
 		if self.in_transaction():
+			return
 			self.commit()
 			
 		self._in_transaction = True
@@ -136,8 +137,10 @@ class GameManager(Transactionable, Savable, Pullable):
 
 
 class GamePlayer(Named, Typed, Writable, tdict):
-	def __init__(self, name, **props):
-		super().__init__(name=name, obj_type=self.__class__.__name__, **props)
+	def __init__(self, name, obj_type=None, **props):
+		if obj_type is None:
+			obj_type = self.__class__.__name__
+		super().__init__(name=name, obj_type=obj_type, **props)
 
 	# def __eq__(self, other):
 	# 	return other == self.name or other.name == self.name
@@ -146,5 +149,7 @@ class GamePlayer(Named, Typed, Writable, tdict):
 		return 'player'
 	def get_text_val(self):
 		return self.name
+	def get_text_info(self):
+		return {'obj_type':self.get_type()}
 
 

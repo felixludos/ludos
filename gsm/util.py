@@ -10,7 +10,7 @@ def jsonify(obj, tfm=None):
 	if isinstance(obj, _primitives):
 		return obj
 	
-	if isinstance(obj, tuple):
+	if isinstance(obj, dict):
 		return {k: jsonify(v) for k, v in obj.items()}
 	if isinstance(obj, list):
 		return [jsonify(r) for r in obj]
@@ -81,6 +81,7 @@ class RandomGenerator(random.Random, Savable, Transactionable):
 	
 	def begin(self):
 		if self.in_transaction():
+			return
 			self.commit()
 		
 		self._shadow = self.getstate()

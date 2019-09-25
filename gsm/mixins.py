@@ -185,7 +185,7 @@ class Savable(object):
 		raise NotImplementedError
 
 class Named(object):
-	def __init__(self, name=None, **kwargs):
+	def __init__(self, name, **kwargs):
 		super().__init__(**kwargs)
 		self.name = name
 	
@@ -193,12 +193,20 @@ class Named(object):
 		return self.name
 
 class Typed(object):
-	def __init__(self, obj_type=None, **kwargs):
+	def __init__(self, obj_type, **kwargs):
 		super().__init__(**kwargs)
 		self.obj_type = obj_type
 	
 	def get_type(self):
 		return self.obj_type
+
+class Hashable(object):
+	
+	def __hash__(self):
+		return id(self)
+	
+	def __eq__(self, other):
+		return id(self) == id(other)
 
 
 class Pullable(object):
@@ -217,9 +225,6 @@ class Writable(object):
 	
 	def get_text_info(self):
 		return {}
-	
-	# def get_text_info(self):
-	# 	return {}
 
 
 class Transactionable(object):
