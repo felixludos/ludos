@@ -1,21 +1,21 @@
 # Game-Set-Match: An AI-centric framework for turn-based game development
 
-This framework is designed to allow the development of the backends to turn-based games using Python. This includes all the game logic and action generation.
+This framework is designed to allow the development of the backends to turn-based games using Python. The backend includes all the game logic and action generation.
 The idea is for the backend to communicate with any frontend (eg. a GUI, an AI player) through JSON objects.
+
+There are a few small examples of game backends implemented using GSM.
 
 ## Short-term goals
 
-1. Complete control flow: Phases, PhaseStack, signals (including errors)
-2. Localize gamestate for phase specific information
-3. Complete game object handling, including transactions and automatic create/update/remove tables
-4. Clean up interface functions and action set syntax
-5. Improve logging with html-like tags
-6. Formalize config file organization (if necessary)
-7. Overhaul test framework (!)
+1. Test higher level functionality (eg. saving)
+2. Implement testing framework
+3. Document and clean code
+4. Clean up error handling
 
-## Long-term goals
+## Future goals
 
-1. Develop resilient GameObjects/GamePhases/framework - save code/functionality with data
-2. Anonymize GameObject IDs and info - prevent cheating by keeping track of IDs
-3. Visual interface language, auto-GUI generator - define config to visualize common GameObject behaviors
-4. Develop GSM in Julia for performance improvements
+1. AI utilities - both frontend and backend utilities to develop agents (search, RL, etc.)
+2. Common game utilies - implement grids, graphs, card decks, workers, etc.
+3. gUsIm - automatic GUI generator in JS (and maybe python) from a config file to streamline frontend development
+4. Improve debugging and playing in console/jupyter
+5. Develop GSM in Julia for performance improvements
