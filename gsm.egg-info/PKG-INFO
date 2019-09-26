@@ -1,10 +1,10 @@
 Metadata-Version: 1.0
 Name: gsm
-Version: 0.1
+Version: 0.6
 Summary: AI-centric framework for turn-based games
 Home-page: https://github.com/fleeb24/gsm
 Author: Felix Leeb
-Author-email: fleeb@uw.edu
+Author-email: fleeb@tuebingen.mpg.edu
 License: MIT
 Description: UNKNOWN
 Platform: UNKNOWN

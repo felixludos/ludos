@@ -5,14 +5,15 @@ from .signals import UnregisteredClassError, SavableClassCollisionError, ObjectI
 
 _primitives = (type(None), str, int, float, bool) # all json readable and no sub elements
 
+_savable_id_attr = '_pack_id' # instances of all subclasses cant use this identifier as an attribute
+_py_cls_codes = {dict: '_dict', list: '_list', set: '_set', tuple: '_tuple'}
+_py_code_cls = {v: k for k, v in _py_cls_codes.items()}
+_ref_prefix = '<>'
 
 class Savable(object):
 	__subclasses = {}
 	__obj_id_counter = 0
-	__savable_id_attr = '_pack_id'  # '_pack_id' # instances of all subclasses cant use this identifier as an attribute
-	__py_cls_codes = {dict: '_dict', list: '_list', set: '_set', tuple: '_tuple'}
-	__py_code_cls = {v: k for k, v in __py_cls_codes.items()}
-	__ref_prefix = '<>'
+	
 	
 	# temporary data for saving/loading
 	__obj_table = None
@@ -31,11 +32,12 @@ class Savable(object):
 	def __new__(cls, *args, _gen_id=True, **kwargs):
 		obj = super().__new__(cls)
 		if _gen_id:
-			obj.__dict__[cls.__savable_id_attr] = cls.__gen_obj_id() # all instances of Savable have a unique obj_id
+			obj.__dict__[_savable_id_attr] = cls.__gen_obj_id() # all instances of Savable have a unique obj_id
 		return obj
 	
 	def __setattr__(self, key, value):
-		if key == self.__class__.__savable_id_attr:
+		# if key == self.__class__._savable_id_attr:
+		if key == '_pack_id':
 			raise ObjectIDReadOnlyError()
 		return super().__setattr__(key, value)
 	
@@ -108,18 +110,18 @@ class Savable(object):
 		pys = cls.__py_table
 		
 		if isinstance(obj, _primitives):
-			if isinstance(obj, str) and obj.startswith(cls.__ref_prefix):
+			if isinstance(obj, str) and obj.startswith(_ref_prefix):
 				ref = cls.__gen_obj_id()
 				refs[ref] = {'_type': '_str', '_data': obj}
 			else:
 				return obj
 		elif isinstance(obj, Savable):
 			# if refs is not None:
-			ref = obj.__getref()
+			ref = obj._getref()
 			if ref not in refs:
 				refs[ref] = None # create entry in refs to stop reference loops
 				refs[ref] = {'_type': Savable._full_name(type(obj)), '_data': obj.__save__()}
-		elif type(obj) in cls.__py_cls_codes:  # known python objects
+		elif type(obj) in _py_cls_codes:  # known python objects
 			ID = id(obj)
 			if ID not in pys:
 				pys[ID] = cls.__gen_obj_id()
@@ -134,29 +136,29 @@ class Savable(object):
 					data['_data'] = {cls._pack_obj(k): cls._pack_obj(v) for k, v in obj.items()}
 				else:
 					data['_data'] = [cls._pack_obj(x) for x in obj]
-				data['_type'] = cls.__py_cls_codes[type(obj)]
+				data['_type'] = _py_cls_codes[type(obj)]
 		
 		elif issubclass(obj, Savable):
-			return '{}:{}'.format(cls.__ref_prefix, Savable._full_name(obj))
+			return '{}:{}'.format(_ref_prefix, Savable._full_name(obj))
 		
-		elif obj in cls.__py_cls_codes:
-			return '{}:{}'.format(cls.__ref_prefix, obj.__name__)
+		elif obj in _py_cls_codes:
+			return '{}:{}'.format(_ref_prefix, obj.__name__)
 		
 		else:
 			raise TypeError('Unrecognized type: {}'.format(type(obj)))
 		
-		return '{}{}'.format(cls.__ref_prefix, ref)
+		return '{}{}'.format(_ref_prefix, ref)
 	
 	@classmethod
 	def _unpack_obj(cls, data):
 		refs = cls.__ref_table
 		objs = cls.__obj_table
 		
-		if isinstance(data, str) and data.startswith(cls.__ref_prefix):  # reference or class
+		if isinstance(data, str) and data.startswith(_ref_prefix):  # reference or class
 			
 			if ':' in data:  # class
 				
-				cls_name = data[len(cls.__ref_prefix) + 1:]
+				cls_name = data[len(_ref_prefix) + 1:]
 				
 				try:
 					return cls.get_cls(cls_name)
@@ -165,7 +167,7 @@ class Savable(object):
 			
 			else:  # reference
 				
-				ID = int(data[len(cls.__ref_prefix):])
+				ID = int(data[len(_ref_prefix):])
 				
 				if ID in objs:
 					return objs[ID]
@@ -177,8 +179,8 @@ class Savable(object):
 					obj = refs[ID]['_data']
 				elif typ == '_tuple':  # since tuples are immutable they have to created right away (no loop issues)
 					obj = tuple(cls._unpack_obj(x) for x in data)
-				elif typ in cls.__py_code_cls:
-					obj = cls.__py_code_cls[typ]()
+				elif typ in _py_code_cls:
+					obj = _py_code_cls[typ]()
 				else:  # must be an instance of Savable
 					new = cls.get_cls(typ)
 					obj = new.__new__(new,
@@ -188,7 +190,7 @@ class Savable(object):
 				objs[ID] = obj
 				
 				# after adding empty obj to obj table, populate obj with state from data
-				if typ in cls.__py_code_cls:
+				if typ in _py_code_cls:
 					if typ == '_dict':
 						obj.update({cls._unpack_obj(k): cls._unpack_obj(v) for k, v in data.items()})
 					elif typ == '_set':
@@ -206,8 +208,8 @@ class Savable(object):
 		
 		return obj
 	
-	def __getref(self):
-		return self.__dict__[self.__class__.__savable_id_attr]
+	def _getref(self):
+		return self.__dict__[_savable_id_attr]
 	
 	def __deepcopy__(self, memodict={}):
 		return self.__class__.unpack(self.__class__.pack(self))
