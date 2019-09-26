@@ -8,10 +8,21 @@ from .basic_containers import tdict, tset, tlist
 
 # all wrapped objects must be able to be copied (shallow copy) using
 # note: Transactionable objects cant be wrapped
-class ObjectWrapper(ObjectProxy, Transactionable, Savable):
+class ObjectWrapper(Transactionable, Savable, ObjectProxy):
+	
+	def __new__(cls, *args, **kwargs):
+		obj = super().__new__(cls, _gen_id=False)
+		
+		# obj.__dict__[cls.__savable_id_attr] = Savable.__gen_obj_id()
+		
+		return obj
 	
 	def __init__(self, obj):
 		super().__init__(obj)
+		
+		x = self._self__class__.__savable_id_attr
+		
+		self.__dict__[x] = self.__class__.__gen_obj_id()
 		
 		self._self_shadow = None
 		self._self_children = tset()
@@ -49,6 +60,10 @@ class ObjectWrapper(ObjectProxy, Transactionable, Savable):
 	def __str__(self):
 		return self.__wrapped__.__str__()
 	
+	# def __getattribute__(self, item):
+	# 	if item in super().__getattribute__('_self_special_attrs'):
+	# 		return
+	
 	def __setattr__(self, key, value):
 		if isinstance(value, Transactionable) and not key == '_self_children':
 			self._self_children.add(value)
@@ -73,26 +88,26 @@ class ObjectWrapper(ObjectProxy, Transactionable, Savable):
 	
 	
 	@classmethod
-	def __load(cls, data):
-		unpack = cls.__unpack
+	def __load__(self, data):
+		obj = self.__build__(data)
 		
-		obj = cls.__build(data)
-		return cls(obj)
+		self.__init__(obj)
+		
+		# self.__wrapped__ = self.__build__(data)
 	
 	# must be overridden
 	
-	def __save(self): # save everything from the internal state
+	def __save__(self): # save everything from the internal state
 		raise NotImplementedError
 	
-	@classmethod
-	def __build(cls, data): # recover wrapped object in correct state from data, return wrapped object
+	def __build__(self, data): # recover wrapped object in correct state from data, return wrapped object
 		raise NotImplementedError
 
 
 class Array(ObjectWrapper): # wraps numpy arrays
 	
-	def __save(self):
-		pack = self.__class__.__pack
+	def __save__(self):
+		pack = self.__class__._pack_obj
 		
 		data = {}
 		
@@ -101,7 +116,6 @@ class Array(ObjectWrapper): # wraps numpy arrays
 		
 		return data
 	
-	@classmethod
-	def __build(cls, data):
-		unpack = cls.__unpack
+	def __build__(self, data):
+		unpack = self.__class__._unpack_obj
 		return np.array(unpack(data['data']), dtype=unpack(data['dtype']))

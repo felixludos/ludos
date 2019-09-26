@@ -139,8 +139,8 @@ class RichWriter(Savable, Transactionable, Pullable):
 	def extend(self, line):
 		self.text.extend(line)
 	
-	def __save(self):
-		pack = self.__class__.__pack
+	def __save__(self):
+		pack = self.__class__._pack_obj
 		
 		data = {}
 		
@@ -153,11 +153,8 @@ class RichWriter(Savable, Transactionable, Pullable):
 		
 		return data
 
-	@classmethod
-	def __load(cls, data):
-		unpack = cls.__unpack
-		
-		self = cls()
+	def __load__(self, data):
+		unpack = self.__class__._unpack_obj
 		
 		self.text = unpack(data['text'])
 		self.indent_level = unpack(data['indent_level'])
@@ -165,8 +162,6 @@ class RichWriter(Savable, Transactionable, Pullable):
 		self.debug = unpack(data['debug'])
 		self._in_transaction = unpack(data['in_transaction'])
 		self.end = unpack(data['end'])
-		
-		return self
 		
 	def begin(self):
 		if self.in_transaction():
@@ -240,20 +235,14 @@ class LogWriter(RichWriter):
 	def get_log(self):
 		return list(self.log)
 		
-	def __save(self):
-		
-		data = super().__save()
-		
-		data['log'] = self.__class__.__pack(self.log)
-		
+	def __save__(self):
+		data = super().__save__()
+		data['log'] = self.__class__._pack_obj(self.log)
 		return data
 	
-	@classmethod
-	def __load(cls, data):
-		
-		obj = super().__load(data)
-		obj.log = cls.__unpack(data['log'])
-		
+	def __load__(self, data):
+		obj = super().__load__(data)
+		obj.log = self.__class__._unpack_obj(data['log'])
 		return obj
 
 # the dev can write instance of RichText, but all written objects are stored as simple objects (dict, list, primitives)
@@ -273,17 +262,17 @@ class RichText(Typed, Writable, Savable):
 	def get_text_info(self): # dev can provide frontend with format instructions, this is added to the info for each line in the log using this LogFormat
 		return self.info # by default no additional info is sent
 	
-	def __save(self):
-		pack = self.__class__.__pack
+	def __save__(self):
+		pack = self.__class__._pack_obj
 		
 		return {
 			'val' :pack(self.val),
 			'info' :pack(self.info),
 		}
 	
-	@classmethod
-	def __load(cls, data):
-		return cls(cls.__unpack(data['val']), **cls.__unpack(data['info']))
+	def __load__(self, data):
+		unpack = self.__class__._unpack_obj
+		return self.__init__(unpack(data['val']), **unpack(data['info']))
 	
 	def __format__(self, format_spec):
 		raise NotImplementedError

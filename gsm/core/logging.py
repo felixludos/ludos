@@ -19,16 +19,13 @@ class GameLogger(RichWriter):
 		self.writers = tdict({p: LogWriter(indent=indent, debug=debug)
 		                   for p in players})
 		
-	def __save(self):
+	def __save__(self):
 		data = {}
-		data['writers'] =  self.__class__.__pack(self.writers)
+		data['writers'] =  self.__class__._pack_obj(self.writers)
 		return data
 	
-	@classmethod
-	def __load(cls, data):
-		self = cls()
-		self.writers = cls.__unpack(data['writers'])
-		return self
+	def __load__(self, data):
+		self.writers = self.__class__._unpack_obj(data['writers'])
 	
 	def begin(self):
 		if self.in_transaction():

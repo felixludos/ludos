@@ -25,10 +25,18 @@ def containerify(obj, obj_tbl=None):
 
 class tdict(Container, OrderedDict): # keys must be primitives, values can be primitives or Savable instances/subclasses
 	
+	def __new__(cls, *args, **kwargs):
+		
+		self = super().__new__(cls)
+		
+		self.__dict__['_data'] = OrderedDict()
+		self.__dict__['_shadow'] = None
+		
+		return self
+	
 	def __init__(self, *args, **kwargs):
 		super().__init__()
 		self.__dict__['_data'] = OrderedDict(*args, **kwargs)
-		self.__dict__['_shadow'] = None
 		
 	def in_transaction(self):
 		return self._shadow is not None
@@ -107,27 +115,34 @@ class tdict(Container, OrderedDict): # keys must be primitives, values can be pr
 	def move_to_end(self, key, last=True):
 		self._data.move_to_end(key, last)
 	
-	def __save(self):
-		pack = self.__class__.__pack
+	def __save__(self):
+		pack = self.__class__._pack_obj
 		
 		data = {}
-		data['_pairs'] = {key:pack(value)
-		                  for key, value in self.items()}
 		
-		data['_order'] = list(iter(self))
+		data['_pairs'] = {}
+		data['_order'] = []
+		
+		for key, value in self.items():
+			
+			k,v = pack(key), pack(value)
+			data['_pairs'][k] = v
+			data['_order'].append(k)
 		
 		if self.in_transaction(): # TODO: maybe write warning about saving in the middle of a transaction
-			data['_shadow_pairs'] = {key:pack(value)
-		                  for key, value in self._shadow.items()}
 			
-			data['_shadow_order'] = list(iter(self._shadow))
+			data['_shadow_pairs'] = {}
+			data['_shadow_order'] = []
+			
+			for key, value in self._shadow.items():
+				k, v = pack(key), pack(value)
+				data['_shadow_pairs'][k] = v
+				data['_shadow_order'].append(k)
 		
 		return data
 	
-	@classmethod
-	def __load(cls, data):
-		self = cls()
-		unpack = cls.__unpack
+	def __load__(self, data):
+		unpack = self.__class__._unpack_obj
 		
 		# TODO: write warning about overwriting state - which can't be aborted
 		# if self.in_transaction():
@@ -135,12 +150,12 @@ class tdict(Container, OrderedDict): # keys must be primitives, values can be pr
 		
 		self._data.clear()
 		for key in data['_order']:
-			self._data[key] = unpack(data['_pairs'][key])
+			self._data[unpack(key)] = unpack(data['_pairs'][key])
 			
 		if '_shadow_pairs' in data: # TODO: maybe write warning about loading into a partially completed transaction
 			self._shadow = OrderedDict()
 			for key in data['_shadow_order']:
-				self._shadow[key] = unpack(data['_shadow_pairs'][key])
+				self._shadow[unpack(key)] = unpack(data['_shadow_pairs'][key])
 			
 		return self
 	
@@ -177,10 +192,18 @@ class tdict(Container, OrderedDict): # keys must be primitives, values can be pr
 	
 class tlist(Container, list):
 
+	def __new__(cls, *args, **kwargs):
+		
+		self = super().__new__(cls)
+		
+		self._data = []
+		self._shadow = None
+		
+		return self
+
 	def __init__(self, *args, **kwargs):
 		super().__init__()
 		self._data = list(*args, **kwargs)
-		self._shadow = None
 	
 	def in_transaction(self):
 		return self._shadow is not None
@@ -225,19 +248,16 @@ class tlist(Container, list):
 			copy._shadow = self._shadow.copy()
 		return copy
 	
-	def __save(self):
-		pack = self.__class__.__pack
+	def __save__(self):
+		pack = self.__class__._pack_obj
 		state = {}
 		state['_entries'] = [pack(elm) for elm in iter(self)]
 		if self.in_transaction(): # TODO: maybe write warning about saving in the middle of a transaction
 			state['_shadow'] = [pack(elm) for elm in self._shadow]
 		return state
 	
-	@classmethod
-	def __load(cls, state):
-		
-		self = cls()
-		unpack = cls.__unpack
+	def __load__(self, state):
+		unpack = self.__class__._unpack_obj
 		
 		# TODO: write warning about overwriting state - which can't be aborted
 		# if self.in_transaction():
@@ -247,7 +267,6 @@ class tlist(Container, list):
 		if '_shadow' in state: # TODO: maybe write warning about loading into a partially completed transaction
 			self._shadow = [unpack(elm) for elm in state['_shadow']]
 			
-		return self
 	
 	def __getitem__(self, item):
 		return self._data[item]
@@ -322,9 +341,16 @@ class tlist(Container, list):
 	
 class tset(Container, set):
 	
+	def __new__(cls, *args, **kwargs):
+		
+		self = super().__new__(cls)
+		
+		self._data = OrderedDict()
+		
+		return self
+	
 	def __init__(self, iterable=[]):
 		super().__init__()
-		self._data = OrderedDict()
 		for x in iterable:
 			self.add(x)
 		self._shadow = None
@@ -370,18 +396,16 @@ class tset(Container, set):
 			copy._shadow = self._shadow.copy()
 		return copy
 	
-	def __save(self):
-		pack = self.__class__.__pack
+	def __save__(self):
+		pack = self.__class__._pack_obj
 		state = {}
 		state['_elements'] = [pack(elm) for elm in iter(self)]
 		if self.in_transaction():
 			state['_shadow'] = [pack(elm) for elm in self._shadow]
 		return state
 	
-	@classmethod
-	def __load(cls, data):
-		self = cls()
-		unpack = cls.__unpack
+	def __load__(self, data):
+		unpack = self.__class__._unpack_obj
 		
 		# TODO: write warning about overwriting state - which can't be aborted
 		# if self.in_transaction():
@@ -394,7 +418,6 @@ class tset(Container, set):
 			for elm in data['_shadow']:
 				self._shadow[unpack(elm)] = None
 		
-		return self
 	def __hash__(self):
 		return id(self)
 	def __eq__(self, other):

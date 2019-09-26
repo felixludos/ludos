@@ -42,7 +42,7 @@ def unjsonify(obj, tfm=None):
 	
 	raise UnknownElementError(obj)
 
-class RandomGenerator(random.Random, Savable, Transactionable):
+class RandomGenerator(Savable, Transactionable, random.Random):
 	
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -54,8 +54,8 @@ class RandomGenerator(random.Random, Savable, Transactionable):
 		copy._shadow = self._shadow
 		return copy
 	
-	def __save(self):
-		pack = self.__class__.__pack
+	def __save__(self):
+		pack = self.__class__._pack_obj
 		
 		data = {}
 		
@@ -65,19 +65,14 @@ class RandomGenerator(random.Random, Savable, Transactionable):
 		
 		return data
 	
-	@classmethod
-	def __load(cls, data):
-		
-		unpack = cls.__unpack
-		
-		self = cls()
+	def __load__(self, data):
+		unpack = self.__class__._unpack_obj
 		
 		self.setstate(tuple(unpack(data['state'])))
 		
 		if '_shadow' in data:
 			self._shadow = tuple(unpack(data['_shadow']))
 		
-		return self
 	
 	def begin(self):
 		if self.in_transaction():
@@ -127,7 +122,7 @@ class RandomGenerator(random.Random, Savable, Transactionable):
 # 		raise NotImplementedError
 #
 # 	@classmethod
-# 	def __load(cls, data):
+# 	def __load__(self, data):
 # 		raise NotImplementedError
 #
 # 	def begin(self):

@@ -122,8 +122,8 @@ class GameObject(Typed, Writable, Hashable, Transactionable, Savable, Pullable):
 		
 		return copy
 		
-	def __save(self):
-		pack = self.__class__.__pack
+	def __save__(self):
+		pack = self.__class__._pack_obj
 		
 		data = {}
 		
@@ -136,11 +136,9 @@ class GameObject(Typed, Writable, Hashable, Transactionable, Savable, Pullable):
 		
 		return data
 	
-	@classmethod
-	def __load(cls, data):
+	def __load__(self, data):
 		
-		self = cls.__new__(cls)
-		unpack = cls.__unpack
+		unpack = self.__class__._unpack_obj
 		
 		self._id = unpack(data['_id'])
 		self._table = unpack(data['_table'])
@@ -150,8 +148,6 @@ class GameObject(Typed, Writable, Hashable, Transactionable, Savable, Pullable):
 		self._hidden = unpack(data['_hidden'])
 		
 		# self._verify() # TODO: maybe verify req when loading
-		
-		return self
 		
 	def get_text_type(self):
 		return 'obj'

@@ -5,11 +5,15 @@ from gsm.signals import SavableClassCollisionError, ObjectIDReadOnlyError, Unreg
 class S(object):
 	__subclasses = {}
 	__obj_id_counter = 0
-	__savable_id_attr = '_pack_id' # instances of all subclasses cant use this identifier as an attribute
+	__savable_id_attr = '_pack_id'#'_pack_id' # instances of all subclasses cant use this identifier as an attribute
+	__py_cls_codes = {dict:'_dict', list:'_list', set:'_set', tuple:'_tuple'}
+	__py_code_cls = {v:k for k,v in __py_cls_codes.items()}
+	__ref_prefix = '<>'
 
 	# temporary data for saving/loading
 	__obj_table = None
 	__ref_table = None
+	__py_table = None
 
 	def __init_subclass__(cls, *args, **kwargs):
 		super().__init_subclass__()
@@ -21,8 +25,7 @@ class S(object):
 
 	def __new__(cls, *args, **kwargs):
 		obj = super().__new__(cls)
-		obj.__dict__[cls.__savable_id_attr] = cls.__obj_id_counter # TODO: make thread safe (?)
-		cls.__obj_id_counter += 1
+		obj.__dict__[cls.__savable_id_attr] = cls.__gen_obj_id()
 		return obj
 
 	def __setattr__(self, key, value):
@@ -39,6 +42,12 @@ class S(object):
 		return '.'.join([module, name])
 
 	@classmethod
+	def __gen_obj_id(cls):
+		ID = cls.__obj_id_counter # TODO: make thread safe (?)
+		cls.__obj_id_counter += 1
+		return ID
+	
+	@classmethod
 	def get_cls(cls, name):
 		try:
 			return cls.__subclasses[name]
@@ -51,6 +60,7 @@ class S(object):
 		# savefile contains
 		assert cls.__ref_table is None, 'There shouldnt be a object table already here'
 		cls.__ref_table = {} # create object table
+		cls.__py_table = {}
 
 		out = cls._pack_obj(obj)
 
@@ -64,12 +74,10 @@ class S(object):
 		}
 
 		cls.__ref_table = None  # clear built up object table
+		cls.__py_table = None
 
 		# save parent object separately
-		if isinstance(obj, S):
-			data['ref'] = obj.__getref()
-		else:
-			data['obj'] = out
+		data['head'] = out
 
 		return data
 
@@ -79,7 +87,7 @@ class S(object):
 		cls.__ref_table = data['table']
 		cls.__obj_table = {}
 
-		obj = cls._unpack_obj(data['table'][data['ref']] if 'ref' in data else data['obj'])
+		obj = cls._unpack_obj(data['head'])
 
 		cls.__ref_table = None
 		cls.__obj_table = None
@@ -91,81 +99,104 @@ class S(object):
 	@classmethod
 	def _pack_obj(cls, obj):
 		refs = cls.__ref_table
+		pys = cls.__py_table
 
 		if isinstance(obj, _primitives):
-			return obj
+			if isinstance(obj, str) and len(obj) >= len(cls.__ref_prefix) and obj.startswith(cls.__ref_prefix):
+				ref = cls.__gen_obj_id()
+				refs[ref] = {'_type':'_str', '_data':obj}
+			else:
+				return obj
 		elif isinstance(obj, S):
-			if refs is not None:
-				ref = obj.__getref()
-				if ref not in refs:
-					refs[ref] = obj._save_obj()
-					# refs[ref] = { obj._save_obj() }
-
-				return {'_type': S._full_name(obj.__class__), '_ref': ref}
-
-			assert False, 'must save using Savable.pack(obj)'
-			return {'_type': S._full_name(obj.__class__), '_data': obj._save_obj()}
-
+			# if refs is not None:
+			ref = obj.__getref()
+			if ref not in refs:
+				refs[ref] = None
+				refs[ref] = {'_type': S._full_name(type(obj)), '_data': obj.__save__()}
+		elif type(obj) in cls.__py_cls_codes: # known python objects
+			ID = id(obj)
+			if ID not in pys:
+				pys[ID] = cls.__gen_obj_id()
+			ref = pys[ID]
+			
+			if ref not in refs:
+				data = {}
+				if type(obj) == dict:
+					data['_data'] = {cls._pack_obj(k):cls._pack_obj(v) for k,v in obj.items()}
+				else:
+					data['_data'] = [cls._pack_obj(x) for x in obj]
+				data['_type'] = cls.__py_cls_codes[type(obj)]
+				
+				refs[ref] = data
+		
 		elif issubclass(obj, S):
-			return {'_type': '_class', '_data': S._full_name(obj)}
-
-		elif type(obj) == dict:
-			# raise NotImplementedError
-			return {'_type': '_dict', '_data':{k:cls._pack_obj(v) for k,v in obj.items()}}
-		elif type(obj) == list:
-			# raise NotImplementedError
-			return {'_type': '_list', '_data':[cls._pack_obj(x) for x in obj]}
-		elif type(obj) == set:
-			# raise NotImplementedError
-			return {'_type': '_set', '_data': [cls._pack_obj(x) for x in obj]}
-		elif type(obj) == tuple:
-			# raise NotImplementedError
-			return {'_type': '_tuple', '_data': [cls._pack_obj(x) for x in obj]}
-
+			return '{}:{}'.format(cls.__ref_prefix, S._full_name(obj))
+		
+		elif obj in cls.__py_cls_codes:
+			return '{}:{}'.format(cls.__ref_prefix, obj.__name__)
+		
 		else:
-			raise TypeError('Un recognized type: {}'.format(type(obj)))
+			raise TypeError('Unrecognized type: {}'.format(type(obj)))
+		
+		return '{}{}'.format(cls.__ref_prefix, ref)
 
 	@classmethod
 	def _unpack_obj(cls, data):
 		refs = cls.__ref_table
 		objs = cls.__obj_table
-
-		if isinstance(data, _primitives):
-			return data
-		else:
-		# if isinstance(data, dict) and '_type' in data:
-			typ = data['_type']
-			if typ == '_class':
-				return cls.get_cls(data['_data'])
-
-			elif typ == '_dict':
-				# raise NotImplementedError
-				return {k:cls._unpack_obj(v) for k,v in data['_data'].items()}
-			elif typ == '_list':
-				# raise NotImplementedError
-				return [cls._unpack_obj(x) for x in data['_data']]
-			elif typ == '_set':
-				# raise NotImplementedError
-				return {cls._unpack_obj(x) for x in data['_data']}
-			elif typ == '_tuple':
-				# raise NotImplementedError
-				return tuple(cls._unpack_obj(x) for x in data['_data'])
-
-			else: # Savable instance
-				ID = data['_ref']
+			
+		if isinstance(data, str) and data.startswith(cls.__ref_prefix): # reference or class
+			
+			if ':' in data: # class
+				
+				cls_name = data[len(cls.__ref_prefix)+1:]
+				
+				try:
+					return cls.get_cls(cls_name)
+				except UnregisteredClassError:
+					return eval(cls_name)
+				
+			else: # reference
+			
+				ID = int(data[len(cls.__ref_prefix):])
+				
 				if ID in objs:
 					return objs[ID]
-				else:
+				
+				typ = refs[ID]['_type']
+				data = refs[ID]['_data']
+			
+				if typ == '_str':
+					obj = refs[ID]['_data']
+				elif typ == '_tuple': # since tuples are immutable they have to created right away (no loop issues)
+					obj = tuple(cls._unpack_obj(x) for x in data)
+				elif typ in cls.__py_code_cls:
+					obj = cls.__py_code_cls[typ]()
+				else: # must be an instance of Savable
 					new = cls.get_cls(typ)
-					obj = new._load_obj(refs[ID])
-
-					# move ID from refs to objs - it has been loaded
-					del refs[ID]
-					objs[ID] = obj
-
-					return obj
-
-
+					obj = new.__new__(new, data=data) # use data carefully (usually not at all, unless __new__ requires args)
+				
+				del refs[ID]
+				objs[ID] = obj
+				
+				# after adding empty obj to obj table, populate obj with state from data
+				if typ in cls.__py_code_cls:
+					if typ == '_dict':
+						obj.update({cls._unpack_obj(k):cls._unpack_obj(v) for k,v in data.items()})
+					elif typ == '_set':
+						obj.update(cls._unpack_obj(x) for x in data)
+					elif typ == '_list':
+						obj.extend(cls._unpack_obj(x) for x in data)
+					else:
+						raise TypeError('Unrecognized type: {}'.format(obj))
+				elif isinstance(obj, S):
+					obj.__load__(data)
+					
+		else:
+			assert isinstance(data, _primitives), '{}, {}'.format(type(data), data)
+			obj = data
+		
+		return obj
 
 	def __getref(self):
 		return self.__dict__[self.__class__.__savable_id_attr]
@@ -175,11 +206,10 @@ class S(object):
 
 	# functions must be overridden => any information in an instance that should be saved/loaded that could be anything other than a primitive should be packed/unpacked using self.__class__.__pack and self.__class__.__unpack
 
-	def _save_obj(self): # should call self.__class__.__pack(obj) on all objects that are relevant to its state
+	def __save__(self): # should call self.__class__.__pack(obj) on all objects that are relevant to its state
 		raise NotImplementedError
 
-	@classmethod
-	def _load_obj(cls, data): # should call cls.__unpack(obj) on all objects that are relevant to its state and return an instance
+	def __load__(self, data): # should call self.__class__._unpack_obj(obj) on all objects that are relevant to its state and return an instance
 		raise NotImplementedError
 
 
@@ -192,7 +222,7 @@ class A(S):
 	def __repr__(self):
 		return 'A({},{})'.format(self.x, self.y)
 	
-	def _save_obj(self):
+	def __save__(self):
 		pack = self.__class__._pack_obj
 		
 		data = {}
@@ -202,13 +232,17 @@ class A(S):
 		
 		return data
 	
-	@classmethod
-	def _load_obj(cls, data):
-		unpack = cls._unpack_obj
-		
-		self = cls()
+	def __load__(self, data):
+		unpack = self.__class__._unpack_obj
 		
 		self.x = unpack(data['x'])
 		self.y = unpack(data['y'])
-		
-		return self
+
+
+if __name__ == '__main__':
+	a = A(A())
+	print(repr(A))
+	out = S.pack(a)
+	print(repr(out))
+	b = S.unpack(out)
+	print(repr(b))

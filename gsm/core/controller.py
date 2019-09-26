@@ -97,8 +97,8 @@ class GameController(Named, Transactionable, Savable):
 				obj.abort()
 		
 	
-	def __save(self):
-		pack = self.__class__.__pack
+	def __save__(self):
+		pack = self.__class__._pack_obj
 		
 		data = {}
 		
@@ -119,10 +119,8 @@ class GameController(Named, Transactionable, Savable):
 		
 		return data
 	
-	@classmethod
-	def __load(cls, data):
-		self = cls()
-		unpack = cls.__unpack
+	def __load__(self, data):
+		unpack = self.__class__._unpack_obj
 		
 		# load registries
 		self._phases = unpack(data['_phases'])
@@ -131,14 +129,12 @@ class GameController(Named, Transactionable, Savable):
 		
 		# unpack tmembers
 		for mem in self._tmembers:
-			self.__dict__[mem] = data[mem]
+			self.__dict__[mem] = unpack(data[mem])
 			
 		self.name = unpack(data['name'])
 		self._in_transaction = unpack(data['_in_transaction'])
 		self._in_progress = unpack(data['_in_progress'])
-		self.DEBUG = unpack(data['DEBUG'])
-		
-		return self
+		self.DEBUG = unpack(data['debug'])
 	
 	
 	
@@ -396,11 +392,11 @@ class GameController(Named, Transactionable, Savable):
 		raise NotImplementedError # TODO: by default it should return contents of a config file
 	
 	def save(self):  # returns string
-		return json.dumps(self.__save())
+		return str(Savable.pack(self))
 	
 	def load(self, data):
 		
-		obj = self.__class__.__load(json.loads(data))
+		obj = Savable.unpack(eval(data))
 		
 		# load registries
 		self._phases = obj._phases

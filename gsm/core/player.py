@@ -36,8 +36,8 @@ class GameManager(Transactionable, Savable, Pullable):
 					raise MissingValueError(p.get_type(), req, *self.req)
 		
 		
-	def __save(self):
-		pack = self.__class__.__pack
+	def __save__(self):
+		pack = self.__class__._pack_obj
 		
 		data = {}
 		
@@ -50,11 +50,9 @@ class GameManager(Transactionable, Savable, Pullable):
 		
 		return data
 	
-	@classmethod
-	def __load(cls, data):
-		unpack = cls.__unpack
+	def __load__(self, data):
+		unpack = self.__class__._unpack_obj
 		
-		self = cls()
 		self.players = unpack(data['players'])
 		self.req = unpack(data['req'])
 		self.open = unpack(data['open'])
@@ -63,8 +61,6 @@ class GameManager(Transactionable, Savable, Pullable):
 		self.player_cls = unpack(data['player_cls'])
 		
 		# self.verify() # TODO: maybe enforce req upon load
-		
-		return self
 	
 	def begin(self):
 		if self.in_transaction():

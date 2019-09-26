@@ -130,8 +130,8 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 		except AttributeError:
 			return self._current.__getattribute__(item)
 	
-	def __save(self):
-		pack = self.__class__.__pack
+	def __save__(self):
+		pack = self.__class__._pack_obj
 		
 		data = {}
 		
@@ -143,18 +143,14 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 		
 		return data
 	
-	@classmethod
-	def __load(cls, data):
-		self = cls()
-		unpack = cls.__unpack
+	def __load__(self, data):
+		unpack = self.__class__._unpack_obj
 		
 		self._current = unpack(data['_current'])
 		self._desc = unpack(data['_desc'])
-		self._options = unpack(data['options'])
+		self._options = unpack(data['_options'])
 		self.status = unpack(data['status'])
 		self.info = unpack(data['info'])
-		
-		return self
 	
 	def verify(self, action): # action should be a tuple
 		
@@ -223,12 +219,11 @@ class FixedAction(ActionElement):
 		super().__init__('fixed')
 		self.val = val
 
-	def __save(self):
+	def __save__(self):
 		return self.val
 
-	@classmethod
-	def __load(cls, data):
-		return cls(data)
+	def __load__(self, data):
+		self.__init__(data)
 
 	def encode(self):
 		return {'val':self.val}
@@ -250,12 +245,11 @@ class ObjectAction(ActionElement):
 		super().__init__('obj')
 		self.obj = obj
 		
-	def __save(self):
-		return {'obj': self.__class__.__pack(self.obj)}
+	def __save__(self):
+		return {'obj': self.__class__._pack_obj(self.obj)}
 	
-	@classmethod
-	def __load(cls, data):
-		return cls(cls.__unpack(data['obj']))
+	def __load__(self, data):
+		self.__init__(self.__class__._unpack_obj(data['obj']))
 		
 	def encode(self):
 		return {'ID':self.obj._id, 'val':str(self.obj)}
@@ -270,13 +264,12 @@ class TextAction(ActionElement): # allows player to enter arbitrary text as acti
 	def __init__(self):
 		super().__init__('text')
 		
-	def __save(self):
-		pack = self.__class__.__pack
+	def __save__(self):
+		pack = self.__class__._pack_obj
 		raise NotImplementedError
 		
-	@classmethod
-	def __load(cls, data):
-		unpack = cls.__unpack
+	def __load__(self, data):
+		unpack = self.__class__._unpack_obj
 		raise NotImplementedError
 	
 	def encode(self):
@@ -291,13 +284,12 @@ class NumberAction(ActionElement): # allows player to choose from a number (floa
 	def __init__(self):
 		super().__init__('number')
 	
-	def __save(self):
-		pack = self.__class__.__pack
+	def __save__(self):
+		pack = self.__class__._pack_obj
 		raise NotImplementedError
 	
-	@classmethod
-	def __load(cls, data):
-		unpack = cls.__unpack
+	def __load__(self, data):
+		unpack = self.__class__._unpack_obj
 		raise NotImplementedError
 	
 	def encode(self):

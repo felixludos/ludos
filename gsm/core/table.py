@@ -128,35 +128,30 @@ class GameTable(Transactionable, Savable, Pullable):
 			
 		return table
 	
-	def __save(self):
+	def __save__(self):
 		
-		pack = self.__class__.__pack
+		pack = self.__class__._pack_obj
 		
 		data = {}
 		data['ID_counter'] = self.ID_counter
 		data['ID_counter_shadow'] = self.ID_counter_shadow
-		data['table'] = {k:pack(v)
+		data['table'] = {pack(k):pack(v)
 		                 for k, v in self.table.items()}
 		data['players'] = pack(self.players)
 		
 		return data
 	
-	@classmethod
-	def __load(cls, data):
+	def __load__(self, data):
 		
-		unpack = cls.__unpack
-		
-		self = cls()
+		unpack = self.__class__._unpack_obj
 		
 		for k, x in data['table'].items():
-			self.table[k] = unpack(x)
+			self.table[unpack(k)] = unpack(x)
 			
 		self.ID_counter = data['ID_counter']
 		self.ID_counter_shadow = data['ID_counter_shadow']
 		
 		self.players = unpack(data['players'])
-		
-		return self
 	
 	def __getitem__(self, item):
 		return self.table[item]
