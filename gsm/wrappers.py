@@ -12,18 +12,10 @@ class ObjectWrapper(Transactionable, Savable, ObjectProxy):
 	# __slots__ = ['__wrapped__', '__wrapper_cls__']
 	
 	def __new__(cls, *args, **kwargs):
-		obj = super().__new__(cls, _gen_id=False)
-		
-		super(ObjectWrapper, obj).__init__(None)
-		
-		obj._self_cls = cls
-		
-		# obj.__wrapper_cls__ = cls
-		
+		obj = super().__new__(cls, _gen_id=False) # delay adding a pack_id until after initialization
 		return obj
 	
 	def __init__(self, obj):
-		# object.__setattr__(self, '__wrapped__', obj)
 		super().__init__(obj)
 		
 		self._self_pack_id = Savable._Savable__gen_obj_id()
@@ -33,42 +25,6 @@ class ObjectWrapper(Transactionable, Savable, ObjectProxy):
 	
 	def _getref(self):
 		return self._self_pack_id
-	
-	# def _pack_obj(self, obj):
-	# 	return self._self_cls._pack_obj(obj)
-	#
-	# def _unpack_obj(self, data):
-	# 	return self._self_cls._unpack_obj(data)
-	
-	# def __setattr__(self, name, value):
-	# 	if name.startswith('_self_'):
-	# 		print('setting', name, value)
-	# 		object.__setattr__(self, name, value)
-	#
-	# 		print(hasattr(self, name))
-	#
-	# 	elif name == '__wrapped__' or name == '__wrapper_cls__':
-	# 		object.__setattr__(self, name, value)
-	# 		try:
-	# 			object.__delattr__(self, '__qualname__')
-	# 		except AttributeError:
-	# 			pass
-	# 		try:
-	# 			object.__setattr__(self, '__qualname__', value.__qualname__)
-	# 		except AttributeError:
-	# 			pass
-	#
-	# 	elif name == '__qualname__':
-	# 		setattr(self.__wrapped__, name, value)
-	# 		object.__setattr__(self, name, value)
-	#
-	# 	elif hasattr(type(self), name):
-	# 		object.__setattr__(self, name, value)
-	#
-	# 	else:
-	# 		if isinstance(value, Transactionable) and not name == '_self_children':
-	# 			self._self_children.add(value)
-	# 		setattr(self.__wrapped__, name, value)
 	
 	def begin(self):
 		if self.in_transaction():
@@ -107,10 +63,10 @@ class ObjectWrapper(Transactionable, Savable, ObjectProxy):
 	# 	if item in super().__getattribute__('_self_special_attrs'):
 	# 		return
 	
-	# def __setattr__(self, key, value):
-	# 	if isinstance(value, Transactionable) and not key == '_self_children':
-	# 		self._self_children.add(value)
-	# 	return super().__setattr__(key, value)
+	def __setattr__(self, key, value):
+		if isinstance(value, Transactionable) and not key == '_self_children':
+			self._self_children.add(value)
+		return super().__setattr__(key, value)
 	
 	def __delattr__(self, item):
 		value = self.__getattr__(item)
@@ -133,8 +89,6 @@ class ObjectWrapper(Transactionable, Savable, ObjectProxy):
 		obj = self.__build__(data)
 		
 		self.__init__(obj)
-		
-		# self.__wrapped__ = self.__build__(data)
 	
 	# must be overridden
 	
@@ -148,7 +102,7 @@ class ObjectWrapper(Transactionable, Savable, ObjectProxy):
 class Array(ObjectWrapper): # wraps numpy arrays
 	
 	def __save__(self):
-		pack = self._self_cls._pack_obj
+		pack = type(self)._pack_obj
 		
 		data = {}
 		
@@ -158,5 +112,5 @@ class Array(ObjectWrapper): # wraps numpy arrays
 		return data
 	
 	def __build__(self, data=None):
-		unpack = self._self_cls._unpack_obj
+		unpack = type(self)._unpack_obj
 		return np.array(unpack(data['data']), dtype=unpack(data['dtype']))

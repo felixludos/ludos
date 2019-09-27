@@ -14,7 +14,6 @@ class Savable(object):
 	__subclasses = {}
 	__obj_id_counter = 0
 	
-	
 	# temporary data for saving/loading
 	__obj_table = None
 	__ref_table = None
@@ -37,7 +36,7 @@ class Savable(object):
 	
 	def __setattr__(self, key, value):
 		# if key == self.__class__._savable_id_attr:
-		if key == '_pack_id':
+		if key == _savable_id_attr:
 			raise ObjectIDReadOnlyError()
 		return super().__setattr__(key, value)
 	

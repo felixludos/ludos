@@ -90,10 +90,14 @@ class Ipython_Interface(object):
 	def set_player(self, player=None):
 		
 		if player is None:
-			if self.msg is None or 'waiting_for' not in self.msg:
+			if self.msg is None:
 				player = self.rng.choice(self.get_players())
+			elif 'waiting_for' not in self.msg:
+				print('Player set to {}'.format(self.player))
+				return
 			else:
 				player = self.msg.waiting_for.pop()
+			
 		
 		self.player = player
 		print('Player set to {}'.format(self.player))
@@ -141,6 +145,8 @@ class Ipython_Interface(object):
 		if 'options' in self.msg:
 			self.actions = tlist()
 			
+			self.in_progress = True
+			
 			for opt in self.msg.options:
 				self.actions.extend(decode_action_set(opt.actions))
 				
@@ -158,7 +164,6 @@ class Ipython_Interface(object):
 			player = self.player
 		self.msg = _format(self.ctrl.reset(player=player, seed=seed))
 		
-		self.in_progress = True
 		self._process_msg()
 				
 		
@@ -235,8 +240,8 @@ class Ipython_Interface(object):
 		
 	def select_action(self, idx=None):
 		
-		if not self.in_progress:
-			print('No game in progress')
+		if self.actions is None or not len(self.actions):
+			print('No actions to select')
 			return
 		
 		if idx is None:
