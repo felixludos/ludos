@@ -241,10 +241,9 @@ class LogWriter(RichWriter):
 		return data
 	
 	def __load__(self, data):
-		obj = super().__load__(data)
-		obj.log = self.__class__._unpack_obj(data['log'])
-		return obj
-
+		super().__load__(data)
+		self.log = self.__class__._unpack_obj(data['log'])
+		
 # the dev can write instance of RichText, but all written objects are stored as simple objects (dict, list, primitives)
 class RichText(Typed, Writable, Savable):
 	
@@ -272,7 +271,7 @@ class RichText(Typed, Writable, Savable):
 	
 	def __load__(self, data):
 		unpack = self.__class__._unpack_obj
-		return self.__init__(unpack(data['val']), **unpack(data['info']))
+		self.__init__(unpack(data['val']), **unpack(data['info']))
 	
 	def __format__(self, format_spec):
 		raise NotImplementedError

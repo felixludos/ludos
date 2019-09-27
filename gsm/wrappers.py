@@ -9,12 +9,16 @@ from .basic_containers import tdict, tset, tlist
 # all wrapped objects must be able to be copied (shallow copy) using
 # note: Transactionable objects cant be wrapped
 class ObjectWrapper(Transactionable, Savable, ObjectProxy):
-	# __slots__ = ['__wrapped__', '__wrapped_cls__']
+	# __slots__ = ['__wrapped__', '__wrapper_cls__']
 	
 	def __new__(cls, *args, **kwargs):
 		obj = super().__new__(cls, _gen_id=False)
 		
-		# obj.__wrapped_cls__ = cls
+		super(ObjectWrapper, obj).__init__(None)
+		
+		obj._self_cls = cls
+		
+		# obj.__wrapper_cls__ = cls
 		
 		return obj
 	
@@ -22,19 +26,19 @@ class ObjectWrapper(Transactionable, Savable, ObjectProxy):
 		# object.__setattr__(self, '__wrapped__', obj)
 		super().__init__(obj)
 		
-		self._self__pack_id = Savable._Savable__gen_obj_id()
+		self._self_pack_id = Savable._Savable__gen_obj_id()
 		
 		self._self_shadow = None
 		self._self_children = tset()
 	
 	def _getref(self):
-		return self._self__pack_id
+		return self._self_pack_id
 	
-	def _pack_obj(self, obj):
-		return self.__wrapped_cls__._pack_obj(obj)
-	
-	def _unpack_obj(self, data):
-		return self.__wrapped_cls__._unpack_obj(data)
+	# def _pack_obj(self, obj):
+	# 	return self._self_cls._pack_obj(obj)
+	#
+	# def _unpack_obj(self, data):
+	# 	return self._self_cls._unpack_obj(data)
 	
 	# def __setattr__(self, name, value):
 	# 	if name.startswith('_self_'):
@@ -43,7 +47,7 @@ class ObjectWrapper(Transactionable, Savable, ObjectProxy):
 	#
 	# 		print(hasattr(self, name))
 	#
-	# 	elif name == '__wrapped__' or name == '__wrapped_cls__':
+	# 	elif name == '__wrapped__' or name == '__wrapper_cls__':
 	# 		object.__setattr__(self, name, value)
 	# 		try:
 	# 			object.__delattr__(self, '__qualname__')
@@ -62,6 +66,8 @@ class ObjectWrapper(Transactionable, Savable, ObjectProxy):
 	# 		object.__setattr__(self, name, value)
 	#
 	# 	else:
+	# 		if isinstance(value, Transactionable) and not name == '_self_children':
+	# 			self._self_children.add(value)
 	# 		setattr(self.__wrapped__, name, value)
 	
 	def begin(self):
@@ -101,10 +107,10 @@ class ObjectWrapper(Transactionable, Savable, ObjectProxy):
 	# 	if item in super().__getattribute__('_self_special_attrs'):
 	# 		return
 	
-	def __setattr__(self, key, value):
-		if isinstance(value, Transactionable) and not key == '_self_children':
-			self._self_children.add(value)
-		return super().__setattr__(key, value)
+	# def __setattr__(self, key, value):
+	# 	if isinstance(value, Transactionable) and not key == '_self_children':
+	# 		self._self_children.add(value)
+	# 	return super().__setattr__(key, value)
 	
 	def __delattr__(self, item):
 		value = self.__getattr__(item)
@@ -123,8 +129,6 @@ class ObjectWrapper(Transactionable, Savable, ObjectProxy):
 	# 		return out
 	# 	return _exec
 	
-	
-	@classmethod
 	def __load__(self, data):
 		obj = self.__build__(data)
 		
@@ -144,7 +148,7 @@ class ObjectWrapper(Transactionable, Savable, ObjectProxy):
 class Array(ObjectWrapper): # wraps numpy arrays
 	
 	def __save__(self):
-		pack = self.__wrapped_cls__._pack_obj
+		pack = self._self_cls._pack_obj
 		
 		data = {}
 		
@@ -153,6 +157,6 @@ class Array(ObjectWrapper): # wraps numpy arrays
 		
 		return data
 	
-	def __build__(self, data):
-		unpack = self.__wrapped_cls__._unpack_obj
+	def __build__(self, data=None):
+		unpack = self._self_cls._unpack_obj
 		return np.array(unpack(data['data']), dtype=unpack(data['dtype']))

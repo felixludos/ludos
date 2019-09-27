@@ -20,11 +20,12 @@ class GameLogger(RichWriter):
 		                   for p in players})
 		
 	def __save__(self):
-		data = {}
+		data = super().__save__()
 		data['writers'] =  self.__class__._pack_obj(self.writers)
 		return data
 	
 	def __load__(self, data):
+		super().__load__(data)
 		self.writers = self.__class__._unpack_obj(data['writers'])
 	
 	def begin(self):

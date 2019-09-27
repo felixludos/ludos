@@ -197,8 +197,10 @@ class Savable(object):
 						obj.update(cls._unpack_obj(x) for x in data)
 					elif typ == '_list':
 						obj.extend(cls._unpack_obj(x) for x in data)
+					elif typ == '_tuple':
+						pass # already loaded
 					else:
-						raise TypeError('Unrecognized type: {}'.format(obj))
+						raise TypeError('Unrecognized type {}: {}'.format(type(obj),obj))
 				elif isinstance(obj, Savable):
 					obj.__load__(data)
 		

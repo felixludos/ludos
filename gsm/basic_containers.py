@@ -346,6 +346,7 @@ class tset(Container, set):
 		self = super().__new__(cls)
 		
 		self._data = OrderedDict()
+		self._shadow = None
 		
 		return self
 	
@@ -411,7 +412,7 @@ class tset(Container, set):
 		# if self.in_transaction():
 		# 	pass
 		
-		self._data.update(unpack(elm) for elm in data['_elements'])
+		self.update(unpack(elm) for elm in data['_elements'])
 		
 		if '_shadow' in data: # TODO: maybe write warning about loading into a partially completed transaction
 			self._shadow = OrderedDict()

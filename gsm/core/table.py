@@ -145,6 +145,8 @@ class GameTable(Transactionable, Savable, Pullable):
 		
 		unpack = self.__class__._unpack_obj
 		
+		self.__init__()
+		
 		for k, x in data['table'].items():
 			self.table[unpack(k)] = unpack(x)
 			

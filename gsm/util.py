@@ -59,19 +59,23 @@ class RandomGenerator(Savable, Transactionable, random.Random):
 		
 		data = {}
 		
-		data['state'] = pack(list(self.getstate()))
+		data['state'] = pack(self.getstate())
 		if self._shadow is not None:
-			data['_shadow'] = pack(list(self._shadow))
+			data['_shadow'] = pack(self._shadow)
 		
 		return data
 	
 	def __load__(self, data):
 		unpack = self.__class__._unpack_obj
 		
-		self.setstate(tuple(unpack(data['state'])))
+		self._shadow = None
+		
+		x = unpack(data['state'])
+		
+		self.setstate(x)
 		
 		if '_shadow' in data:
-			self._shadow = tuple(unpack(data['_shadow']))
+			self._shadow = unpack(data['_shadow'])
 		
 	
 	def begin(self):
