@@ -23,12 +23,6 @@ _adj_y = {
 	'octa': np.array([1, 1, 0, -1, -1, -1, 0, 1])
 }
 
-_corners = {
-	'hex': 3,
-	'quad': 4,
-	'octa': 4,
-}
-
 # _inv_fn = {
 #
 # }
@@ -119,6 +113,27 @@ def _add_hex_corners(field, fields, get_ID, corners):
 		
 		field.corners[i] = c
 
+_edge_ninds = {
+	'hex': lambda i: [i],
+	# 'quad': lambda i: [i],
+	'octa': None, # impossible
+}
+_edge_xinds = {
+	'hex': lambda i: [(i+3)%6],
+	# 'quad': lambda i: [(i+2)%4],
+	'octa': None,
+}
+
+_corner_ninds = {
+	'hex': lambda i: [(i-1)%6, i],
+	# 'quad': lambda i: [],
+	'octa': lambda i: [2*i, 2*i+1, (2*i+2)%8],
+}
+_corner_xinds = {
+	'hex': lambda i: [(i+2)%6, (i-2)%6],
+	# 'quad': lambda i: [],
+	'octa': lambda i: [(i+1)%4, (i+2)%4, (i+3)%4],
+}
 
 def _add_subelement(field, fields, get_ID, elms, typ,
                     ninds, xinds,
@@ -139,8 +154,8 @@ def _add_subelement(field, fields, get_ID, elms, typ,
 		x = None # element to be added
 		
 		# try finding existing/corresponding x in neighbors
-		flds, priority = [field.ID], [i] + xinds
-		for ni, j in zip(ninds[i], xinds[i]):
+		flds, priority = [field.ID], [i] + xinds(i)
+		for ni, j in zip(ninds(i), xinds(i)):
 		
 			n = field.neighbors[ni]
 			flds.append(n)
