@@ -9,7 +9,6 @@ from .basic_containers import tdict, tset, tlist
 # all wrapped objects must be able to be copied (shallow copy) using
 # note: Transactionable objects cant be wrapped
 class ObjectWrapper(Transactionable, Savable, ObjectProxy):
-	# __slots__ = ['__wrapped__', '__wrapper_cls__']
 	
 	def __new__(cls, *args, **kwargs):
 		obj = super().__new__(cls, _gen_id=False) # delay adding a pack_id until after initialization
