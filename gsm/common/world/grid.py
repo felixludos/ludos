@@ -68,12 +68,17 @@ def _format_grid(raw, table=None,
 			obj = tdict(obj_type='field', _id=f['ID'],
 			            row=f['row'], col=f['col'],
 			            neighbors=f['neighbors'])
+			
 		else:
 			obj = table.create(obj_type=field_obj_type,
 			
 			                   row=f['row'], col=f['col'],
 			                   neighbors=f['neighbors'],
 			                   )
+			
+
+		if 'val' in f:
+			obj['val'] = f['val']
 		
 		if enable_edges:
 			obj.edges = f['edges']
@@ -81,7 +86,7 @@ def _format_grid(raw, table=None,
 		if enable_corners:
 			obj.corners = f['corners']
 		
-		f.obj_id = obj._id
+		f['obj_id'] = obj._id
 		
 		fields[obj._id] = obj
 	
@@ -95,17 +100,17 @@ def _format_grid(raw, table=None,
 		for eid, e in raw['edges'].items():
 			if table is None:
 				obj = tdict(obj_type='edge', _id=e['ID'],
-				            fields=e.fields)
+				            fields=e['fields'])
 			else:
 				obj = table.create(obj_type=edge_obj_type,
 				
-				                   fields=e.fields,
+				                   fields=e['fields'],
 				                   )
 			
 			if enable_corners:
-				obj.corners = e.corners
+				obj.corners = e['corners']
 			
-			e.obj_id = obj._id
+			e['obj_id'] = obj._id
 			
 			edges[obj._id] = obj
 	
@@ -120,27 +125,30 @@ def _format_grid(raw, table=None,
 			
 			if table is None:
 				obj = tdict(obj_type='corner', _id=c['ID'],
-				            fields=c.fields)
+				            fields=c['fields'])
 			else:
 				obj = table.create(obj_type=corner_obj_type,
 				
-				                   fields=c.fields,
+				                   fields=c['fields'],
 				                   )
 			
 			if enable_edges:
-				obj.edges = c.edges
+				obj.edges = c['edges']
 			
-			c.obj_id = obj._id
+			c['obj_id'] = obj._id
 			
 			corners[obj._id] = obj
 	
 	else:
 		for fid, f in raw['fields'].items():
-			del f.corners
+			if 'corners' in f:
+				del f['corners']
 		if 'edges' in raw:
 			for eid, e in raw['edges'].items():
-				del e.corners
-		del raw['corners']
+				if 'corners' in e:
+					del e['corners']
+		if 'corners' in raw:
+			del raw['corners']
 	
 	# create grid
 	if table is not None:
@@ -159,38 +167,38 @@ def _format_grid(raw, table=None,
 	# connect fields
 	for f in fields.values():
 		
-		f.neighbors = tlist((fields[raw['fields'][n].obj_id] if n is not None else n)
-		                    for n in f.neighbors)
+		f.neighbors = tlist((fields[raw['fields'][n]['obj_id']] if n is not None else n)
+		                    for n in f['neighbors'])
 		
 		if len(edges):
-			f.edges = tlist((edges[raw['edges'][e].obj_id] if e is not None else e)
-			                for e in f.edges)
+			f.edges = tlist((edges[raw['edges'][e]['obj_id']] if e is not None else e)
+			                for e in f['edges'])
 		
 		if len(corners):
-			f.corners = tlist((corners[raw['corners'][c].obj_id] if c is not None else c)
-			                  for c in f.corners)
+			f.corners = tlist((corners[raw['corners'][c]['obj_id']] if c is not None else c)
+			                  for c in f['corners'])
 	
 	# connect edges
 	if len(edges):
 		for e in edges.values():
-			e.fields = tlist((fields[raw['fields'][f].obj_id] if f is not None else f)
-			                 for f in e.fields)
+			e.fields = tlist((fields[raw['fields'][f]['obj_id']] if f is not None else f)
+			                 for f in e['fields'])
 			
 			if len(corners):
-				e.corners = tlist((corners[raw['corners'][c].obj_id] if c is not None else c)
-				                  for c in e.corners)
+				e.corners = tlist((corners[raw['corners'][c]['obj_id']] if c is not None else c)
+				                  for c in e['corners'])
 		
 		grid.edges = edges
 	
 	# connect corners
 	if len(corners):
 		for c in corners.values():
-			c.fields = tlist((fields[raw['fields'][f].obj_id] if f is not None else f)
-			                 for f in c.fields)
+			c.fields = tlist((fields[raw['fields'][f]['obj_id']] if f is not None else f)
+			                 for f in c['fields'])
 			
 			if len(edges):
-				c.edges = tlist((edges[raw['edges'][e].obj_id] if e is not None else e)
-				                for e in c.edges)
+				c.edges = tlist((edges[raw['edges'][e]['obj_id']] if e is not None else e)
+				                for e in c['edges'])
 		
 		grid.corners = corners
 	
@@ -250,6 +258,7 @@ def make_hexgrid(M, table=None,
 	raw['rows'], raw['cols'] = raw['map'].shape
 	
 	return _format_grid(raw, table=table,
+	                    enable_edges=enable_edges, enable_corners=enable_corners,
 	                    grid_obj_type=grid_obj_type, field_obj_type=field_obj_type,
 	                    edge_obj_type=edge_obj_type, corner_obj_type=corner_obj_type,
 	                    )

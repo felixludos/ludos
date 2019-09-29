@@ -194,6 +194,15 @@ class GameObject(Typed, Writable, Hashable, Transactionable, Savable, Pullable):
 			return super().__delattr__(name)
 		return self._public.__delattr__(name)
 	
+	def __getitem__(self, item):
+		return self.__getattr__(item)
+	
+	def __setitem__(self, key, value):
+		return self.__setattr__(key, value)
+	
+	def __delitem__(self, key):
+		return self.__delattr__(key)
+	
 	def __contains__(self, item):
 		return item in self._public or item in self._hidden
 	
