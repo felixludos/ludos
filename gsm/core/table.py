@@ -1,6 +1,6 @@
 
 from ..mixins import Transactionable, Savable, Pullable
-from ..basic_containers import tdict, tset, tlist
+from humpack import tset, tdict, tlist
 from ..signals import MissingTypeError, MissingValueError, MissingObjectError, ObjectIDCollisionError
 from .object import GameObject
 

@@ -12,50 +12,67 @@ from gsm import util
 from gsm import viz
 from gsm.viz import Ipython_Interface as Interface
 from git.examples.tictactoe_grid.main import TicTacToe
-
+from gsm.common.world import _hex_grid as grid_util
+import yaml
 import numpy as np
 from gsm import Array
-x = Array(np.zeros(4))
+# x = Array(np.zeros(4))
 
-seed = 1
+test_yaml = '../../test_yaml.yaml'
+data = viz.unjsonify(yaml.load(open(test_yaml,'r')))
+M = data['map']
+M = 'A'
+print('\n'.join(M))
 
-I = Interface(TicTacToe(), seed=seed)
+info = grid_util._create_grid(M, grid_type='hex',
+              wrap_rows=False, wrap_cols=False,
+#               enforce_connectivity=True,
+              enable_edges=True, enable_corners=True, enable_boundary=False,
+                )
 
-I.set_player('Player1')
+print(info.keys())
+print(info.map)
 
-I.reset(seed=seed)
-I.view()
-
-I.select_action()
-I.step()
-I.set_player()
-I.get_status()
-I.view()
-
-out = I.save()
-print(out)
-
-J = Interface(TicTacToe(), seed=seed)
-J.load(out)
-
-print('J loaded')
-
-J.select_action()
-J.step()
-J.set_player()
-J.get_status()
-J.view()
-
-print()
-print('I')
-print()
-
-I.select_action()
-I.step()
-I.set_player()
-I.get_status()
-I.view()
-
-
-
-
+if False:
+	seed = 1
+	
+	I = Interface(TicTacToe(), seed=seed)
+	
+	I.set_player('Player1')
+	
+	I.reset(seed=seed)
+	I.view()
+	
+	I.select_action()
+	I.step()
+	I.set_player()
+	I.get_status()
+	I.view()
+	
+	out = I.save()
+	print(out)
+	
+	J = Interface(TicTacToe(), seed=seed)
+	J.load(out)
+	
+	print('J loaded')
+	
+	J.select_action()
+	J.step()
+	J.set_player()
+	J.get_status()
+	J.view()
+	
+	print()
+	print('I')
+	print()
+	
+	I.select_action()
+	I.step()
+	I.set_player()
+	I.get_status()
+	I.view()
+	
+	
+	
+	

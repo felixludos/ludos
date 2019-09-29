@@ -2,7 +2,7 @@
 import numpy as np
 from ... import tdict, tlist, tset
 from ... import GameObject, Array
-from ._grid_util import quadgrid as _quadgrid
+from ._old_grid_util import quadgrid as _quadgrid
 
 def _format_grid(rows, cols, table=None,
              enable_edges=False, enable_corners=False,

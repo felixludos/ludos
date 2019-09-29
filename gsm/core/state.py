@@ -1,5 +1,5 @@
 
-from ..basic_containers import tdict
+from humpack import tset, tdict, tlist
 
 
 class GameState(tdict):

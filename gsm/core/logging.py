@@ -1,5 +1,5 @@
 
-from ..basic_containers import tdict, tlist, tset
+from humpack import tset, tdict, tlist
 from .object import GameObject
 from ..writing import RichWriter, LogWriter
 from ..mixins import Named, Typed, Savable, Transactionable

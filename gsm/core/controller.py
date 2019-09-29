@@ -5,7 +5,7 @@ import random
 import traceback
 import yaml
 
-from ..basic_containers import tdict, tset, tlist, containerify
+from humpack import tset, tdict, tlist, containerify
 from .logging import GameLogger
 from .object import obj_jsonify
 from .state import GameState

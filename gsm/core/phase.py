@@ -1,5 +1,5 @@
 from ..mixins import Named, Transactionable, Savable
-from ..basic_containers import tdict, tlist, tset
+from humpack import tset, tdict, tlist
 from ..signals import PhaseComplete
 
 class GamePhase(Named, tdict):

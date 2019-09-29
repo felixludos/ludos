@@ -1,321 +1,248 @@
-from ...basic_containers import tdict, tlist, tset
 
-dhelp = {}
-idCounters = {'field': 0, 'corner': 0, 'edge': 0, 'other': 0}
+import numpy as np
 
-def getId(o):
-	global idCounters
-	if 'obj_type' in o and o.obj_type in idCounters:
-		idCounters[o.obj_type] += 1
-		prefix = o.obj_type[0]
-		return prefix + str(idCounters[o.obj_type])
-	else:
-		prefix = 'o'
-		idCounters['other'] += 1
-		return prefix + str(idCounters['other'])
 
-def calc_hex_col_array(rows, cols):
-	colarr = []  #how many cols in each row
-	for i in range(rows):
-		colarr.append(cols)
-		if i < (rows - 1) / 2:
-			cols += 1
-		else:
-			cols -= 1
-	return colarr
+class ParityError(Exception):
+	def __init__(self):
+		super().__init__('Inconsistent spacing')
 
-def quadgrid(rows, cols):
-	global idCounters
-	dhelp = {}
-	idCounters = {'field': 0, 'corner': 0, 'edge': 0, 'other': 0}
-	h = tdict()
-	h.objects = tdict()
-	h.obj_type = 'quadgrid'
-	h.id = getId(h)
-	h.topcols = cols  # cols in top row
-	h.colarr = [cols] * rows
-	h.maxcols = cols
-	h.rows = rows
-	h.cols = cols
-	h.fields = []
-	h.corners = []
-	h.edges = []
-	imiddleRow = (rows - 1) / 2
-	indexRow = [-1, 0, 0, -1]  #NE node is f.corners[0]
-	indexCol = [0, 0, -1, -1]
-	#fields
-	for irow in range(len(h.colarr)):
-		for icol in range(h.colarr[irow]):
-			#field________________
-			field = tdict()
-			field.obj_type = 'field'
-			field.id = getId(field)
-			field.row = irow + 1
-			field.col = icol + 1
-			field.edges = [None] * 4
-			field.fields = [None] * 4
-			field.corners = [None] * 4
-			h.objects[field.id] = field
-			h.fields.append(field.id)
+class RegistryError(Exception):
+	def __init__(self, name):
+		super().__init__('grid type "{}" already exists'.format(name))
 
-	#nodes________________
-	for fid in h.fields:
-		field = h.objects[fid]
-		#nodes field is irow+1,icol+1
-		for inode in range(4):
-			#make node idByRC
-			nrow = field.row + indexRow[inode]
-			ncol = field.col + indexCol[inode]
-			irc = 'n' + '-' + str(nrow) + '_' + str(ncol)
-			node = None
-			if irc in dhelp:
-				node = dhelp[irc]
-			else:
-				node = tdict()
-				node.obj_type = 'corner'
-				node.id = getId(node)
-				node.row = nrow
-				node.col = ncol
-				node.edges = [None, None, None, None]
-				node.fields = [None, None, None, None]
-				h.corners.append(node.id)
-				dhelp[irc] = node
-				h.objects[node.id] = node
-			#fields of nodes
-			if inode == 0:
-				node.fields[2] = field.id
-			elif inode == 1:
-				node.fields[3] = field.id
-			elif inode == 2:
-				node.fields[0] = field.id
-			elif inode == 3:
-				node.fields[1] = field.id
-			field.corners[inode] = node.id
+_adj_y = {
+	'hex': np.array([1, 2, 1, -1, -2, -1]),
+	'quad': np.array([0, 1, 0, -1]),
+	'octa': np.array([0, 1, 1, 1, 0, -1, -1, -1])
+}
 
-	#edges________________
-	for fid in h.fields:
-		field = h.objects[fid]
-		#field indices is irow+1,icol+1
-		for i in range(4):
-			inode = (i + 3) % 4
-			in1 = inode
-			in2 = (inode + 1) % 4
-			n1 = h.objects[field.corners[in1]]
-			n2 = h.objects[field.corners[in2]]
+_adj_x = {
+	'hex': np.array([-1, 0, 1, 1, 0, -1]),
+	'quad': np.array([-1, 0, 1, 0]),
+	'octa': np.array([-1, -1, 0, 1, 1, 1, 0, -1])
+}
 
-			startNode = n1
-			if n1.row > n2.row:
-				startNode = n2
-			if n1.row == n2.row and n1.col > n2.col:
-				startNode = n2
-			endNode = n2 if startNode == n1 else n1
+_edge_ninds = {
+	'hex': lambda i: [i],
+	'quad': lambda i: [i],
+	'octa': None, # impossible
+}
+_edge_xinds = {
+	'hex': lambda i: [( i +3 ) %6],
+	'quad': lambda i: [( i +2 ) %4],
+	'octa': None,
+}
+_edge_order = {
+	'hex': lambda i: [1 ,0] if i < 3 else [0 ,1],
+	'quad': lambda i: [1 ,0] if i < 2 else [0 ,1],
+	'octa': None,
+}
 
-			irc = 'e' + str(startNode.id) + '_' + str(endNode.id)
-			edge = None
-			if irc in dhelp:
-				edge = dhelp[irc]
-			else:
-				edge = tdict()
-				edge.obj_type = 'edge'
-				edge.id = getId(edge)
-				edge.row = startNode.row
-				edge.col = startNode.col
-				edge.fields = [None, None]
-				edge.leftField = None
-				edge.rightField = None
-				edge.topField = None
-				edge.bottomField = None
-				edge.crossField = None
-				edge.corners = [startNode.id, endNode.id]
-				edge.startNode = startNode.id
-				edge.endNode = endNode.id
-				#add this edge id to each node's edges list ok
-				if inode == 0:
-					n1.edges[2] = edge.id
-					n2.edges[0] = edge.id
-				elif inode == 1:
-					n1.edges[3] = edge.id
-					n2.edges[1] = edge.id
-				elif inode == 2:
-					n1.edges[0] = edge.id
-					n2.edges[2] = edge.id
-				elif inode == 3:
-					n1.edges[1] = edge.id
-					n2.edges[3] = edge.id
-				#add edge to board, dhelp
-				h.edges.append(edge.id)
-				dhelp[irc] = edge
-				h.objects[edge.id] = edge
-			if inode == 0:
-				edge.fields[1] = field.id
-				edge.leftField = field.id
-			elif inode == 1:
-				edge.fields[0] = field.id
-				edge.topField = field.id
-			elif inode == 2:
-				edge.fields[0] = field.id
-				edge.rightField = field.id
-			elif inode == 3:
-				edge.fields[1] = field.id
-				edge.bottomField = field.id
-			field.edges[(inode + 1) % 4] = edge.id
+_corner_ninds = {
+	'hex': lambda i: [( i -1 ) %6, i],
+	'quad': None, # impossible
+	'octa': lambda i: [ 2 *i, 2* i + 1, (2 * i + 2) % 8],
+}
+_corner_xinds = {
+	'hex': lambda i: [(i + 2) % 6, (i - 2) % 6],
+	'quad': None,
+	'octa': lambda i: [(i + 1) % 4, (i + 2) % 4, (i + 3) % 4],
+}
+_corner_order = {
+	'hex': lambda i: [1, 2, 0] if i == 1 or i == 2 else ([2, 0, 1] if i == 0 or i == 5 else [0, 1, 2]),
+	'quad': None,
+	'octa': lambda i: [0, 1, 2, 3],
+}
 
-	#add fields of fields ok
-	for fid in h.fields:
-		f = h.objects[fid]
-		for i in range(4):
-			if not f.edges[i]:
-				continue
-			e = h.objects[f.edges[i]]
-			for f1 in e.fields:
-				if f1 and f1 != fid:
-					f.fields[i] = f1
-	return h
 
-def hexgrid(rows, cols):
-	global idCounters
-	dhelp = {}
-	idCounters = {'field': 0, 'corner': 0, 'edge': 0, 'other': 0}
-	h = tdict()
-	h.objects = tdict()
-	h.obj_type = 'hexgrid'
-	h.id = getId(h)
-	rows = rows if rows % 2 != 0 else rows + 1  # bei hex muss das ungerade sein: was wenn nicht?
-	h.topcols = cols  # cols in top row
-	h.colarr = calc_hex_col_array(rows, h.topcols)
-	h.maxcols = max(h.colarr)
-	h.rows = rows
-	h.cols = cols
-	h.fields = []
-	h.corners = []
-	h.edges = []
-	imiddleRow = (rows - 1) / 2
-	indexRow = [-1, -1, 0, 0, 0, -1]
-	indexCol = [0, 1, 1, 0, -1, -1]
-	for irow in range(len(h.colarr)):
-		colstart = h.maxcols - h.colarr[irow]
-		for j in range(h.colarr[irow]):
-			#field________________
-			icol = colstart + 2 * j
-			field = tdict()
-			field.obj_type = 'field'
-			field.id = getId(field)
-			field.row = irow + 1
-			field.col = icol + 1
-			field.edges = [None] * 6
-			field.fields = [None] * 6
-			field.corners = [None] * 6
-			h.objects[field.id] = field
-			h.fields.append(field.id)
+def _add_subelement(field, fields, get_ID, elms, typ,
+                    ninds, xinds, orders,
+                    group_name=None, N=None):
+	if group_name is None:
+		group_name = typ + 's'
+	
+	if N is None:
+		N = len(field['neighbors'])
+	
+	if group_name not in field:
+		field[group_name] = []
+	
+	# add all corners to this field
+	for i in range(N):
+		
+		x = None  # element to be added
+		
+		# try finding existing/corresponding x in neighbors
+		# flds, priority = [field.ID], [i] + xinds(i)
+		flds = [field['ID']]
+		for ni, j in zip(ninds(i), xinds(i)):
+			
+			n = field['neighbors'][ni]
+			flds.append(n)
+			
+			if n is not None and group_name in fields[n] and fields[n][group_name][j] is not None:
+				x = fields[n][group_name][j]
+		
+		order = np.array(flds)[orders(i)].tolist()
+		# print(group_name, field.ID, i, flds, ord, order)
+		
+		if x is None:
+			elm = dict(ID=get_ID(typ), type=typ, fields=order)
+			elms[elm['ID']] = elm
+			x = elm['ID']
+		
+		field[group_name].append(x)
 
-	#nodes________________
-	for fid in h.fields:
-		field = h.objects[fid]
-		#nodes field is irow+1,icol+1
-		for inode in range(6):
-			#make node idByRC
-			nrow = field.row + indexRow[inode]
-			ncol = field.col + indexCol[inode]
-			irc = 'n' + '-' + str(nrow) + '_' + str(ncol)
-			node = None
-			if irc in dhelp:
-				node = dhelp[irc]
-			else:
-				node = tdict()
-				node.obj_type = 'corner'
-				node.id = getId(node)
-				node.row = nrow
-				node.col = ncol
-				node.edges = [None, None, None]
-				node.fields = [None, None, None]
-				h.corners.append(node.id)
-				dhelp[irc] = node
-				h.objects[node.id] = node
-			#fields of nodes ok
-			if inode == 0:
-				node.fields[1] = field.id
-			elif inode == 1:
-				node.fields[2] = field.id
-			elif inode == 2:
-				node.fields[2] = field.id
-			elif inode == 3:
-				node.fields[0] = field.id
-			elif inode == 4:
-				node.fields[0] = field.id
-			elif inode == 5:
-				node.fields[1] = field.id
-			field.corners[inode] = node.id
 
-	#edges________________
-	for fid in h.fields:
-		field = h.objects[fid]
-		#field indices is irow+1,icol+1
-		for inode in range(6):
-			in1 = inode
-			in2 = (inode + 1) % 6
-			n1 = h.objects[field.corners[in1]]
-			n2 = h.objects[field.corners[in2]]
+_hex_edge_corner_idx = {  # idx of the edge to be added in the corner
+	0: [2, 1],
+	1: [1, 0],
+	2: [2, 0],
+	3: [2, 1],
+	4: [1, 0],
+	5: [2, 0],
+}
 
-			startNode = n1
-			if n1.row > n2.row:
-				startNode = n2
-			if n1.row == n2.row and n1.col > n2.col:
-				startNode = n2
-			endNode = n2 if startNode == n1 else n1
 
-			irc = 'e' + str(startNode.id) + '_' + str(endNode.id)
-			edge = None
-			if irc in dhelp:
-				edge = dhelp[irc]
-			else:
-				edge = tdict()
-				edge.obj_type = 'edge'
-				edge.id = getId(edge)
-				edge.row = startNode.row
-				edge.col = startNode.col
-				edge.fields = [None, None]
-				edge.leftField = None
-				edge.rightField = None
-				edge.corners = [startNode.id, endNode.id]
-				edge.startNode = startNode.id
-				edge.endNode = endNode.id
-				#add this edge id to each node's edges list ok
-				if inode == 0:
-					n1.edges[1] = edge.id
-					n2.edges[2] = edge.id
-				elif inode == 1:
-					n1.edges[1] = edge.id
-					n2.edges[0] = edge.id
-				elif inode == 2:
-					n1.edges[2] = edge.id
-					n2.edges[0] = edge.id
-				elif inode == 3:
-					n1.edges[2] = edge.id
-					n2.edges[1] = edge.id
-				elif inode == 4:
-					n1.edges[0] = edge.id
-					n2.edges[1] = edge.id
-				elif inode == 5:
-					n1.edges[0] = edge.id
-					n2.edges[2] = edge.id
-				#add edge to board, dhelp
-				h.edges.append(edge.id)
-				dhelp[irc] = edge
-				h.objects[edge.id] = edge
-			if inode < 3:
-				edge.fields[1] = field.id
-				edge.leftField = field.id
-			else:
-				edge.fields[0] = field.id
-				edge.rightField = field.id
-			field.edges[inode] = edge.id
+def _connect_hex_idx(i):
+	corner_idx = _hex_edge_corner_idx[i]
+	if 0 < i < 4:
+		return [i, (i + 1) % 6], corner_idx  # idx of the corner to the added to the edge
+	return [(i + 1) % 6, i], corner_idx
 
-	#add fields of fields ok
-	for fid in h.fields:
-		f = h.objects[fid]
-		for i in range(6):
-			e = h.objects[f.edges[i]]
-			for f1 in e.fields:
-				if f1 and f1 != fid:
-					f.fields[i] = f1
-	return h
+
+def _connect_elements(field, edges, corners):  # only for hex
+	
+	for i, eid in enumerate(field['edges']):
+		
+		e = edges[eid]
+		
+		if 'corners' not in e:
+			e['corners'] = []
+			
+			for cidx, eidx in zip(*_connect_hex_idx(i)):
+				
+				cid = field['corners'][cidx]
+				c = corners[cid]
+				
+				if 'edges' not in c:
+					c['edges'] = [None] * 3
+				
+				c['edges'][eidx] = e['ID']
+				
+				e['corners'].append(c['ID'])
+
+
+def _create_grid(M, grid_type='quad',
+                 wrap_rows=False, wrap_cols=False,
+                 # enforce_connectivity=True,
+                 enable_edges=False, enable_corners=False, enable_boundary=False,
+                 # enable_boundary necessary for add/remove fields
+                 **spec):
+	assert grid_type != 'quad' or not enable_corners, 'not working'
+	assert grid_type != 'octa' or not enable_edges, 'not working'
+	
+	# prep Ids
+	ID_counters = {'field': 0, 'edge': 0, 'corner': 0}
+	
+	def get_ID(t):
+		ID = ID_counters[t]
+		ID_counters[t] += 1
+		return '{}{}'.format(t, ID)
+	
+	if not isinstance(M, list):
+		M = M.split('\n')
+	
+	# create grid
+	rows = len(M)
+	cols = len(M[0])
+	for row in M:
+		assert len(row) == cols, 'Input map is non-rectangular'
+	grid = np.empty((rows, cols), dtype='object')
+	
+	fields = {}
+	parity = None  # since hex maps have double coverage
+	
+	for r, row in enumerate(M):
+		for c, val in enumerate(row):
+			if val != ' ':
+				f = dict(ID=get_ID('field'), type='field', val=val, row=r, col=c)
+				grid[r, c] = f['ID']
+				fields[f['ID']] = f
+				
+				if parity is None:
+					parity = (r + c) % 2
+				elif parity != (r + c) % 2:
+					raise ParityError()
+	
+	# find neighbors (and borders)
+	aX, aY = _adj_x[grid_type], _adj_y[grid_type]
+	
+	for r, c in np.ndindex(rows, cols):
+		
+		if grid[r, c] is None:
+			continue
+		
+		f = fields[grid[r, c]]
+		if f is None:
+			continue
+		
+		iX, iY = r + aX, c + aY
+		selX = (iX < 0) + (iX >= rows)
+		iX %= rows
+		selY = (iY < 0) + (iY >= cols)
+		iY %= cols
+		
+		f['neighbors'] = grid[iX, iY]
+		
+		if not (wrap_rows or wrap_cols):
+			sel = selX * 0
+			
+			if not wrap_rows:
+				sel += selX
+			if not wrap_cols:
+				sel += selY
+			
+			sel = sel.astype(bool)
+			
+			f['neighbors'][sel] = None  # clear invalid neighbors
+	
+	# create edges
+	edges = {}
+	if enable_edges:
+		for field in fields.values():
+			_add_subelement(field, fields, get_ID, edges, 'edge',
+			                _edge_ninds[grid_type], _edge_xinds[grid_type], _edge_order[grid_type])
+	
+	# create corners
+	corners = {}
+	if enable_corners:
+		for field in fields.values():
+			_add_subelement(field, fields, get_ID, corners, 'corner',
+			                _corner_ninds[grid_type], _corner_xinds[grid_type], _corner_order[grid_type])
+		
+		if enable_edges:
+			
+			# connect edges and corners
+			for field in fields.values():
+				_connect_elements(field, edges, corners)
+	
+	# format final output
+	info = dict(
+		fields=fields,
+		map=grid,
+	
+	)
+	
+	if len(edges):
+		info['edges'] = edges
+	if len(corners):
+		info['corners'] = corners
+	
+	return info
+
+
+
+
+
+

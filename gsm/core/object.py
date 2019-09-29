@@ -2,7 +2,7 @@
 import numpy as np
 from ..signals import InvalidInitializationError, MissingValueError, UnknownElementError
 from ..mixins import Named, Typed, Writable, Transactionable, Savable, Pullable, Hashable
-from ..basic_containers import tdict, tset, tlist
+from humpack import tset, tdict, tlist
 from ..util import _primitives, RandomGenerator
 
 # TODO: fix so it works with cross referencing

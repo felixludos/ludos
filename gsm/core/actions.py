@@ -1,6 +1,6 @@
 # import json
 from itertools import product, chain
-from ..basic_containers import tdict, tset, tlist
+from humpack import tset, tdict, tlist
 from .object import obj_jsonify, GameObject
 from ..mixins import Typed, Named, Transactionable, Savable, Pullable, Hashable
 from ..signals import ActionMismatch, UnknownActionElement, InvalidActionError

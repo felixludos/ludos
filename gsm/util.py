@@ -1,10 +1,10 @@
 import yaml
 import numpy as np
 import random
+from humpack import tdict, tset, tlist
+
 from .mixins import Named, Typed, Savable, Transactionable, _primitives
 from .signals import UnknownElementError
-from .basic_containers import tdict, tset, tlist
-
 
 def jsonify(obj, tfm=None):
 	if isinstance(obj, _primitives):
@@ -40,7 +40,7 @@ def unjsonify(obj, tfm=None):
 	if tfm is not None:
 		return tfm(obj, unjsonify)
 	
-	raise UnknownElementError(obj)
+	return obj
 
 class RandomGenerator(Savable, Transactionable, random.Random):
 	

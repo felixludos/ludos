@@ -2,7 +2,7 @@
 import json
 import random
 from itertools import chain
-from .basic_containers import tset, tdict, tlist
+from humpack import tset, tdict, tlist
 from .core.object import obj_unjsonify
 from .core.actions import decode_action_set
 from .util import unjsonify

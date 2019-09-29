@@ -1,7 +1,7 @@
 
 from string import Formatter
 
-from .basic_containers import tdict, tset, tlist
+from humpack import tset, tdict, tlist
 from .mixins import Typed, Savable, Transactionable, Pullable, Writable
 from .signals import FormatException
 from .util import _primitives
