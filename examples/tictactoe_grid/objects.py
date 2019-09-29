@@ -2,10 +2,10 @@
 import numpy as np
 
 from gsm import GameObject
-from gsm.common.world import QuadGrid, QuadField
+from gsm.common.world import Grid, Field
 
 
-class Board(QuadGrid):
+class Board(Grid):
 	
 	def check(self):
 		L = self.map.shape[0]
@@ -46,7 +46,7 @@ class Board(QuadGrid):
 		return self.map[free]
 
 
-class Tick(QuadField):
+class Tick(Field):
 	def __init__(self, **props):
 		super().__init__(**props)
 		
