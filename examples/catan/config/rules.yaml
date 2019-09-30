@@ -1,4 +1,18 @@
 
-victory: 10
+victory_condition: 10
+
+victory_points:
+  road: 0
+  settlement: 1
+  city: 2
+
+  longest_road: 2
+
+  largest_army: 2
+
+longest_road_min: 5
+largest_army_min: 3
+
+num_res: 19
 
 
