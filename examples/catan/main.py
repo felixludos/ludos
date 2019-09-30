@@ -1,7 +1,7 @@
 import sys, os
 import numpy as np
 import gsm
-from gsm import tdict, tlist, tset
+from gsm import tdict, tlist, tset, containerify
 
 from .phases import TurnPhase
 
@@ -9,21 +9,29 @@ MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
 class Catan(gsm.GameController):
 	
-	def __init__(self, debug=False):
+	def __init__(self, debug=False, player_names=None,
+	             num_players=3, colors=['White', 'Red', 'Blue', 'Orange'],
+	             **settings):
 		
 		# create player manager
-		manager = gsm.GameManager(open={'symbol'},
-		                          hidden={'val'})
+		manager = gsm.GameManager(open={'num_res', 'num_dev', 'color'},
+		                          hidden={'vps'})
 		
 		super().__init__(debug=debug,
-		                 manager=manager)
+		                 manager=manager,
+		                 settings=settings)
 		
 		# register config files
-		self.register_config('basic', os.path.join(MY_PATH,'config/basics.yaml'))
+		self.register_config('dev', os.path.join(MY_PATH,'config/dev_cards.yaml'))
+		self.register_config('map', os.path.join(MY_PATH,'config/map.yaml'))
 		
 		# register players
-		self.register_player('Player1', val=1)
-		self.register_player('Player2', val=-1)
+		
+		if player_names is None:
+			player_names = colors
+		
+		for i, name, color in zip(range(num_players), player_names, colors):
+			self.register_player(name, num_res=0, num_dev=0, color=color)
 		
 		# register game object types
 		self.register_obj_type(name='tick',
@@ -35,6 +43,11 @@ class Catan(gsm.GameController):
 		
 		# register possible phases
 		self.register_phase(name='turn', cls=TurnPhase)
+	
+	def _pre_setup(self, config):
+		
+		# register players
+		pass
 	
 	def _set_phase_stack(self, config):
 		

@@ -145,8 +145,8 @@ class GameController(Named, Transactionable, Savable):
 	def register_config(self, name, path):
 		if self._in_progress:
 			raise ClosedRegistryError
-		if name in self.config_files:
-			raise RegistryCollisionError(name)
+		# if name in self.config_files:
+		# 	raise RegistryCollisionError(name)
 		self.config_files[name] = path
 	def register_obj_type(self, obj_cls=None, name=None, req=[], open=[]):
 		if self._in_progress:
@@ -157,8 +157,8 @@ class GameController(Named, Transactionable, Savable):
 			raise ClosedRegistryError
 		if name is None:
 			name = cls.__class__.__name__
-		if name in self.config_files:
-			raise RegistryCollisionError(name)
+		# if name in self._phases:
+		# 	raise RegistryCollisionError(name)
 		self._phases[name] = cls
 	def register_player(self, name, **props):
 		if self._in_progress:

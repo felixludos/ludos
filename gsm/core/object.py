@@ -218,11 +218,12 @@ class GameObject(Typed, Writable, Hashable, Transactionable, Savable, Pullable):
 
 class GameObjectGenerator(GameObject):
 	
-	def __init__(self, objs=[], default=GameObject, **props):
+	def __init__(self, objs=[], default=None, **props):
 		super().__init__(**props)
 		self._hidden.objs = tlist(objs)
-		for obj in self._hidden.objs:
-			assert 'obj_type' in obj, 'Every object in the Generator must have an "obj_type"'
+		if default is None:
+			for obj in self._hidden.objs:
+				assert 'obj_type' in obj, 'Every object in the Generator must have an "obj_type"'
 		self._hidden.default = default
 		self._hidden.ID_counter = 0
 	
@@ -231,7 +232,14 @@ class GameObjectGenerator(GameObject):
 	######################
 	
 	def _registered(self, x):
-		return self._table.create(ID=self._gen_ID(), **x)
+		
+		obj_type = self._hidden.default
+		
+		if 'obj_type' in x:
+			obj_type = x.obj_type
+			del x.obj_type
+		
+		return self._table.create(ID=self._gen_ID(), obj_type=obj_type, **x)
 	
 	def _freed(self, x):
 		self._table.remove(x._id)
@@ -246,11 +254,11 @@ class GameObjectGenerator(GameObject):
 	
 	# should not be overridden
 	def extend(self, objs):
-		return self._add(*map(self._erased,objs))
+		return self._add(*map(self._freed,objs))
 	
 	# should not be overridden
 	def append(self, obj):
-		return self._add(self._erased(obj))
+		return self._add(self._freed(obj))
 	
 	######################
 	# Must be Overridden

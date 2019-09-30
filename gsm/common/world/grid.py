@@ -29,7 +29,6 @@ _neighbors = {
 }
 
 class Grid(GameObject):
-	
 	def __init__(self, fields, rows, cols, **other):
 		super().__init__(fields=fields, rows=rows, cols=cols, **other)
 		
