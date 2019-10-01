@@ -10,6 +10,7 @@ from .util import unjsonify
 def _format(obj):
 	return unjsonify(json.loads(obj))
 
+
 def _format_line(line):
 	
 	txt = []
@@ -26,6 +27,20 @@ def _format_line(line):
 			txt.append(str(obj))
 		
 	return ''.join(txt)
+
+
+def _format_log(lines):
+	
+	log = []
+	
+	for line in lines:
+		txt = _format_line(line['line'])
+		if 'level' in line:
+			txt = '\t' * line['level'] + txt
+		log.append(txt)
+		
+	return ''.join(log)
+
 
 def _format_action(tpl):
 	
@@ -187,9 +202,9 @@ class Ipython_Interface(object):
 			print('-------------')
 			
 			if self.full_log:
-				print(_format_line(self.get_log())) # TODO: make the same player is called
+				print(_format_log(self.get_log())) # TODO: make the same player is called
 			else:
-				print(_format_line(self.msg.log))
+				print(_format_log(self.msg.log))
 			
 		
 		if 'error' in self.msg:
@@ -204,7 +219,7 @@ class Ipython_Interface(object):
 		else:
 			
 			if 'status' in self.msg:
-				status = _format_line(self.msg.status)
+				status = _format_log(self.msg.status)
 				print('+' + '-' * (len(status) + 2) + '+')
 				print('| {} |'.format(status))
 				print('+' + '-' * (len(status) + 2) + '+')
@@ -219,7 +234,7 @@ class Ipython_Interface(object):
 				for opt in self.msg.options:
 					
 					if 'desc' in opt:
-						print('-- {} --'.format(_format_line(opt.desc)))
+						print('-- {} --'.format(_format_log(opt.desc)))
 					
 					for tpl in decode_action_set(opt.actions):
 						print('{:>4} - {}'.format(idx, _format_action(tpl)))

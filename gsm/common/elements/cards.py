@@ -12,7 +12,7 @@ class Card(GameObject):
 		self._hidden.deck = deck
 	
 	def discard(self):
-		pass
+		self._hidden.deck.discard(self)
 
 
 class Deck(SafeGenerator):
