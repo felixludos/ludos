@@ -10,8 +10,9 @@ victory_points:
 
   largest_army: 2
 
-longest_road_min: 5
-largest_army_min: 3
+reqs:
+  longest_road: 5
+  largest_army: 3
 
 num_res: 19
 

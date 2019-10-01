@@ -1,12 +1,19 @@
 
 
 
-map: # seam "1" is above the top O
-  - "  W Y O  "
-  - " B S B O "
-  - "O S W Y S"
-  - " D B Y W "
-  - "  Y W S  "
+#map: # seam "1" is above the top O
+#  - "  W Y O  "
+#  - " B S B O "
+#  - "O S W Y S"
+#  - " D B Y W "
+#  - "  Y W S  "
+
+map: # seam "1" is above the top A
+  - "  X X A  "
+  - " X X X X "
+  - "X X X X X"
+  - " X X X X "
+  - "  X X X  "
 
 fields:
   wheat: 4
