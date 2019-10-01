@@ -15,4 +15,26 @@ largest_army_min: 3
 
 num_res: 19
 
+building_costs:
+  road:
+    wood: 1
+    brick: 1
+  settlement:
+    wood: 1
+    brick: 1
+    sheep: 1
+    wheat: 1
+  city:
+    ore: 3
+    wheat: 2
+  dev_card:
+    ore: 1
+    sheep: 1
+    wheat: 1
+
+building_limits:
+  road: 15
+  settlement: 5
+  city: 4
+
 
