@@ -112,6 +112,9 @@ class RichWriter(Savable, Transactionable, Pullable):
 		if indent_level is not None:
 			out['level'] = indent_level
 			
+		if debug:
+			out['debug'] = True
+			
 		self.extend(out)
 		
 	def writef(self, txt, *objs, end=None, indent_level=None, debug=False, **kwobjs):

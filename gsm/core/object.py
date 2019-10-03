@@ -1,57 +1,15 @@
 
 import numpy as np
 from ..signals import InvalidInitializationError, MissingValueError, UnknownElementError
-from ..mixins import Named, Typed, Writable, Transactionable, Savable, Pullable, Hashable
+from ..mixins import Named, Typed, Jsonable, Writable, Transactionable, Savable, Pullable, Hashable
 from humpack import tset, tdict, tlist
-from ..util import _primitives, RandomGenerator
+from ..util import _primitives, RandomGenerator, obj_jsonify
 
 # TODO: fix so it works with cross referencing
-def obj_jsonify(obj):
-	if isinstance(obj, _primitives):
-		return obj
-	if isinstance(obj, GameObject):
-		return {'_obj': obj._id}
-	if isinstance(obj, list):
-		return [obj_jsonify(o) for o in obj]
-	if isinstance(obj, dict):
-		return {obj_jsonify(k):obj_jsonify(v) for k,v in obj.items()}
-	if isinstance(obj, tuple):
-		return {'_tuple': [obj_jsonify(o) for o in obj]}
-		# return [jsonify(o) for o in obj]
-	if isinstance(obj, set):
-		return {'_set': [obj_jsonify(o) for o in obj]}
-	if isinstance(obj, np.ndarray): # TODO: make this work for obj.dtype = 'obj', maybe recurse elements of .tolist()?
-		return {'_ndarray': obj_jsonify(obj.tolist()), '_dtype':obj.dtype.name}
-		
-	raise UnknownElementError(obj)
-
-def obj_unjsonify(obj, obj_tbl=None):
-	if isinstance(obj, _primitives):
-		return obj
-	if isinstance(obj, tuple):
-		return tuple([obj_unjsonify(o, obj_tbl) for o in obj])
-	if isinstance(obj, set):
-		return tset([obj_unjsonify(o, obj_tbl) for o in obj])
-	if isinstance(obj, list):
-		return tlist([obj_unjsonify(o, obj_tbl) for o in obj])
-	if isinstance(obj, dict):
-		if '_obj' in obj and len(obj) == 1:
-			if obj_tbl is None:
-				return obj
-			else:
-				return obj_tbl[obj['_obj']]
-		if '_set' in obj and len(obj) == 1:
-			return tset([obj_unjsonify(o, obj_tbl) for o in obj['set']])
-		if '_tuple' in obj and len(obj) == 1:
-			return tuple(obj_unjsonify(o, obj_tbl) for o in obj['tuple'])
-		if '_ndarray' in obj and '_dtype' in obj:
-			return np.array(obj_unjsonify(obj['_ndarray'], obj_tbl), dtype=obj['_dtype'])
-		return tdict({obj_unjsonify(k, obj_tbl):obj_unjsonify(v, obj_tbl) for k,v in obj.items()})
-	
-	raise UnknownElementError(obj)
 
 
-class GameObject(Typed, Writable, Hashable, Transactionable, Savable, Pullable):
+
+class GameObject(Typed, Writable, Hashable, Jsonable, Transactionable, Savable, Pullable):
 	
 	def __new__(cls, *args, **kwargs):
 		self = super().__new__(cls)
@@ -121,6 +79,9 @@ class GameObject(Typed, Writable, Hashable, Transactionable, Savable, Pullable):
 		copy._hidden = self._hidden.copy()
 		
 		return copy
+		
+	def jsonify(self):
+		return {'_obj':self._id}
 		
 	def __save__(self):
 		pack = self.__class__._pack_obj
@@ -207,7 +168,9 @@ class GameObject(Typed, Writable, Hashable, Transactionable, Savable, Pullable):
 		return item in self._public or item in self._hidden
 	
 	def __eq__(self, other):
-		return self._id == other._id
+		if isinstance(other, GameObject):
+			return self._id == other._id
+		return False
 	
 	def __hash__(self):
 		return hash(self._id)

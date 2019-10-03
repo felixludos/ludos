@@ -2,8 +2,10 @@ import sys, os
 import numpy as np
 import gsm
 from gsm import tdict, tlist, tset, containerify
-from gsm.common.elements import Card
+from gsm.common.elements import Card, Deck
+from gsm.common.world import grid
 
+from .ops import build_catan_map
 from .phases import SetupPhase, MainPhase, TradePhase
 from .objects import Hex, Board, DevCard
 
@@ -37,9 +39,9 @@ class Catan(gsm.GameController):
 		
 		# register game object types
 		self.register_obj_type(obj_cls=Board)
-		self.register_obj_type(obj_cls=Hex, open={'resource', 'number'})
-		self.register_obj_type(obj_cls=DevCard,
-		                       req={'name', 'desc'},)
+		self.register_obj_type(obj_cls=Hex)
+		self.register_obj_type(obj_cls=DevCard, req={'name', 'desc'},)
+		self.register_obj_type(name='DevDeck', obj_cls=Deck)
 		self.register_obj_type(name='Robber', open={'loc'})
 		self.register_obj_type(name='Road', open={'loc', 'owner'})
 		self.register_obj_type(name='Settlement', open={'loc', 'owner'})
@@ -50,22 +52,23 @@ class Catan(gsm.GameController):
 		self.register_phase(name='main', cls=MainPhase)
 		self.register_phase(name='trade', cls=TradePhase)
 	
-	def _pre_setup(self, config):
-		pass
-	
 	def _set_phase_stack(self, config):
 		return tlist([self.create_phase('main'), self.create_phase('setup')])
 	
 	def _init_game(self, config):
 		
+		res_names = config.rules.res_names
+		
 		# update player props
 		for player in self.players.values():
 			player.reserve = tdict(config.rules.building_limits)
+			player.buildings = tdict(road=tset(), settlement=tset(), city=tset())
+			player.resources = tdict({res:0 for res in res_names})
 			
 		self.state.costs = config.rules.building_costs
 		
 		bank = tdict()
-		for res in ['wood', 'brick', 'sheep', 'ore', 'wheat']:
+		for res in res_names:
 			bank[res] = config.rules.num_res
 		self.state.bank = bank
 		
@@ -74,26 +77,59 @@ class Catan(gsm.GameController):
 		self.state.victory_condition = config.rules.victory_condition
 		
 		# init map
-		# TODO
-		side = config.basic.side_length
+		G = grid.make_hexgrid(config.map.map, table=self.table,
+		                      enable_corners=True, enable_edges=True,
+		                      
+		                      field_obj_type='Hex', grid_obj_type='Board')
 		
-		self.state.map = gsm.Array(np.zeros((side, side), dtype=int))
+		build_catan_map(G, config.map.fields, config.map.ports, self.RNG)
+		self.state.world = G
 		
-		self.state.turn_counter = -1
-		self.state.player_order = tlist(self.players.values())
-		if 'shuffle_order' in config.settings:
-			self.RNG.shuffle(self.state.player_order)
+		# robber
+		loc = None
+		for f in G.fields:
+			if f.res == 'desert':
+				loc = f
+				break
+		assert loc is not None, 'couldnt find the desert'
+		self.state.robber = self.table.create('Robber', loc=loc)
+		
+		# setup dev card deck
+		cards = tlist()
+		
+		for name, info in config.dev.items():
+			cards.extend([tdict(name=name, desc=info.desc)]*info.num)
+		
+		self.state.dev_deck = self.table.create(obj_type='DevDeck', cards=cards,
+		                                        seed=self.RNG.getrandbits(64),
+		                                        default='DevCard')
+		self.state.dev_deck.shuffle()
+		
+		# turn order
+		turns = tdict()
+		turns.order = tlist(self.players.values())
+		turns.counter = 0
+		turns.delta = 1
+		turns.settle = True
+		self.state.turns = turns
 		
 		
 	def _end_game(self):
 		
-		val = self.state.winner
+		out = tdict()
 		
-		if val is None:
-			return tdict(winner=None)
+		vps = tdict({player.name:player.vps for player in self.players.values()})
+		out.vps = vps
 		
-		for p in self.players.values():
-			if p.val == val:
-				return tdict(winner=p.name)
-			
-		raise Exception('No player with val: {}'.format(val))
+		mx = max(vps.values())
+		
+		winners = tlist()
+		for name, V in vps.items():
+			if V == mx:
+				winners.append(name)
+		
+		if len(winners) == 1:
+			out.winner = winners[0]
+			return out
+		out.winners = winners
+		return out

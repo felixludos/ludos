@@ -37,7 +37,6 @@ class Deck(SafeGenerator):
 	def _add(self, *objs):
 		self._hidden.objs.extend(objs)
 	
-	
 	def _peek(self):
 		if self._hidden.top_face_up is not None:
 			self.next = tlist(self._hidden.objs[:self._hidden.top_face_up])

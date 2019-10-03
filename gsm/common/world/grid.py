@@ -29,12 +29,13 @@ _neighbors = {
 }
 
 class Grid(GameObject):
+
 	def __init__(self, fields, rows, cols, **other):
 		super().__init__(fields=fields, rows=rows, cols=cols, **other)
 		
 		self.map = Array(np.empty((rows, cols), dtype='object'))
 		
-		for f in fields.values():
+		for f in fields:
 			self.map[f.row - 1, f.col - 1] = f
 
 
@@ -156,11 +157,11 @@ def _format_grid(raw, table=None,
 			grid_obj_type = Grid.__name__
 		
 		grid = table.create(obj_type=grid_obj_type,
-		                    fields=fields,
+		                    fields=tset(fields.values()),
 		                    rows=raw['rows'], cols=raw['cols'])
 	else:
 		grid = tdict(obj_type='grid',
-		             fields=fields,
+		             fields=tset(fields.values()),
 		             rows=raw['rows'], cols=raw['cols'])
 	
 	# connect fields
@@ -187,7 +188,7 @@ def _format_grid(raw, table=None,
 				e.corners = tlist((corners[raw['corners'][c]['obj_id']] if c is not None else c)
 				                  for c in e['corners'])
 		
-		grid.edges = edges
+		grid.edges = tset(edges.values())
 	
 	# connect corners
 	if len(corners):
@@ -199,7 +200,7 @@ def _format_grid(raw, table=None,
 				c.edges = tlist((edges[raw['edges'][e]['obj_id']] if e is not None else e)
 				                for e in c['edges'])
 		
-		grid.corners = corners
+		grid.corners = tset(corners.values())
 	
 	return grid
 

@@ -21,9 +21,11 @@ class Typed(object):
 	def get_type(self):
 		return self.obj_type
 
+class Jsonable(object):
+	def jsonify(self):
+		raise NotImplementedError
 
 class Pullable(object):
-	
 	def pull(self, player=None):  # output should be full json readable
 		raise NotImplementedError
 	

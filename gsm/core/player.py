@@ -1,8 +1,8 @@
 
 from humpack import tset, tdict, tlist
-from ..mixins import Named, Typed, Transactionable, Savable, Pullable, Writable
+from ..mixins import Named, Typed, Jsonable, Transactionable, Savable, Pullable, Writable
 from ..signals import MissingValueError
-from .object import obj_jsonify
+from ..util import obj_jsonify
 
 class GameManager(Transactionable, Savable, Pullable):
 	
@@ -132,7 +132,7 @@ class GameManager(Transactionable, Savable, Pullable):
 
 
 
-class GamePlayer(Named, Typed, Writable, tdict):
+class GamePlayer(Named, Typed, Jsonable, Writable, tdict):
 	def __init__(self, name, obj_type=None, **props):
 		if obj_type is None:
 			obj_type = self.__class__.__name__
@@ -140,6 +140,9 @@ class GamePlayer(Named, Typed, Writable, tdict):
 
 	# def __eq__(self, other):
 	# 	return other == self.name or other.name == self.name
+
+	def jsonify(self):
+		return {'_player':self.name}
 
 	def get_text_type(self):
 		return 'player'

@@ -1,11 +1,11 @@
 # import json
 from itertools import product, chain
 from humpack import tset, tdict, tlist
-from .object import obj_jsonify, GameObject
+from .object import GameObject
 from ..mixins import Typed, Named, Transactionable, Savable, Pullable, Hashable
 from ..signals import ActionMismatch, UnknownActionElement, InvalidActionError
 from ..writing import RichWriter
-# from ..util import jsonify
+from ..util import obj_jsonify
 
 
 def _expand_actions(code):

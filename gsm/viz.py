@@ -3,9 +3,8 @@ import json
 import random
 from itertools import chain
 from humpack import tset, tdict, tlist
-from .core.object import obj_unjsonify
 from .core.actions import decode_action_set
-from .util import unjsonify
+from .util import unjsonify, obj_unjsonify
 
 def _format(obj):
 	return unjsonify(json.loads(obj))
@@ -37,6 +36,8 @@ def _format_log(lines):
 		txt = _format_line(line['line'])
 		if 'level' in line:
 			txt = '\t' * line['level'] + txt
+		if 'debug' in line:
+			txt = '*DEBUG: ' + txt
 		log.append(txt)
 		
 	return ''.join(log)

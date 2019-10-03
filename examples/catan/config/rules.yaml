@@ -1,6 +1,8 @@
 
 victory_condition: 10
 
+res_names: ['wood', 'brick', 'sheep', 'ore', 'wheat']
+
 victory_points:
   road: 0
   settlement: 1

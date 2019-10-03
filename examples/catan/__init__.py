@@ -1,1 +1,1 @@
-from .main import TicTacToe
+from .main import Catan

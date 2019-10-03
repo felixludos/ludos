@@ -3,8 +3,50 @@ import numpy as np
 import random
 from humpack import tdict, tset, tlist
 
-from .mixins import Named, Typed, Savable, Transactionable, _primitives
+from .mixins import Named, Typed, Jsonable, Savable, Transactionable, _primitives
 from .signals import UnknownElementError
+
+
+def obj_jsonify(obj):
+	if isinstance(obj, _primitives):
+		return obj
+	if isinstance(obj, Jsonable):
+		return obj.jsonify()
+	if isinstance(obj, list):
+		return [obj_jsonify(o) for o in obj]
+	if isinstance(obj, dict):
+		return {obj_jsonify(k): obj_jsonify(v) for k, v in obj.items()}
+	if isinstance(obj, tuple):
+		return {'_tuple': [obj_jsonify(o) for o in obj]}
+	# return [jsonify(o) for o in obj]
+	if isinstance(obj, set):
+		return {'_set': [obj_jsonify(o) for o in obj]}
+	if isinstance(obj, np.ndarray):  # TODO: make this work for obj.dtype = 'obj', maybe recurse elements of .tolist()?
+		return {'_ndarray': obj_jsonify(obj.tolist()), '_dtype': obj.dtype.name}
+	
+	raise UnknownElementError(obj)
+
+def obj_unjsonify(obj):
+	if isinstance(obj, _primitives):
+		return obj
+	if isinstance(obj, tuple):
+		return tuple([obj_unjsonify(o) for o in obj])
+	if isinstance(obj, set):
+		return tset([obj_unjsonify(o) for o in obj])
+	if isinstance(obj, list):
+		return tlist([obj_unjsonify(o) for o in obj])
+	if isinstance(obj, dict):
+		if '_set' in obj and len(obj) == 1:
+			return tset([obj_unjsonify(o) for o in obj['set']])
+		if '_tuple' in obj and len(obj) == 1:
+			return tuple(obj_unjsonify(o) for o in obj['tuple'])
+		if '_ndarray' in obj and '_dtype' in obj:
+			return np.array(obj_unjsonify(obj['_ndarray']), dtype=obj['_dtype'])
+		return tdict({obj_unjsonify(k): obj_unjsonify(v) for k, v in obj.items()})
+	
+	raise UnknownElementError(obj)
+
+
 
 def jsonify(obj, tfm=None):
 	if isinstance(obj, _primitives):
@@ -44,9 +86,11 @@ def unjsonify(obj, tfm=None):
 
 class RandomGenerator(Savable, Transactionable, random.Random):
 	
-	def __init__(self, *args, **kwargs):
-		super().__init__(*args, **kwargs)
+	def __init__(self, seed=None):
+		super().__init__()
 		self._shadow = None
+		if seed is not None:
+			self.seed(seed)
 	
 	def copy(self):
 		copy = RandomGenerator()

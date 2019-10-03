@@ -9,7 +9,6 @@ class Board(grid.Grid):
 class Hex(grid.Field):
 	pass
 
-
 class DevCard(Named, Card):
 	pass
 

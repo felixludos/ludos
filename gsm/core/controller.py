@@ -7,13 +7,12 @@ import yaml
 
 from humpack import tset, tdict, tlist, containerify
 from .logging import GameLogger
-from .object import obj_jsonify
 from .state import GameState
 from .table import GameTable
 from .player import GameManager
 from ..mixins import Named, Transactionable, Savable
 from ..signals import PhaseComplete, PhaseInterrupt, GameOver, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
-from ..util import RandomGenerator, jsonify
+from ..util import RandomGenerator, jsonify, obj_jsonify
 
 class GameController(Named, Transactionable, Savable):
 	
