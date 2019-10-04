@@ -3,6 +3,10 @@ victory_condition: 10
 
 res_names: ['wood', 'brick', 'sheep', 'ore', 'wheat']
 
+numbers:
+  hi: [6, 6, 8, 8]
+  reg: [2, 3, 3, 4, 4, 5, 5, 9, 9, 10, 10, 11, 11, 12]
+
 victory_points:
   road: 0
   settlement: 1

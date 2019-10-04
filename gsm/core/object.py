@@ -1,5 +1,6 @@
 
 import numpy as np
+from itertools import chain
 from ..signals import InvalidInitializationError, MissingValueError, UnknownElementError
 from ..mixins import Named, Typed, Jsonable, Writable, Transactionable, Savable, Pullable, Hashable
 from humpack import tset, tdict, tlist
@@ -82,6 +83,9 @@ class GameObject(Typed, Writable, Hashable, Jsonable, Transactionable, Savable, 
 		
 	def jsonify(self):
 		return {'_obj':self._id}
+	
+	def __iter__(self):
+		return chain(iter(self._public), iter(self._hidden))
 		
 	def __save__(self):
 		pack = self.__class__._pack_obj
@@ -153,7 +157,10 @@ class GameObject(Typed, Writable, Hashable, Jsonable, Transactionable, Savable, 
 	def __delattr__(self, name):
 		if name in self.__dict__:
 			return super().__delattr__(name)
-		return self._public.__delattr__(name)
+		if name in self._public:
+			return self._public.__delattr__(name)
+		if name in self._hidden:
+			return self._hidden.__delattr__(name)
 	
 	def __getitem__(self, item):
 		return self.__getattr__(item)

@@ -26,7 +26,7 @@ def get_outside_corners(field): # start corner must be N of the field at seam "1
 	return corners
 	
 
-def build_catan_map(G, hex_info, ports, RNG):
+def build_catan_map(G, hex_info, ports, number_info, RNG):
 	
 	start_field = None
 	for field in G.fields:
@@ -48,10 +48,12 @@ def build_catan_map(G, hex_info, ports, RNG):
 	
 	for field, hextype in zip(G.fields, hextypes):
 		field.res = hextype
+		del field.val
 	
-	hinums = tlist([6]*2 + [8]*2)
+	hinums = number_info.hi
 	
-	options = tlist(G.fields)
+	options = tlist(f for f in G.fields if f.res != 'desert')
+	assert len(options) == (len(number_info.hi) + len(number_info.reg)), 'not the right number of tiles'
 	remaining = tset()
 	
 	for num in hinums:
@@ -63,16 +65,32 @@ def build_catan_map(G, hex_info, ports, RNG):
 		
 		options.remove(f)
 		for n in f.neighbors:
-			if n is not None and n not in remaining:
+			if n is not None and n in options:
 				remaining.add(n)
 				options.remove(n)
 	
 	remaining.update(options)
 	
-	regnums = tlist([3, 4, 5, 9, 10, 11] * 2 + [2, 12])
+	regnums = number_info.reg
 	RNG.shuffle(regnums)
 	
 	for f, num in zip(remaining, regnums):
 		f.num = num
 
 
+def build(C, bldname, player, loc):
+	bld = C.table.create(bldname, loc=loc, owner=player.name)
+	loc.color = player.color
+	loc.player = player.name
+	loc.building = bldname
+	player.buildings[bldname].add(bld)
+	
+	reward = C.state.rewards[bldname]
+	player.vps += reward
+	
+	msg = None
+	if reward == 1:
+		msg = ' (gaining 1 victory point)'
+	if reward > 1:
+		msg = ' (gaining {} victory points)'.format(msg)
+	C.log.writef('{} builds {}{}', player, bld, '' if msg is None else msg)

@@ -23,6 +23,8 @@ I.set_player('White')
 I.reset(seed=seed)
 I.view()
 
+
+
 if False:
 	
 	test_yaml = '../../test_yaml.yaml'

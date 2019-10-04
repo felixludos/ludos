@@ -38,14 +38,17 @@ class Catan(gsm.GameController):
 			self.register_player(name, num_res=0, num_dev=0, color=color)
 		
 		# register game object types
-		self.register_obj_type(obj_cls=Board)
-		self.register_obj_type(obj_cls=Hex)
-		self.register_obj_type(obj_cls=DevCard, req={'name', 'desc'},)
+		self.register_obj_type(name='board', obj_cls=Board)
+		self.register_obj_type(name='hex', obj_cls=Hex)
+		
+		self.register_obj_type(name='devcard', obj_cls=DevCard,
+		                       req={'name', 'desc'},)
 		self.register_obj_type(name='DevDeck', obj_cls=Deck)
 		self.register_obj_type(name='Robber', open={'loc'})
-		self.register_obj_type(name='Road', open={'loc', 'owner'})
-		self.register_obj_type(name='Settlement', open={'loc', 'owner'})
-		self.register_obj_type(name='City', open={'loc', 'owner'})
+		
+		self.register_obj_type(name='road', open={'loc', 'owner'})
+		self.register_obj_type(name='settlement', open={'loc', 'owner'})
+		self.register_obj_type(name='city', open={'loc', 'owner'})
 		
 		# register possible phases
 		self.register_phase(name='setup', cls=SetupPhase)
@@ -53,7 +56,7 @@ class Catan(gsm.GameController):
 		self.register_phase(name='trade', cls=TradePhase)
 	
 	def _set_phase_stack(self, config):
-		return tlist([self.create_phase('main'), self.create_phase('setup')])
+		return tlist([self.create_phase('main'), self.create_phase('setup', player_order=tlist(self.players.values()))])
 	
 	def _init_game(self, config):
 		
@@ -64,6 +67,7 @@ class Catan(gsm.GameController):
 			player.reserve = tdict(config.rules.building_limits)
 			player.buildings = tdict(road=tset(), settlement=tset(), city=tset())
 			player.resources = tdict({res:0 for res in res_names})
+			player.vps = 0
 			
 		self.state.costs = config.rules.building_costs
 		
@@ -80,9 +84,9 @@ class Catan(gsm.GameController):
 		G = grid.make_hexgrid(config.map.map, table=self.table,
 		                      enable_corners=True, enable_edges=True,
 		                      
-		                      field_obj_type='Hex', grid_obj_type='Board')
+		                      field_obj_type='hex', grid_obj_type='board')
 		
-		build_catan_map(G, config.map.fields, config.map.ports, self.RNG)
+		build_catan_map(G, config.map.fields, config.map.ports, config.rules.numbers, self.RNG)
 		self.state.world = G
 		
 		# robber
@@ -104,14 +108,6 @@ class Catan(gsm.GameController):
 		                                        seed=self.RNG.getrandbits(64),
 		                                        default='DevCard')
 		self.state.dev_deck.shuffle()
-		
-		# turn order
-		turns = tdict()
-		turns.order = tlist(self.players.values())
-		turns.counter = 0
-		turns.delta = 1
-		turns.settle = True
-		self.state.turns = turns
 		
 		
 	def _end_game(self):

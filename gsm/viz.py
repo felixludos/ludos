@@ -3,7 +3,9 @@ import json
 import random
 from itertools import chain
 from humpack import tset, tdict, tlist
+from .mixins import Jsonable
 from .core.actions import decode_action_set
+from .core import GameObject, GamePlayer
 from .util import unjsonify, obj_unjsonify
 
 def _format(obj):
@@ -299,26 +301,31 @@ class Ipython_Interface(object):
 
 
 
-def render_format(raw):
+def render_format(raw, unfolded=False):
+	
+	if isinstance(raw, Jsonable) and unfolded:
+		return raw.jsonify()
+	unfolded = True
 	if isinstance(raw, set):
-		# return list(render_format(el) for el in raw)
 		itr = dict()
 		for i, el in enumerate(raw):
-			itr['s{}'.format(i)] = render_format(el)
+			itr['s{}'.format(i)] = render_format(el, unfolded)
 		return itr
 	elif isinstance(raw, dict):
-		return dict((str(k), render_format(v)) for k, v in raw.items())
+		return dict((str(k), render_format(v, unfolded)) for k, v in raw.items())
+	elif isinstance(raw, GameObject):
+		return {k:render_format(raw[k], unfolded) for k in raw}
 	elif isinstance(raw, list):
 		# return list(render_format(el) for el in raw)
 		itr = dict()
 		for i, el in enumerate(raw):
-			itr['l{}'.format(i)] = render_format(el)
+			itr['l{}'.format(i)] = render_format(el, unfolded)
 		return itr
 	elif isinstance(raw, tuple):
 		# return list(render_format(el) for el in raw)
 		itr = dict()
 		for i, el in enumerate(raw):
-			itr['t{}'.format(i)] = render_format(el)
+			itr['t{}'.format(i)] = render_format(el, unfolded)
 		return itr
 	return str(raw)
 
