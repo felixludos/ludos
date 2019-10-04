@@ -135,6 +135,9 @@ class RichWriter(Savable, Transactionable, Pullable):
 		if indent_level is not None:
 			out['level'] = indent_level
 			
+		if debug:
+			out['debug'] = True
+			
 		self.extend(out)
 		
 	def extend(self, line):
