@@ -13,19 +13,32 @@ class GameOver(Exception):
 	pass
 
 class PhaseComplete(Exception):
-	pass
+	def __init__(self, transfer=False): # transfer action to next phase
+		super().__init__()
+		self.transfer = transfer
+		
+	def transfer_action(self):
+		return self.transfer
 
 class PhaseInterrupt(Exception): # possibly can include an action and player
-	def __init__(self, phase, stack=True):
+	def __init__(self, phase, stack=True, transfer=False, **kwargs):
 		super().__init__()
 		self.phase = phase
 		self.stack = stack
+		self.transfer = transfer
+		self.kwargs = kwargs
+		
+	def transfer_action(self):
+		return self.transfer
 		
 	def stacks(self):
 		return self.stack
 		
 	def get_phase(self):
 		return self.phase
+	
+	def get_phase_kwargs(self):
+		return self.kwargs
 
 # Controller errors
 

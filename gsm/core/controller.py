@@ -230,15 +230,18 @@ class GameController(Named, Transactionable, Savable):
 					phase.execute(self, player=self.players[player], action=action)
 					# get next action
 					out = phase.encode(self)
-				except PhaseComplete:
-					pass
+				except PhaseComplete as intr:
+					if not intr.transfer_action():
+						action = None
 				except PhaseInterrupt as intr:
 					if intr.stacks():
 						self.phase_stack.append(phase)  # keep current phase around
 					new = intr.get_phase()
 					if new in self._phases:
-						new = self.create_phase(new)
+						new = self.create_phase(new, **intr.get_phase_kwargs())
 					self.phase_stack.append(new)
+					if not intr.transfer_action():
+						action = None
 				else:
 					self.phase_stack.append(phase)
 					break

@@ -17,7 +17,7 @@ class TurnPhase(GamePhase):
 			
 			loc._hidden.val = player.val
 			loc.symbol = player.symbol
-			loc.player = player.name
+			loc.player = player
 			
 			# C.log.write(player, 'places at: {}, {}'.format(*action))
 			C.log.writef('{} chooses {}', player, loc)

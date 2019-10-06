@@ -6,7 +6,7 @@ from gsm.common.elements import Card, Deck
 from gsm.common.world import grid
 
 from .ops import build_catan_map
-from .phases import SetupPhase, MainPhase, TradePhase
+from .phases import *
 from .objects import Hex, Board, DevCard
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -30,6 +30,7 @@ class Catan(gsm.GameController):
 		self.register_config('rules', os.path.join(MY_PATH, 'config/rules.yaml'))
 		self.register_config('dev', os.path.join(MY_PATH,'config/dev_cards.yaml'))
 		self.register_config('map', os.path.join(MY_PATH,'config/map.yaml'))
+		self.register_config('msgs', os.path.join(MY_PATH, 'config/msgs.yaml'))
 		
 		# register players
 		if player_names is None:
@@ -43,20 +44,21 @@ class Catan(gsm.GameController):
 		
 		self.register_obj_type(name='devcard', obj_cls=DevCard,
 		                       req={'name', 'desc'},)
-		self.register_obj_type(name='DevDeck', obj_cls=Deck)
+		self.register_obj_type(name='devdeck', obj_cls=Deck)
 		self.register_obj_type(name='Robber', open={'loc'})
 		
-		self.register_obj_type(name='road', open={'loc', 'owner'})
-		self.register_obj_type(name='settlement', open={'loc', 'owner'})
-		self.register_obj_type(name='city', open={'loc', 'owner'})
+		self.register_obj_type(name='road', open={'loc', 'player'})
+		self.register_obj_type(name='settlement', open={'loc', 'player'})
+		self.register_obj_type(name='city', open={'loc', 'player'})
 		
 		# register possible phases
 		self.register_phase(name='setup', cls=SetupPhase)
 		self.register_phase(name='main', cls=MainPhase)
 		self.register_phase(name='trade', cls=TradePhase)
+		self.register_phase(name='robber', cls=RobberPhase)
 	
 	def _set_phase_stack(self, config):
-		return tlist([self.create_phase('main'), self.create_phase('setup', player_order=tlist(self.players.values()))])
+		return tlist([self.create_phase('setup', player_order=tlist(self.players.values()))])
 	
 	def _init_game(self, config):
 		
@@ -67,7 +69,9 @@ class Catan(gsm.GameController):
 			player.reserve = tdict(config.rules.building_limits)
 			player.buildings = tdict(road=tset(), settlement=tset(), city=tset())
 			player.resources = tdict({res:0 for res in res_names})
+			player.devcards = tset()
 			player.vps = 0
+			player.ports = tset()
 			
 		self.state.costs = config.rules.building_costs
 		
@@ -77,6 +81,7 @@ class Catan(gsm.GameController):
 		self.state.bank = bank
 		
 		self.state.rewards = config.rules.victory_points
+		self.state.production = config.rules.resource_pays
 		self.state.reqs = config.rules.reqs
 		self.state.victory_condition = config.rules.victory_condition
 		
@@ -89,14 +94,20 @@ class Catan(gsm.GameController):
 		build_catan_map(G, config.map.fields, config.map.ports, config.rules.numbers, self.RNG)
 		self.state.world = G
 		
-		# robber
+		# robber and numbers
+		numbers = tdict()
 		loc = None
 		for f in G.fields:
 			if f.res == 'desert':
 				loc = f
-				break
+			else:
+				if f.num not in numbers:
+					numbers[f.num] = tset()
+				numbers[f.num].add(f)
 		assert loc is not None, 'couldnt find the desert'
 		self.state.robber = self.table.create('Robber', loc=loc)
+		self.state.desert = loc
+		self.state.numbers = numbers
 		
 		# setup dev card deck
 		cards = tlist()
@@ -104,11 +115,18 @@ class Catan(gsm.GameController):
 		for name, info in config.dev.items():
 			cards.extend([tdict(name=name, desc=info.desc)]*info.num)
 		
-		self.state.dev_deck = self.table.create(obj_type='DevDeck', cards=cards,
+		self.state.dev_deck = self.table.create(obj_type='devdeck', cards=cards,
 		                                        seed=self.RNG.getrandbits(64),
-		                                        default='DevCard')
+		                                        default='devcard')
 		self.state.dev_deck.shuffle()
 		
+		self.state.turns = tdict(
+			order=tlist(self.players.values()),
+			index=0,
+		)
+		
+		self.state.bank_trading = config.rules.bank_trading
+		self.state.msgs = config.msgs
 		
 	def _end_game(self):
 		

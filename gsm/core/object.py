@@ -175,9 +175,10 @@ class GameObject(Typed, Writable, Hashable, Jsonable, Transactionable, Savable, 
 		return item in self._public or item in self._hidden
 	
 	def __eq__(self, other):
-		if isinstance(other, GameObject):
+		try:
 			return self._id == other._id
-		return False
+		except AttributeError:
+			return False
 	
 	def __hash__(self):
 		return hash(self._id)

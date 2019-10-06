@@ -57,7 +57,7 @@ def _format_action(tpl):
 		else:
 			raise Exception('cant handle: {}'.format(repr(obj)))
 		
-	return tuple(action)
+	return ' '.join(action)
 	
 def _package_action(action):
 	

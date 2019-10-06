@@ -77,13 +77,83 @@ def build_catan_map(G, hex_info, ports, number_info, RNG):
 	for f, num in zip(remaining, regnums):
 		f.num = num
 
+def roll_dice(rng):
+	return rng.randint(1,6) + rng.randint(1,6)
+
+def gain_res(res, bank, player, delta, log=None):
+	
+	if delta > 0 and bank[res] < delta:
+		delta = bank[res]
+		
+		if log is not None and delta == 0:
+			log.writef('Bank is out of {}.', res)
+			return
+	
+	bank[res] -= delta
+	player.resources[res] += delta
+	
+	change = 'gains' if delta > 0 else 'loses'
+	if log is not None:
+		log.writef('{} {} {} {}.', player, change, abs(delta), res)
+	
+	if log is not None and bank[res] == 0:
+		log.writef('Bank ran out of {}.', res)
+
+def get_knight(devcards):
+	
+	for card in devcards:
+		if card.name == 'Knight':
+			return card
+	return None
+
+def _settle_available(loc):
+	for e in loc.edges:
+		if e is not None:
+			for c in e.corners:
+				if 'building' in c:
+					return False
+	return True
+def _payable(player, cost):
+	for res, num in cost.items():
+		if player.resources[res] < num:
+			return False
+	return True
+def check_building_options(player, costs, devdeck):
+	
+	locs = tdict(
+		road=tset(),
+		settlement=tset(),
+		city=tset(),
+		devcard=tset([devdeck]),
+	)
+	
+	for road in player.buildings.road:
+		for c in road.loc.corners:
+			if 'building' not in c:
+				if _settle_available(c):
+					locs.settlement.add(c)
+			elif c.building.player == player:
+				if c.building.get_type() == 'settlement':
+					locs.city.add(c)
+				for e in c.edges:
+					if e is not None and 'building' not in e:
+						locs.road.add(e)
+	
+	options = tdict()
+	for bld, cost in costs.items():
+		if _payable(player, cost) and player.reserve[bld] > 0:
+			options[bld] = locs[bld]
+	
+	return options
 
 def build(C, bldname, player, loc):
-	bld = C.table.create(bldname, loc=loc, owner=player.name)
-	loc.color = player.color
-	loc.player = player.name
-	loc.building = bldname
+	bld = C.table.create(bldname, loc=loc, player=player)
+	loc.building = bld
 	player.buildings[bldname].add(bld)
+	player.reserve[bldname] -= 1
+	
+	if 'port' in loc:
+		player.ports.add(loc.port)
 	
 	reward = C.state.rewards[bldname]
 	player.vps += reward
@@ -93,4 +163,18 @@ def build(C, bldname, player, loc):
 		msg = ' (gaining 1 victory point)'
 	if reward > 1:
 		msg = ' (gaining {} victory points)'.format(msg)
-	C.log.writef('{} builds {}{}', player, bld, '' if msg is None else msg)
+	C.log.writef('{} builds a {}{}', player, bld, '' if msg is None else msg)
+
+def update_stats(player):
+	player.num_dev = len(player.devcards)
+	player.num_res = sum(num for num in player.resources.values())
+
+def bank_trade_options(player, bank_trading):
+	bank_options = tdict()
+	default = bank_trading['3to1'] if '3to1' in player.ports else bank_trading.default
+	for res, num in player.resources.items():
+		ratio = bank_trading[res] if res in player.ports else default
+		if num >= ratio:
+			bank_options[res] = ratio
+	
+	return bank_options
