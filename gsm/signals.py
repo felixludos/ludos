@@ -62,6 +62,8 @@ class MissingObjectError(Exception):
 	def __init__(self, name):
 		super().__init__('{} is not a recognized GameObject type, have you registered it?'.format(name))
 
+class NoActiveGameError(Exception):
+	pass
 
 # action errors
 		

@@ -122,7 +122,7 @@ class Catan(gsm.GameController):
 		
 		self.state.turns = tdict(
 			order=tlist(self.players.values()),
-			index=0,
+			counter=0,
 		)
 		
 		self.state.bank_trading = config.rules.bank_trading

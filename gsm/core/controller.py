@@ -11,7 +11,7 @@ from .state import GameState
 from .table import GameTable
 from .player import GameManager
 from ..mixins import Named, Transactionable, Savable
-from ..signals import PhaseComplete, PhaseInterrupt, GameOver, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
+from ..signals import PhaseComplete, PhaseInterrupt, GameOver, NoActiveGameError, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
 from ..util import RandomGenerator, jsonify, obj_jsonify
 
 class GameController(Named, Transactionable, Savable):
@@ -183,7 +183,7 @@ class GameController(Named, Transactionable, Savable):
 		self._pre_setup(self.config)
 		
 		self.end_info = None
-		self.active_players = None
+		self.active_players = tdict()
 		
 		self.state = GameState()
 		self.log = GameLogger(tset(self.players.names()))
@@ -204,19 +204,17 @@ class GameController(Named, Transactionable, Savable):
 			if not len(self.phase_stack):
 				raise GameOver
 			
-			if action is not None and (key is None or key != self.keys[player]):
-				raise InvalidKeyError
+			if self.active_players is None:
+				raise NoActiveGameError('Call reset() first')
 			
-			if self.active_players is not None:
-				
+			if action is not None:
 				if player not in self.active_players:
 					return self._compose_msg(player)
 				
-				# check validity of action
+				if key is None or key != self.keys[player]:
+					raise InvalidKeyError
+				
 				action = self.active_players[player].verify(action)
-			
-			else:
-				assert action is None, 'there shouldnt be an action if the game hasnt started'
 			
 			# start transaction
 			self.begin()

@@ -146,7 +146,7 @@ def check_building_options(player, costs, devdeck):
 	
 	return options
 
-def build(C, bldname, player, loc):
+def build(C, bldname, player, loc, silent=False):
 	bld = C.table.create(bldname, loc=loc, player=player)
 	loc.building = bld
 	player.buildings[bldname].add(bld)
@@ -157,13 +157,35 @@ def build(C, bldname, player, loc):
 	
 	reward = C.state.rewards[bldname]
 	player.vps += reward
+	if not silent:
+		msg = None
+		if reward == 1:
+			msg = ' (gaining 1 victory point)'
+		if reward > 1:
+			msg = ' (gaining {} victory points)'.format(msg)
+		C.log.writef('{} builds a {}{}', player, bld, '' if msg is None else msg)
+
+def unbuild(C, bld, silent=False):
+	C.table.remove(bld)
+	player = bld.player
+	loc = bld.loc
 	
-	msg = None
-	if reward == 1:
-		msg = ' (gaining 1 victory point)'
-	if reward > 1:
-		msg = ' (gaining {} victory points)'.format(msg)
-	C.log.writef('{} builds a {}{}', player, bld, '' if msg is None else msg)
+	del loc.building
+	player.buildings[bld.obj_type].remove(bld)
+	player.reserve[bld.obj_type] += 1
+	
+	if 'port' in loc:
+		player.ports.discard(loc.port)
+	
+	reward = C.state.rewards[bld.obj_type]
+	player.vps -= reward
+	if not silent:
+		msg = None
+		if reward == 1:
+			msg = ' (losing 1 victory point)'
+		if reward > 1:
+			msg = ' (losing {} victory points)'.format(msg)
+		C.log.writef('{} removes a {}{}', player, bld, '' if msg is None else msg)
 
 def update_stats(player):
 	player.num_dev = len(player.devcards)

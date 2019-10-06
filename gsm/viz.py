@@ -1,6 +1,7 @@
 
 import json
 import random
+import pickle
 from itertools import chain
 from humpack import tset, tdict, tlist
 from .mixins import Jsonable
@@ -99,10 +100,16 @@ class Ipython_Interface(object):
 		self.player = None
 		self.key = None
 		
-	def save(self):
-		return self.ctrl.save()
+	def save(self, filename=None):
+		data = self.ctrl.save()
+		if filename is not None:
+			pickle.dump(data, open(filename, 'wb'))
+		else:
+			return data
 	
 	def load(self, data):
+		if isinstance(data, str):
+			data = pickle.load(open(data, 'rb'))
 		return self.ctrl.load(data)
 	
 	def set_player(self, player=None):

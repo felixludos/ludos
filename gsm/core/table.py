@@ -117,8 +117,10 @@ class GameTable(Transactionable, Savable, Pullable):
 		return ID not in self.table
 	
 	# IMPORTANT: dev should use this function to create remove any game object
-	def remove(self, key):
-		del self.table[key]
+	def remove(self, obj):
+		if obj in self.table:
+			del self.table[obj]
+		del self.table[obj._id]
 	
 	def pull(self, player=None): # returns jsonified obj
 		table = {}
@@ -138,6 +140,7 @@ class GameTable(Transactionable, Savable, Pullable):
 		data['table'] = {pack(k):pack(v)
 		                 for k, v in self.table.items()}
 		data['players'] = pack(self.players)
+		data['obj_types'] = pack(self.obj_types)
 		
 		return data
 	
@@ -146,6 +149,8 @@ class GameTable(Transactionable, Savable, Pullable):
 		unpack = self.__class__._unpack_obj
 		
 		self.__init__()
+		
+		self.obj_types = unpack(data['obj_types'])
 		
 		for k, x in data['table'].items():
 			self.table[unpack(k)] = unpack(x)

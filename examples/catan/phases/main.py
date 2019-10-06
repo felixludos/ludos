@@ -4,7 +4,7 @@ from gsm import GamePhase, GameActions, GameObject
 from gsm import tset, tdict, tlist
 from gsm import PhaseInterrupt, PhaseComplete
 
-from ..ops import build, roll_dice, get_knight, gain_res, check_building_options, bank_trade_options, update_stats
+from ..ops import build, unbuild, roll_dice, get_knight, gain_res, check_building_options, bank_trade_options, update_stats
 
 class MainPhase(GamePhase):
 	
@@ -35,7 +35,7 @@ class MainPhase(GamePhase):
 			self.roll = roll_dice(C.RNG)
 			
 			C.log.zindent()
-			C.log.writef('{} rolled a {}.', player, self.roll)
+			C.log.writef('{} rolled: {}.', player, self.roll)
 			C.log.iindent()
 			
 			if self.roll == 7:
@@ -46,34 +46,48 @@ class MainPhase(GamePhase):
 			for hex in hexes:
 				if hex != C.state.robber.loc:
 					for c in hex.corners:
-						if 'building' in c and c.building in C.state.production:
+						if 'building' in c and c.building.obj_type in C.state.production:
 							gain = C.state.production[c.building]
 							gain_res(hex.res, C.state.bank, c.building.player, gain, C.log)
 			
-			for player in self.player.values():
+			for player in C.players.values():
 				update_stats(player)
 		
 			return
 		
 		obj, *rest = action
 		
-		if obj in {'confirm', 'cancel'}:
+		if obj == 'cancel':
+			if self.devcard is not None and self.devcard.name == 'Road Building':
+				unbuild(C, self.card_info.building)
+		
+		if obj in 'confirm':
 			self.devcard = None
 			self.card_info = None
 			return
+			
+		# trade
+		if obj in {'maritime', 'offer', 'demand'}:
+			raise PhaseInterrupt('trade', transfer=True)
+		
+		if self.devcard is not None:
+			if self.devcard.name == 'Knight':
+				pass
+			elif self.devcard.name == 'Road Building':
+				if self.card_info is None:
+					build(C, 'road', player, obj)
+					self.card_info = obj
+					
+				else:
+					build(C, 'road', player, obj)
+					self.devcard = None
+					self.card_info = None
+					
+			else:
+				pass
 		
 		if isinstance(obj, GameObject):
 			obj_type = obj.get_type()
-			
-			if self.devcard is not None:
-				if self.devcard.name == 'Knight':
-					if self.card_info is not None:
-						
-						pass
-					else:
-						pass
-				elif self.devcard.name == 'Road Building':
-					pass
 			
 			if obj_type == 'Edge':
 				build(C, 'road', player, obj)
@@ -81,7 +95,7 @@ class MainPhase(GamePhase):
 					gain_res(res, C.state.bank, player, -num)
 			elif obj_type == 'Corner':
 				if 'building' in obj:
-					build(C, 'city', player, obj)
+					build(C, 'city', player, obj) # TODO: unbuild settlement when upgrading
 					for res, num in C.state.costs.city.items():
 						gain_res(res, C.state.bank, player, -num)
 				else:
@@ -92,8 +106,6 @@ class MainPhase(GamePhase):
 				obj.visible.update(C.players.names())
 				if obj.name == 'Victory Point':
 					raise Exception('Shouldnt have played a Victory point card')
-				elif obj.name == 'Knight':
-					self.devcard = obj
 				elif obj.name == 'Monopoly':
 					res, = rest
 					C.log.writef('{} plays Monopoly, claiming all {}', player, res)
@@ -103,23 +115,18 @@ class MainPhase(GamePhase):
 							C.log.writef('{} receives {} {} from {}', player, opp.resources[res], res, opp)
 				elif obj.name == 'Year of Plenty':
 					res, = rest
-					if self.card_info is not None:
-						
+					if self.card_info is None:
+						self.devcard = obj
+						self.card_info = res
+					else:
 						C.log.writef('{} plays {}, and receives: {} and {}',
 						             player, self.devcard, self.card_info, res)
-						
 						gain_res(self.card_info, C.state.bank, player, 1, log=C.log)
 						gain_res(res, C.state.bank, player, 1, log=C.log)
-						
 						self.card_info = None
 						self.devcard = None
-					else:
-						self.devcard = obj
-						return
-				elif obj.name == 'Road Building':
-					raise NotImplementedError
 				else:
-					raise Exception('Unknown devcards {}: {}'.format(obj.name, obj))
+					self.devcard = obj
 			elif obj_type == 'devdeck':
 				card = C.state.dev_deck.draw()
 				self.player.devcards.add(card)
@@ -136,15 +143,16 @@ class MainPhase(GamePhase):
 					gain_res(res, C.state.bank, self.player, -num)
 			else:
 				raise Exception('Unknown obj {}: {}'.format(type(obj), obj))
-		
-		# trade
-		if obj in {'maritime', 'offer', 'demand'}:
-			raise PhaseInterrupt('trade', transfer=True)
 
 
 	def encode(self, C):
 		
 		out = GameActions()
+		
+		out.begin()
+		out.add(('pass',))
+		out.write('End your turn')
+		out.commit()
 		
 		if self.pre_check:
 			self.pre_check = False
@@ -162,13 +170,22 @@ class MainPhase(GamePhase):
 		if self.devcard is not None:
 			
 			if self.devcard.name == 'Knight':
+				out.begin()
 				if self.card_info is None:
-					pass
+					
+					options = tset(f for f in C.state.world.fields if 'robber' not in f)
+					out.add((options,))
+					out.add(('cancel',))
+					out.status.write('Choose where to move the knight.')
 				else:
 					# identify players in loc
 					opps = tset(c.building.player for c in self.card_info.corners
-					            if 'building' in c)
-				
+					            if 'building' in c and c.building.player != self.player)
+					out.add((opps,))
+					out.add(('cancel',))
+					out.status.write('Choose what player to steal from.')
+					
+				out.commit()
 		# building
 		options = check_building_options(self.player, C.state.costs, C.state.dev_deck)
 		for bldname, opts in options.items():
@@ -208,7 +225,7 @@ class MainPhase(GamePhase):
 			out.write('Play a development card')
 			out.commit()
 		
-		out.status.write('You rolled a {}.', self.roll)
+		out.status.writef('You rolled: {}.', self.roll)
 		
 		return tdict({self.player.name:out})
 
