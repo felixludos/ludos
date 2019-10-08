@@ -42,7 +42,7 @@ class TurnPhase(GamePhase):
 			raise GameOver
 		
 		out.begin()
-		out.add((tset(free),))
+		out.add(tset(free),)
 		out.write('Available spots')
 		out.commit()
 		

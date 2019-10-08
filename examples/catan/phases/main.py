@@ -47,7 +47,7 @@ class MainPhase(GamePhase):
 				if hex != C.state.robber.loc:
 					for c in hex.corners:
 						if 'building' in c and c.building.obj_type in C.state.production:
-							gain = C.state.production[c.building]
+							gain = C.state.production[c.building.obj_type]
 							gain_res(hex.res, C.state.bank, c.building.player, gain, C.log)
 			
 			for player in C.players.values():
@@ -57,9 +57,15 @@ class MainPhase(GamePhase):
 		
 		obj, *rest = action
 		
+		if obj == 'pass':
+			# TODO: add next main phase
+			return
+		
 		if obj == 'cancel':
 			if self.devcard is not None and self.devcard.name == 'Road Building':
 				unbuild(C, self.card_info.building)
+			self.devcard = None
+			self.card_info = None
 		
 		if obj in 'confirm':
 			self.devcard = None
@@ -150,7 +156,7 @@ class MainPhase(GamePhase):
 		out = GameActions()
 		
 		out.begin()
-		out.add(('pass',))
+		out.add('pass')
 		out.write('End your turn')
 		out.commit()
 		
@@ -158,11 +164,11 @@ class MainPhase(GamePhase):
 			self.pre_check = False
 			out.begin()
 			if self.devcard is not None:
-				out.add((self.devcard,))
-				out.add(('cancel',))
+				out.add(self.devcard)
+				out.add('cancel')
 				out.status.write('Before rolling, you can play your knight')
 			else:
-				out.add(('confirm',))
+				out.add('confirm')
 				out.status.write('Confirm your turn beginning')
 			out.commit()
 			return tdict({self.player.name:out})
@@ -174,15 +180,15 @@ class MainPhase(GamePhase):
 				if self.card_info is None:
 					
 					options = tset(f for f in C.state.world.fields if 'robber' not in f)
-					out.add((options,))
-					out.add(('cancel',))
+					out.add(options)
+					out.add('cancel')
 					out.status.write('Choose where to move the knight.')
 				else:
 					# identify players in loc
 					opps = tset(c.building.player for c in self.card_info.corners
 					            if 'building' in c and c.building.player != self.player)
-					out.add((opps,))
-					out.add(('cancel',))
+					out.add(opps)
+					out.add('cancel')
 					out.status.write('Choose what player to steal from.')
 					
 				out.commit()
@@ -191,21 +197,21 @@ class MainPhase(GamePhase):
 		for bldname, opts in options.items():
 			out.begin()
 			out.write(C.state.msgs.build[bldname])
-			out.add((opts,))
+			out.add(opts)
 			out.commit()
 		
 		# trading
 		options = bank_trade_options(self.player, C.state.bank_trading)
 		if len(options):
 			out.begin()
-			out.add(('maritime', 'offer', tset((num, res) for res,num in options.items())))
+			out.add('maritime', 'offer', tset((num, res) for res,num in options.items()))
 			out.write('Maritime Trade (with the bank)')
 			out.commit()
 		
 		out.begin()
-		out.add(('demand', tset(res for res in self.player.resources)))
+		out.add('demand', tset(res for res in self.player.resources))
 		if self.player.num_res:
-			out.add(('offer', tset(res for res, num in self.player.resources.items() if num > 0)))
+			out.add('offer', tset(res for res, num in self.player.resources.items() if num > 0))
 		out.write('Domestic Trade (with players)')
 		out.commit()
 		
@@ -215,17 +221,17 @@ class MainPhase(GamePhase):
 			res = tset(self.player.resources.keys())
 			for card in self.player.devcards:
 				if card.name == 'Monopoly':
-					out.add((card, res))
+					out.add(card, res)
 				elif card.name == 'Year of Plenty':
-					out.add((card, res))
+					out.add(card, res)
 				elif card.name == 'Victory Point':
 					pass
 				else:
-					out.add((card,))
+					out.add(card)
 			out.write('Play a development card')
 			out.commit()
 		
-		out.status.writef('You rolled: {}.', self.roll)
+		out.status.writef('You rolled: {}', self.roll)
 		
 		return tdict({self.player.name:out})
 

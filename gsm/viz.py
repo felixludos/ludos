@@ -181,6 +181,9 @@ class Ipython_Interface(object):
 		if 'table' in self.msg:
 			self.table = self.msg.table
 			
+		if 'players' in self.msg:
+			self.players = self.msg.players
+			
 		# if 'waiting_for' in self.msg:
 		# 	print('Waiting for: {}'.format(', '.join(self.msg.waiting_for)))
 	

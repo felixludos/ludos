@@ -124,11 +124,20 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 	def writef(self, *args, **kwargs):
 		self._desc.writef(*args, **kwargs)
 	
-	def __getattribute__(self, item):
-		try:
-			return super().__getattribute__(item)
-		except AttributeError:
-			return self._current.__getattribute__(item)
+	# def __getattribute__(self, item):
+	# 	try:
+	# 		return super().__getattribute__(item)
+	# 	except AttributeError:
+	# 		return self._current.__getattribute__(item)
+	
+	def add(self, *items):
+		if not self.in_transaction():
+			raise Exception('Call begin() to start new action group')
+		self._current.add(items)
+	
+	# def update(self, items):
+	# 	for item in items:
+	# 		self.add(item)
 	
 	def __save__(self):
 		pack = self.__class__._pack_obj
