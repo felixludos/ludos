@@ -10,6 +10,7 @@ from .logging import GameLogger
 from .state import GameState
 from .table import GameTable
 from .player import GameManager
+from .phase import GameStack
 from ..mixins import Named, Transactionable, Savable
 from ..signals import PhaseComplete, PhaseInterrupt, GameOver, NoActiveGameError, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
 from ..util import RandomGenerator, jsonify, obj_jsonify
@@ -20,24 +21,30 @@ class GameController(Named, Transactionable, Savable):
 		new = super().__new__(cls)
 		
 		# meta values (neither for dev nor user) (not including soft registries - they dont change)
-		new._tmembers = {'state', 'log', 'table', 'active_players', 'phase_stack', 'end_info',
-		                 'keys', 'RNG', '_key_rng', '_images', 'players', 'config'}
+		new._tmembers = {'state', 'log', 'table', 'stack', 'players', 'active_players', 'end_info',
+		                 'keys', 'RNG', '_key_rng', '_images', 'config'}
 		return new
 	
-	def __init__(self, name=None, debug=False, manager=None, **settings):
+	def __init__(self, name=None, debug=False,
+	             manager=None, stack=None, table=None,
+	             **settings):
 		if name is None:
 			# TODO: add suggestion about game name
 			name = self.__class__.__name__
 		super().__init__(name)
-		
-		# Hard registries - include python classes (cant directly be saved)
-		self._phases = tdict() # dict of phase classes
-		
+
 		if manager is None:
 			manager = GameManager()
+		if stack is None:
+			stack = GameStack()
+		if table is None:
+			table = GameTable()
 		
-		# Soft registries - only information, but must be provided before game start
+		# Registries and
 		self.players = manager
+		self.stack = stack
+		self.table = table
+		
 		self.config_files = tdict()
 		
 		# GameState
@@ -53,12 +60,10 @@ class GameController(Named, Transactionable, Savable):
 		self.active_players = None
 		self.config = tdict(settings=tdict(settings))
 		self.end_info = None
-		self.phase_stack = None # should only contain instances of GamePhase
 		
 		# Game components
 		self.log = None
-		self.table = GameTable() # needed to register obj_types
-	
+		
 	def begin(self):
 		if self.in_transaction():
 			return
@@ -102,8 +107,6 @@ class GameController(Named, Transactionable, Savable):
 		data = {}
 		
 		# registries
-		data['_phases'] = pack(self._phases)
-		data['players'] = pack(self.players)
 		data['config_files'] = pack(self.config_files)
 		
 		# tmembers - arbitrary Savable instances
@@ -122,8 +125,6 @@ class GameController(Named, Transactionable, Savable):
 		unpack = self.__class__._unpack_obj
 		
 		# load registries
-		self._phases = unpack(data['_phases'])
-		self.players = unpack(data['players'])
 		self.config_files = unpack(data['config_files'])
 		
 		# unpack tmembers
@@ -151,14 +152,10 @@ class GameController(Named, Transactionable, Savable):
 		if self._in_progress:
 			raise ClosedRegistryError
 		self.table.register_obj_type(obj_cls=obj_cls, name=name, req=req, open=open)
-	def register_phase(self, cls, name=None):
+	def register_phase(self, cls, name=None, **props):
 		if self._in_progress:
 			raise ClosedRegistryError
-		if name is None:
-			name = cls.__class__.__name__
-		# if name in self._phases:
-		# 	raise RegistryCollisionError(name)
-		self._phases[name] = cls
+		self.stack.register(cls, name=name, **props)
 	def register_player(self, name, **props):
 		if self._in_progress:
 			raise ClosedRegistryError
@@ -180,14 +177,13 @@ class GameController(Named, Transactionable, Savable):
 		
 		self.config.update(self._load_config())
 		
-		self._pre_setup(self.config)
-		
 		self.end_info = None
 		self.active_players = tdict()
 		
 		self.state = GameState()
 		self.log = GameLogger(tset(self.players.names()))
 		self.table.reset(tset(self.players.names()))
+		self.stack.reset(self._set_phase_stack(self.config))
 		
 		self.phase_stack = self._set_phase_stack(self.config) # contains phase instances (potentially with phase specific data)
 		
@@ -201,7 +197,7 @@ class GameController(Named, Transactionable, Savable):
 		
 		try:
 			
-			if not len(self.phase_stack):
+			if not len(self.stack):
 				raise GameOver
 			
 			if self.active_players is None:
@@ -222,8 +218,8 @@ class GameController(Named, Transactionable, Savable):
 			# prepare executing acitons
 			
 			# execute action
-			while len(self.phase_stack):
-				phase = self.phase_stack.pop()
+			while len(self.stack):
+				phase = self.stack.pop()
 				try:
 					phase.execute(self, player=self.players[player], action=action)
 					# get next action
@@ -233,18 +229,16 @@ class GameController(Named, Transactionable, Savable):
 						action = None
 				except PhaseInterrupt as intr:
 					if intr.stacks():
-						self.phase_stack.append(phase)  # keep current phase around
+						self.stack.push(phase)  # keep current phase around
 					new = intr.get_phase()
-					if new in self._phases:
-						new = self.create_phase(new, **intr.get_phase_kwargs())
-					self.phase_stack.append(new)
+					self.stack.push(new, **intr.get_phase_kwargs())
 					if not intr.transfer_action():
 						action = None
 				else:
-					self.phase_stack.append(phase)
+					self.stack.push(phase)
 					break
 			
-			if not len(self.phase_stack):
+			if not len(self.stack):
 				raise GameOver
 		
 		except GameOver:
@@ -294,8 +288,8 @@ class GameController(Named, Transactionable, Savable):
 		raise NotImplementedError
 		
 	# must be implemented to define initial phase sequence
-	def _set_phase_stack(self, config):  # should be in reverse order (returns a tlist stack)
-		return tlist()
+	def _set_phase_stack(self, config):
+		return None
 	
 	######################
 	# Optionally Overridden
@@ -308,9 +302,6 @@ class GameController(Named, Transactionable, Savable):
 			config[name] = containerify(yaml.load(open(path, 'r')))
 		
 		return config
-	
-	def _pre_setup(self, config): # allows adjusting the registry after loading the config
-		return
 	
 	def _gen_key(self, player=None):
 		key = hex(self._key_rng.getrandbits(64))
@@ -350,8 +341,8 @@ class GameController(Named, Transactionable, Savable):
 	# Dev functions (return obj)
 	######################
 	
-	def create_phase(self, name, *args, **kwargs):
-		return self._phases[name](*args, **kwargs)
+	def create_phase(self, name, **kwargs):
+		return self.stack.create(name, **kwargs)
 	
 	def create_object(self, obj_type, **spec): # this should delegate right away, all logic in GameTable
 		return self.table.create(obj_type=obj_type, **spec)
@@ -377,7 +368,7 @@ class GameController(Named, Transactionable, Savable):
 		return json.dumps(obj_jsonify(self.players[player]))
 	
 	def get_players(self):
-		return json.dumps(self.players.names())
+		return json.dumps(list(self.players.names()))
 	
 	def get_table(self, player=None):
 		return json.dumps(self.table.pull(player))
@@ -399,8 +390,6 @@ class GameController(Named, Transactionable, Savable):
 		obj = Savable.unpack(eval(data))
 		
 		# load registries
-		self._phases = obj._phases
-		self.players = obj.players
 		self.config_files = obj.config_files
 		
 		# unpack tmembers

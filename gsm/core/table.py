@@ -82,7 +82,7 @@ class GameTable(Transactionable, Savable, Pullable):
 		return list(self.obj_types.keys())
 	
 	def create(self, obj_type, visible=None, ID=None,
-	           _hidden={}, **props):
+	           **props):
 		
 		if obj_type in self.obj_types:
 			info = self.obj_types[obj_type]
@@ -103,9 +103,6 @@ class GameTable(Transactionable, Savable, Pullable):
 		obj._table = self
 		obj._open = info.open
 		obj._req = info.req
-		
-		obj._public = tdict()
-		obj._hidden = tdict(_hidden)
 		
 		obj.__init__(obj_type=obj_type, visible=visible, **props)
 		

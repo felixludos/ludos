@@ -1,18 +1,16 @@
 
 import numpy as np
 from gsm import GamePhase, GameActions, GameObject
+from gsm.common import TurnPhase
 from gsm import tset, tdict, tlist
 from gsm import PhaseInterrupt, PhaseComplete
 
 from ..ops import build, unbuild, roll_dice, get_knight, gain_res, check_building_options, bank_trade_options, update_stats
 
-class MainPhase(GamePhase):
+class MainPhase(TurnPhase):
 	
-	def __init__(self, turns):
-		super().__init__()
-		
-		self.player = turns.order[turns.counter % len(turns.order)]
-		turns.counter += 1
+	def __init__(self, player):
+		super().__init__(player=player)
 		
 		self.roll = None
 		

@@ -4,6 +4,7 @@ import gsm
 from gsm import tdict, tlist, tset, containerify
 from gsm.common.elements import Card, Deck
 from gsm.common.world import grid
+from gsm.common import TurnPhaseStack
 
 from .ops import build_catan_map
 from .phases import *
@@ -21,8 +22,11 @@ class Catan(gsm.GameController):
 		manager = gsm.GameManager(open={'num_res', 'num_dev', 'color', 'reserve', 'ports'},
 		                          hidden={'vps'})
 		
+		stack = TurnPhaseStack()
+		
 		super().__init__(debug=debug,
 		                 manager=manager,
+		                 stack=stack,
 		                 # settings
 		                 shuffle_order=shuffle_order)
 		
@@ -58,6 +62,7 @@ class Catan(gsm.GameController):
 		self.register_phase(name='robber', cls=RobberPhase)
 	
 	def _set_phase_stack(self, config):
+		self.stack.set_player_order(tlist(self.players))
 		return tlist([self.create_phase('setup', player_order=tlist(self.players.values()))])
 	
 	def _init_game(self, config):

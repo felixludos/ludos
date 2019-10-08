@@ -8,6 +8,7 @@ def get_outside_corners(field): # start corner must be N of the field at seam "1
 		for x in options:
 			if x is not None and x != prev and None in x.fields:
 				return x
+		raise Exception('No next found')
 	
 	start = field.corners[0]
 	e = field.edges[0]
@@ -35,7 +36,7 @@ def build_catan_map(G, hex_info, ports, number_info, RNG):
 	assert start_field is not None, 'could not find the start field'
 	
 	outside = get_outside_corners(start_field)
-	
+
 	for idx, port_type in ports.items():
 		outside[idx].port = port_type
 		

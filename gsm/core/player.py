@@ -114,7 +114,9 @@ class GameManager(Transactionable, Savable, Pullable):
 		return item in self.players
 	
 	def __iter__(self):
-		return iter(self.players)
+		return self.players.values()
+	def names(self):
+		return self.players.keys()
 	
 	def keys(self):
 		return self.players.keys()
@@ -126,8 +128,7 @@ class GameManager(Transactionable, Savable, Pullable):
 	def __len__(self):
 		return len(self.players)
 	
-	def names(self):
-		return list(self.players.keys())
+	
 
 
 

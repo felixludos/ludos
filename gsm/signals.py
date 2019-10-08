@@ -21,15 +21,15 @@ class PhaseComplete(Exception):
 		return self.transfer
 
 class PhaseInterrupt(Exception): # possibly can include an action and player
-	def __init__(self, phase, stack=True, transfer=False, **kwargs):
+	def __init__(self, phase, stack=True, send_action=False, **kwargs):
 		super().__init__()
 		self.phase = phase
 		self.stack = stack
-		self.transfer = transfer
+		self.send_action = send_action
 		self.kwargs = kwargs
 		
 	def transfer_action(self):
-		return self.transfer
+		return self.send_action
 		
 	def stacks(self):
 		return self.stack

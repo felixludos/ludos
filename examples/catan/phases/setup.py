@@ -30,7 +30,7 @@ class SetupPhase(GamePhase):
 				
 				self.player_order.pop()
 				if len(self.player_order) == 0:
-					C.phase_stack.append(C.create_phase('main', C.state.turns))
+					C.stack.push('main')
 					raise PhaseComplete()
 				if len(self.player_order) == len(C.players):
 					self.on_second = True

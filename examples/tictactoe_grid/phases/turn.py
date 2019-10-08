@@ -13,9 +13,9 @@ class TurnPhase(GamePhase):
 			
 			loc, = action
 			
-			assert loc._hidden.val == 0, 'this should not happen'
+			assert loc._val == 0, 'this should not happen'
 			
-			loc._hidden.val = player.val
+			loc._val = player.val
 			loc.symbol = player.symbol
 			loc.player = player
 			

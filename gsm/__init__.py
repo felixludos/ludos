@@ -1,6 +1,6 @@
 
 from humpack import Array
-from humpack import tdict, tlist, tset, containerify
+from humpack import tdict, tlist, tset, tdeque, tstack, containerify
 from .util import jsonify, unjsonify
 from .signals import PhaseComplete, PhaseInterrupt, GameOver
 from .mixins import Savable

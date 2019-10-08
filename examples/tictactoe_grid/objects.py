@@ -50,22 +50,22 @@ class Tick(Field):
 	def __init__(self, **props):
 		super().__init__(**props)
 		
-		self._hidden.val = 0
+		self._val = 0
 		
 	def __eq__(self, other):
 		try:
-			return self._hidden.val == other._hidden.val
+			return self._val == other._val
 		except AttributeError:
-			return self._hidden.val == other
+			return self._val == other
 
 	def __hash__(self):
 		return super().__hash__()
 
 	def __add__(self, other):
 		try:
-			return self._hidden.val + other._hidden.val
+			return self._val + other._val
 		except AttributeError:
-			return self._hidden.val + other
+			return self._val + other
 		
 	def __radd__(self, other):
 		return self.__add__(other)

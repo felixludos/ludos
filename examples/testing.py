@@ -20,7 +20,9 @@ seed = 1
 I = Interface(Catan(), seed=seed, full_log=True)
 I.set_player('White')
 
-I.load('saves/catan_setup.pkl')
+I.reset(seed=seed)
+I.view()
+# I.load('saves/catan_setup.pkl')
 
 I.set_player()
 I.get_status()
