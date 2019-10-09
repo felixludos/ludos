@@ -17,7 +17,7 @@ map: # seam "1" is above the top A
 
 fields:
   wheat: 4
-  wool: 4
+  sheep: 4
   wood: 4
   brick: 3
   ore: 3

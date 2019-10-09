@@ -56,8 +56,8 @@ class MainPhase(TurnPhase):
 		obj, *rest = action
 		
 		if obj == 'pass':
-			# TODO: add next main phase
-			return
+			C.stack.push('main')
+			raise PhaseComplete
 		
 		if obj == 'cancel':
 			if self.devcard is not None and self.devcard.name == 'Road Building':
@@ -65,7 +65,7 @@ class MainPhase(TurnPhase):
 			self.devcard = None
 			self.card_info = None
 		
-		if obj in 'confirm':
+		if obj == 'confirm':
 			self.devcard = None
 			self.card_info = None
 			return
@@ -76,7 +76,7 @@ class MainPhase(TurnPhase):
 		
 		if self.devcard is not None:
 			if self.devcard.name == 'Knight':
-				pass
+				raise NotImplementedError
 			elif self.devcard.name == 'Road Building':
 				if self.card_info is None:
 					build(C, 'road', player, obj)
