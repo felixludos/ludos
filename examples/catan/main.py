@@ -24,9 +24,12 @@ class Catan(gsm.GameController):
 		
 		stack = TurnPhaseStack()
 		
+		log = gsm.GameLogger(indent_level=0)
+		
 		super().__init__(debug=debug,
 		                 manager=manager,
 		                 stack=stack,
+		                 log=log,
 		                 # settings
 		                 shuffle_order=shuffle_order)
 		

@@ -26,7 +26,7 @@ class GameController(Named, Transactionable, Savable):
 		return new
 	
 	def __init__(self, name=None, debug=False,
-	             manager=None, stack=None, table=None,
+	             manager=None, stack=None, table=None, log=None,
 	             **settings):
 		if name is None:
 			# TODO: add suggestion about game name
@@ -39,8 +39,10 @@ class GameController(Named, Transactionable, Savable):
 			stack = GameStack()
 		if table is None:
 			table = GameTable()
+		if log is None:
+			log = GameLogger()
 		
-		# Registries and
+		# Registries and managers
 		self.players = manager
 		self.stack = stack
 		self.table = table
@@ -62,7 +64,7 @@ class GameController(Named, Transactionable, Savable):
 		self.end_info = None
 		
 		# Game components
-		self.log = None
+		self.log = log
 		
 	def begin(self):
 		if self.in_transaction():
@@ -181,7 +183,7 @@ class GameController(Named, Transactionable, Savable):
 		self.active_players = tdict()
 		
 		self.state = GameState()
-		self.log = GameLogger(tset(self.players.names()))
+		self.log.reset(tset(self.players.names()))
 		self.table.reset(tset(self.players.names()))
 		self.stack.reset(self._set_phase_stack(self.config))
 		

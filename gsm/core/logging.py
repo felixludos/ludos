@@ -14,10 +14,10 @@ log formatting:
 '''
 
 class GameLogger(RichWriter):
-	def __init__(self, players=[], indent=None, debug=False):
-		super().__init__(indent=indent, debug=debug)
-		self.writers = tdict({p: LogWriter(indent=indent, debug=debug)
-		                   for p in players})
+		
+	def reset(self, players):
+		self.writers = tdict({p: LogWriter(indent_level=self.indent_level, debug=self.debug)
+		                      for p in players})
 		
 	def __save__(self):
 		data = super().__save__()

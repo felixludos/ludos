@@ -65,13 +65,13 @@ def writef(txt, *objs, end=None, **kwobjs):
 
 class RichWriter(Savable, Transactionable, Pullable):
 	
-	def __init__(self, indent=None, debug=False, end='\n'):
+	def __init__(self, indent_level=None, debug=False, end='\n'):
 		super().__init__()
 		
 		self.text = tlist()
 		
 		self.debug = debug
-		self.indent_level = indent
+		self.indent_level = indent_level
 		self._shadow_indent = None
 		self._in_transaction = None
 		self.end = end
@@ -238,6 +238,10 @@ class LogWriter(RichWriter):
 		
 	def get_log(self):
 		return list(self.log)
+	
+	def reset(self):
+		super().clear()
+		self.log.clear()
 		
 	def __save__(self):
 		data = super().__save__()
