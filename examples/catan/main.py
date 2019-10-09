@@ -19,8 +19,9 @@ class Catan(gsm.GameController):
 	             shuffle_order=False):
 		
 		# create player manager
-		manager = gsm.GameManager(open={'num_res', 'num_dev', 'color', 'reserve', 'ports'},
-		                          hidden={'vps'})
+		manager = gsm.GameManager(open={'num_res', 'num_dev', 'color',
+		                                'reserve', 'ports', 'past_devcards'},
+		                          )
 		
 		stack = TurnPhaseStack()
 		
@@ -78,6 +79,7 @@ class Catan(gsm.GameController):
 			player.buildings = tdict(road=tset(), settlement=tset(), city=tset())
 			player.resources = tdict({res:0 for res in res_names})
 			player.devcards = tset()
+			player.past_devcards = tset()
 			player.vps = 0
 			player.ports = tset()
 			

@@ -76,6 +76,7 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 		self._current = None
 		self._desc = RichWriter(end='')
 		self._options = tlist()
+		self._name = None
 		
 		self.status = RichWriter(end='') # should be accessed directly by dev
 		self.info = tdict() # should be accessed directly by dev
@@ -83,10 +84,11 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 	def in_transaction(self):
 		return self._current is not None
 	
-	def begin(self):
+	def begin(self, name=None):
 		if self.in_transaction():
 			return
 		
+		self._name = name
 		self._current = tset()
 		self._desc.clear()
 
@@ -97,8 +99,11 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 		opt = tdict(actions=process_actions(self._current))
 		if len(self._desc):
 			opt.desc = self._desc.pull()
+		if self._name is not None:
+			opt.name = self._name
 		self._options.append(opt)
 		
+		self._name = None
 		self._current = None
 
 	def abort(self):
@@ -106,6 +111,7 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 			return
 
 		self._current = None
+		self._name = None
 	
 	def __enter__(self):
 		# self._context = True
@@ -118,6 +124,9 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 		else:
 			self.abort()
 		return None if type is None else type.__name__ == 'AbortTransaction'
+		
+	def set_name(self, name):
+		self._name = name
 		
 	def write(self, *args, **kwargs):
 		self._desc.write(*args, **kwargs)
@@ -149,6 +158,7 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 		data['_options'] = pack(self._options)
 		data['status'] = pack(self.status)
 		data['info'] = pack(self.info)
+		data['_name'] = pack(self._name)
 		
 		return data
 	
@@ -160,6 +170,7 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 		self._options = unpack(data['_options'])
 		self.status = unpack(data['status'])
 		self.info = unpack(data['info'])
+		self._name = unpack(data['_name'])
 	
 	def verify(self, action): # action should be a tuple
 		

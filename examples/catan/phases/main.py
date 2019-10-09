@@ -72,7 +72,7 @@ class MainPhase(TurnPhase):
 			
 		# trade
 		if obj in {'maritime', 'offer', 'demand'}:
-			raise PhaseInterrupt('trade', transfer=True)
+			raise PhaseInterrupt('trade', send_action=True)
 		
 		if self.devcard is not None:
 			if self.devcard.name == 'Knight':
