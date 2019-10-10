@@ -4,7 +4,7 @@ from humpack import tset, tdict, tlist
 from .object import GameObject
 from ..mixins import Typed, Named, Transactionable, Savable, Pullable, Hashable
 from ..signals import ActionMismatch, UnknownActionElement, InvalidActionError
-from ..writing import RichWriter
+from ..writing import write, writef
 from ..util import obj_jsonify
 
 
@@ -71,39 +71,46 @@ def format_actions(raw): # format action sets to be sent to frontend (mostly enc
 
 class GameActions(Transactionable, Savable, Pullable): # created and returned in phases
 	
-	def __init__(self):
+	def __init__(self, status=None):
 		super().__init__()
 		self._current = None
-		self._desc = RichWriter(end='')
 		self._options = tlist()
 		self._name = None
+		self._desc = None
 		
-		self.status = RichWriter(end='') # should be accessed directly by dev
+		self.set_status(status)
 		self.info = tdict() # should be accessed directly by dev
+	
+	def set_status(self, status):
+		if isinstance(status, str):
+			status = write(status)
+		self.status = status
 	
 	def in_transaction(self):
 		return self._current is not None
 	
-	def begin(self, name=None):
+	def begin(self, name=None, desc=None):
 		if self.in_transaction():
 			return
 		
-		self._name = name
+		self.set_name(name)
+		self.set_desc(desc)
 		self._current = tset()
-		self._desc.clear()
 
 	def commit(self):
 		if not self.in_transaction():
 			return
-
-		opt = tdict(actions=process_actions(self._current))
-		if len(self._desc):
-			opt.desc = self._desc.pull()
-		if self._name is not None:
-			opt.name = self._name
-		self._options.append(opt)
+		
+		if len(self._current):
+			opt = tdict(actions=process_actions(self._current))
+			if self._desc is not None:
+				opt.desc = self._desc
+			if self._name is not None:
+				opt.name = self._name
+			self._options.append(opt)
 		
 		self._name = None
+		self._desc = None
 		self._current = None
 
 	def abort(self):
@@ -112,13 +119,12 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 
 		self._current = None
 		self._name = None
+		self._desc = None
 	
 	def __enter__(self):
-		# self._context = True
-		self.begin()
+		self.begin(self._name, self._desc)
 
 	def __exit__(self, type, *args):
-		# self._context = False
 		if type is None:
 			self.commit()
 		else:
@@ -128,25 +134,20 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 	def set_name(self, name):
 		self._name = name
 		
-	def write(self, *args, **kwargs):
-		self._desc.write(*args, **kwargs)
-	def writef(self, *args, **kwargs):
-		self._desc.writef(*args, **kwargs)
-	
-	# def __getattribute__(self, item):
-	# 	try:
-	# 		return super().__getattribute__(item)
-	# 	except AttributeError:
-	# 		return self._current.__getattribute__(item)
+	def set_desc(self, desc):
+		if desc is not None and isinstance(desc, str):
+			desc = write(desc)
+		self._desc = desc
+		
+	def __call__(self, name=None, desc=None):
+		self.set_name(name)
+		self.set_desc(desc)
+		return self
 	
 	def add(self, *items):
 		if not self.in_transaction():
 			raise Exception('Call begin() to start new action group')
 		self._current.add(items)
-	
-	# def update(self, items):
-	# 	for item in items:
-	# 		self.add(item)
 	
 	def __save__(self):
 		pack = self.__class__._pack_obj
@@ -181,10 +182,12 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 			for tpl in actionset:
 				if len(tpl) == len(action):
 					try:
-						out = tuple(elm.evaluate(a) for elm, a in zip(tpl, action))
+						out = ActionTuple(elm.evaluate(a) for elm, a in zip(tpl, action))
 					except ActionMismatch:
 						pass # action didnt match
 					else:
+						if 'name' in option:
+							out.obj_type = option.name
 						return out
 					
 		raise InvalidActionError(action)
@@ -195,7 +198,7 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 	def __add__(self, other):
 		new = GameActions()
 		new._options = self._options + other._options
-		new.status.text = self.status.text + other.status.text
+		new.status = self.status if self.status is not None else other.status
 		return new
 		
 	def get_info(self):
@@ -214,8 +217,8 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 			'options': options,
 		}
 		
-		if len(self.status):
-			out['status'] = self.status.pull()
+		if self.status is not None:
+			out['status'] = self.status
 			
 		if len(self.info):
 			out['info'] = obj_jsonify(self.info)
@@ -224,6 +227,9 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 
 
 # Advanced action queries
+
+class ActionTuple(Typed, tuple):
+	pass
 
 class ActionElement(Typed, Transactionable, Savable, Hashable):
 	

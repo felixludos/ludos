@@ -20,7 +20,7 @@ class PhaseComplete(Exception):
 	def transfer_action(self):
 		return self.transfer
 
-class PhaseInterrupt(Exception): # possibly can include an action and player
+class SwitchPhase(Exception): # possibly can include an action and player
 	def __init__(self, phase, stack=True, send_action=False, **kwargs):
 		super().__init__()
 		self.phase = phase

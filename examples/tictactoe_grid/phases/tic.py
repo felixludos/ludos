@@ -1,13 +1,14 @@
 
 from gsm import GamePhase, GameActions, GameOver
+from gsm.common import TurnPhase
+from gsm import SwitchPhase
 from gsm import tset, tdict, tlist
 
-class TurnPhase(GamePhase):
+class TicPhase(TurnPhase):
 	
 	def execute(self, C, player=None, action=None):
 		
 		if action is not None:
-			C.state.turn_counter += 1
 			
 			# update map
 			
@@ -28,12 +29,12 @@ class TurnPhase(GamePhase):
 				C.state.winner = winner
 				raise GameOver
 			
+			raise SwitchPhase('tic', stack=False)
+			
 	
 	def encode(self, C):
 		
-		player = C.state.player_order[C.state.turn_counter % len(C.players)]
-		
-		out = GameActions()
+		out = GameActions('Place a tick into one of free spots')
 		
 		free = C.state.board.get_free()
 		
@@ -41,13 +42,9 @@ class TurnPhase(GamePhase):
 			C.state.winner = None
 			raise GameOver
 		
-		out.begin()
-		out.add(tset(free),)
-		out.write('Available spots')
-		out.commit()
+		with out('tic', desc='Available spots'):
+			out.add(tset(free))
 		
-		out.status.write('Place a tick into one of free spots')
-		
-		return tdict({player.name:out})
+		return tdict({self.player.name:out})
 
 

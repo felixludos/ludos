@@ -76,10 +76,10 @@ class GameStack(Transactionable, Savable):
 	def __len__(self):
 		return len(self._stack)
 	
-	def reset(self, phases=None):
+	def reset(self, phases=None, **kwargs):
 		self._stack.clear()
 		if phases is not None:
-			self.extend(phases)
+			self.extend(phases, **kwargs)
 		
 	def _process_entry(self, item, **kwargs):
 		if item in self._phases:

@@ -232,7 +232,7 @@ class Ipython_Interface(object):
 		else:
 			
 			if 'status' in self.msg:
-				status = _format_log(self.msg.status)
+				status = _format_line(self.msg.status['line'])
 				print('+' + '-' * (len(status) + 2) + '+')
 				print('| {} |'.format(status))
 				print('+' + '-' * (len(status) + 2) + '+')
@@ -247,7 +247,7 @@ class Ipython_Interface(object):
 				for opt in self.msg.options:
 					
 					if 'desc' in opt:
-						print('-- {} --'.format(_format_log(opt.desc)))
+						print('-- {} --'.format(_format_line(opt.desc['line'])))
 					
 					for tpl in decode_action_set(opt.actions):
 						print('{:>4} - {}'.format(idx, _format_action(tpl)))

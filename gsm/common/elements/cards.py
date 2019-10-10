@@ -13,6 +13,14 @@ class Card(GameObject):
 	
 	def discard(self):
 		self._deck.discard(self)
+		
+	def face_up(self):
+		self.visible.update(self._table.players)
+		
+	def face_down(self, player=None):
+		self.visible.clear()
+		if player is not None:
+			self.visible.add(player.name)
 
 
 class Deck(SafeGenerator):

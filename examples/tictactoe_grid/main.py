@@ -2,9 +2,9 @@ import sys, os
 import numpy as np
 import gsm
 from gsm import tdict, tlist, tset
-from gsm.common import world
+from gsm.common import world, TurnPhaseStack
 
-from .phases import TurnPhase
+from .phases import TicPhase
 from .objects import Board, Tick
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -18,7 +18,8 @@ class TicTacToe(gsm.GameController):
 		                          hidden={'val'})
 		
 		super().__init__(debug=debug,
-		                 manager=manager)
+		                 manager=manager,
+		                 stack=TurnPhaseStack())
 		
 		# register config files
 		self.register_config('basic', os.path.join(MY_PATH,'config/basics.yaml'))
@@ -32,11 +33,11 @@ class TicTacToe(gsm.GameController):
 		self.register_obj_type(obj_cls=Board)
 		
 		# register possible phases
-		self.register_phase(name='turn', cls=TurnPhase)
+		self.register_phase(name='tic', cls=TicPhase)
 	
 	def _set_phase_stack(self, config):
-		
-		return tlist([self.create_phase('turn')])
+		self.stack.set_player_order(tlist(self.players))
+		return tlist(['tic'])
 	
 	def _select_player(self):
 		return self.players['Player1']
@@ -56,12 +57,6 @@ class TicTacToe(gsm.GameController):
 		                           field_obj_type='Tick', grid_obj_type='Board')
 		
 		self.state.board = grid
-		
-		self.state.turn_counter = -1
-		self.state.player_order = tlist(self.players.values())
-		
-		if self.state.player_order[0].name != self._select_player():
-			self.state.player_order = self.state.player_order[::-1]
 		
 	def _end_game(self):
 		

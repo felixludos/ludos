@@ -17,6 +17,21 @@ class RobberPhase(GamePhase):
 		
 		raise NotImplementedError
 		
+		if self.devcard.name == 'Knight':  # TODO: move to robber phase
+			with out:
+				if self.card_info is None:
+					options = tset(f for f in C.state.world.fields if 'robber' not in f)
+					out.add(options)
+					out.add('cancel')
+					out.set_status('Choose where to move the knight.')
+				else:
+					# identify players in loc
+					opps = tset(c.building.player for c in self.card_info.corners
+					            if 'building' in c and c.building.player != self.player)
+					out.add(opps)
+					out.add('cancel')
+					out.set_status('Choose what player to steal from.')
+		
 		player = C.state.player_order[C.state.turn_counter % len(C.players)]
 		
 		out = GameActions()

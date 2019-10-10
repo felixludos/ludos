@@ -92,6 +92,7 @@ def gain_res(res, bank, player, delta, log=None):
 	
 	bank[res] -= delta
 	player.resources[res] += delta
+	player.num_res += delta
 	
 	change = 'gains' if delta > 0 else 'loses'
 	if log is not None:
@@ -106,6 +107,11 @@ def get_knight(devcards):
 		if card.name == 'Knight':
 			return card
 	return None
+
+def play_dev(player, card):
+	player.devcards.remove(card)
+	card.face_up()
+	player.past_devcards.add(card)
 
 def _settle_available(loc):
 	for e in loc.edges:
@@ -187,10 +193,6 @@ def unbuild(C, bld, silent=False):
 		if reward > 1:
 			msg = ' (losing {} victory points)'.format(msg)
 		C.log.writef('{} removes a {}{}', player, bld, '' if msg is None else msg)
-
-def update_stats(player):
-	player.num_dev = len(player.devcards)
-	player.num_res = sum(num for num in player.resources.values())
 
 def bank_trade_options(player, bank_trading):
 	bank_options = tdict()

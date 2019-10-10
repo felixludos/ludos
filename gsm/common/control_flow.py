@@ -40,8 +40,9 @@ class TurnPhaseStack(GameStack): # tracks turn counter, inc when creating a Turn
 		super().register(cls, name=name, **props)
 		
 	def reset(self, phases=None):
-		super().reset(phases=phases)
 		self.counter = 0
+		super().reset(phases=phases)
+		
 		
 	def set_player_order(self, players):
 		self.players = players

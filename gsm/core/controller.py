@@ -12,7 +12,7 @@ from .table import GameTable
 from .player import GameManager
 from .phase import GameStack
 from ..mixins import Named, Transactionable, Savable
-from ..signals import PhaseComplete, PhaseInterrupt, GameOver, NoActiveGameError, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
+from ..signals import PhaseComplete, SwitchPhase, GameOver, NoActiveGameError, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
 from ..util import RandomGenerator, jsonify, obj_jsonify
 
 class GameController(Named, Transactionable, Savable):
@@ -187,8 +187,6 @@ class GameController(Named, Transactionable, Savable):
 		self.table.reset(tset(self.players.names()))
 		self.stack.reset(self._set_phase_stack(self.config))
 		
-		self.phase_stack = self._set_phase_stack(self.config) # contains phase instances (potentially with phase specific data)
-		
 		self._init_game(self.config) # builds maps/objects
 		
 		self._in_progress = True
@@ -229,7 +227,7 @@ class GameController(Named, Transactionable, Savable):
 				except PhaseComplete as intr:
 					if not intr.transfer_action():
 						action = None
-				except PhaseInterrupt as intr:
+				except SwitchPhase as intr:
 					if intr.stacks():
 						self.stack.push(phase)  # keep current phase around
 					new = intr.get_phase()

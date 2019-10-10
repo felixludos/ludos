@@ -25,15 +25,20 @@ def _process_obj(obj):
 	
 	return info
 
-def write(*objs, end='\n'):
+def write(*objs, end=None, indent_level=None):
 	
 	if end is not None and len(end):
 		objs = list(objs)
 		objs.append(end)
 	
-	return [_process_obj(obj) for obj in objs]
+	line = {'line':[_process_obj(obj) for obj in objs]}
+	
+	if indent_level is not None:
+		line['level'] = indent_level
+		
+	return line
 
-def writef(txt, *objs, end=None, **kwobjs):
+def writef(txt, *objs, end=None, indent_level=None, **kwobjs):
 	line = []
 	
 	pos = 0
@@ -61,7 +66,7 @@ def writef(txt, *objs, end=None, **kwobjs):
 		
 		line.append(obj)
 		
-	return write(*line, end=end)
+	return write(*line, end=end, indent_level=indent_level)
 
 class RichWriter(Savable, Transactionable, Pullable):
 	
@@ -105,17 +110,12 @@ class RichWriter(Savable, Transactionable, Pullable):
 		if indent_level is None:
 			indent_level = self.indent_level
 			
-		line = write(*objs, end=end)
+		line = write(*objs, end=end, indent_level=indent_level)
 		
-		out = {'line': line}
-		
-		if indent_level is not None:
-			out['level'] = indent_level
-			
 		if debug:
-			out['debug'] = True
+			line['debug'] = True
 			
-		self.extend(out)
+		self.extend(line)
 		
 	def writef(self, txt, *objs, end=None, indent_level=None, debug=False, **kwobjs):
 		
@@ -128,17 +128,13 @@ class RichWriter(Savable, Transactionable, Pullable):
 		if indent_level is None:
 			indent_level = self.indent_level
 		
-		line = writef(txt, *objs, end=end, **kwobjs)
-		
-		out = {'line':line}
-		
-		if indent_level is not None:
-			out['level'] = indent_level
+		line = writef(txt, *objs, end=end, indent_level=indent_level,
+		              **kwobjs)
 			
 		if debug:
-			out['debug'] = True
+			line['debug'] = True
 			
-		self.extend(out)
+		self.extend(line)
 		
 	def extend(self, line):
 		self.text.append(line)
@@ -253,6 +249,10 @@ class LogWriter(RichWriter):
 		self.log = self.__class__._unpack_obj(data['log'])
 		
 # the dev can write instance of RichText, but all written objects are stored as simple objects (dict, list, primitives)
+# class RichLine(dict):
+# 	pass
+
+
 class RichText(Typed, Writable, Savable):
 	
 	def __init__(self, msg, obj_type='Regular', **info):

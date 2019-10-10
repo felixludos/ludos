@@ -19,7 +19,7 @@ class Catan(gsm.GameController):
 	             shuffle_order=False):
 		
 		# create player manager
-		manager = gsm.GameManager(open={'num_res', 'num_dev', 'color',
+		manager = gsm.GameManager(open={'num_res', 'color', 'devcards',
 		                                'reserve', 'ports', 'past_devcards'},
 		                          )
 		
@@ -53,7 +53,7 @@ class Catan(gsm.GameController):
 		self.register_obj_type(name='devcard', obj_cls=DevCard,
 		                       req={'name', 'desc'},)
 		self.register_obj_type(name='devdeck', obj_cls=Deck)
-		self.register_obj_type(name='Robber', open={'loc'})
+		self.register_obj_type(name='robber', open={'loc'})
 		
 		self.register_obj_type(name='road', open={'loc', 'player'})
 		self.register_obj_type(name='settlement', open={'loc', 'player'})
@@ -94,7 +94,7 @@ class Catan(gsm.GameController):
 		self.state.production = config.rules.resource_pays
 		self.state.reqs = config.rules.reqs
 		self.state.victory_condition = config.rules.victory_condition
-		
+		self.state.hand_limit = config.rules.hand_limit
 		# init map
 		G = grid.make_hexgrid(config.map.map, table=self.table,
 		                      enable_corners=True, enable_edges=True,
@@ -115,7 +115,7 @@ class Catan(gsm.GameController):
 					numbers[f.num] = tset()
 				numbers[f.num].add(f)
 		assert loc is not None, 'couldnt find the desert'
-		self.state.robber = self.table.create('Robber', loc=loc)
+		self.state.robber = self.table.create('robber', loc=loc)
 		self.state.desert = loc
 		self.state.numbers = numbers
 		
@@ -129,11 +129,6 @@ class Catan(gsm.GameController):
 		                                        seed=self.RNG.getrandbits(64),
 		                                        default='devcard')
 		self.state.dev_deck.shuffle()
-		
-		self.state.turns = tdict(
-			order=tlist(self.players.values()),
-			counter=0,
-		)
 		
 		self.state.bank_trading = config.rules.bank_trading
 		self.state.msgs = config.msgs

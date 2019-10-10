@@ -72,18 +72,15 @@ class SetupPhase(GamePhase):
 		
 		out = GameActions()
 		
-		out.begin()
-		if self.settled is None:
-			loc_name = 'settlement'
-			out.write('Available Locations')
-			out.add(self.available,)
-		else:
-			loc_name = 'road'
-			out.write('Available Edges')
-			out.add(tset(e for e in self.settled.edges
-			              if e is not None and 'building' not in e),)
+		with out('loc', 'Available Locations'):
+			if self.settled is None:
+				loc_name = 'settlement'
+				out.add(self.available,)
+			else:
+				loc_name = 'road'
+				out.add(tset(e for e in self.settled.edges
+				              if e is not None and 'building' not in e),)
 			
-		out.commit()
-		out.status.writef('Choose a location to place a {}', loc_name)
+		out.set_status('Choose a location to place a {}'.format(loc_name))
 		
 		return tdict({player.name:out})

@@ -1,6 +1,8 @@
 
 victory_condition: 10
 
+hand_limit: 7
+
 res_names: ['wood', 'brick', 'sheep', 'ore', 'wheat']
 
 numbers:
