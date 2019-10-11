@@ -81,6 +81,10 @@ def build_catan_map(G, hex_info, ports, number_info, RNG):
 def roll_dice(rng):
 	return rng.randint(1,6) + rng.randint(1,6)
 
+def pay_cost(player, cost, bank):
+	for res, num in cost.items():
+		gain_res(res, bank, player, -num)
+
 def gain_res(res, bank, player, delta, log=None):
 	
 	if delta > 0 and bank[res] < delta:
@@ -113,6 +117,12 @@ def play_dev(player, card):
 	card.face_up()
 	player.past_devcards.add(card)
 
+def steal_options(loc, player):
+	return tset(c.building.player for c in loc.corners
+	            if 'building' in c
+	                and c.building.player != player
+	                and c.building.player.num_res > 0)
+
 def _settle_available(loc):
 	for e in loc.edges:
 		if e is not None:
@@ -125,13 +135,12 @@ def _payable(player, cost):
 		if player.resources[res] < num:
 			return False
 	return True
-def check_building_options(player, costs, devdeck):
+def check_building_options(player, costs):
 	
 	locs = tdict(
 		road=tset(),
 		settlement=tset(),
 		city=tset(),
-		devcard=tset([devdeck]),
 	)
 	
 	for road in player.buildings.road:
@@ -141,7 +150,7 @@ def check_building_options(player, costs, devdeck):
 					locs.settlement.add(c)
 			elif c.building.player == player:
 				if c.building.get_type() == 'settlement':
-					locs.city.add(c)
+					locs.city.add(c.building)
 				for e in c.edges:
 					if e is not None and 'building' not in e:
 						locs.road.add(e)
@@ -152,6 +161,13 @@ def check_building_options(player, costs, devdeck):
 			options[bld] = locs[bld]
 	
 	return options
+
+def can_buy(player, cost):
+	hand = player.resources
+	for res, num in cost.items():
+		if hand[res] < num:
+			return False
+	return True
 
 def build(C, bldname, player, loc, silent=False):
 	bld = C.table.create(bldname, loc=loc, player=player)
@@ -171,6 +187,7 @@ def build(C, bldname, player, loc, silent=False):
 		if reward > 1:
 			msg = ' (gaining {} victory points)'.format(msg)
 		C.log.writef('{} builds a {}{}', player, bld, '' if msg is None else msg)
+	return bld
 
 def unbuild(C, bld, silent=False):
 	C.table.remove(bld)
@@ -203,3 +220,10 @@ def bank_trade_options(player, bank_trading):
 			bank_options[res] = ratio
 	
 	return bank_options
+
+def check_victory(C):
+	req = C.state.victory_condition
+	for player in C.players:
+		if player.vps >= req:
+			return True
+	return False

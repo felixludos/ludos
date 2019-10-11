@@ -118,6 +118,7 @@ class Catan(gsm.GameController):
 		self.state.robber = self.table.create('robber', loc=loc)
 		self.state.desert = loc
 		self.state.numbers = numbers
+		loc.robber = self.state.robber
 		
 		# setup dev card deck
 		cards = tlist()
@@ -137,7 +138,7 @@ class Catan(gsm.GameController):
 		
 		out = tdict()
 		
-		vps = tdict({player.name:player.vps for player in self.players.values()})
+		vps = tdict({player.name:player.vps for player in self.players})
 		out.vps = vps
 		
 		mx = max(vps.values())

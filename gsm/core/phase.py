@@ -100,14 +100,7 @@ class GameStack(Transactionable, Savable):
 		return self._stack.peek(n)
 
 
-class GamePhase(Named, tdict):
-	
-	# __init__ can be overridden
-	def __init__(self, name=None, **info):
-		
-		if name is None:
-			name = self.__class__.__name__
-		super().__init__(name, **info)
+class GamePhase(tdict):
 	
 	def execute(self, C, player=None, action=None): # must be implemented
 		raise NotImplementedError
