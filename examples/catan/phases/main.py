@@ -9,8 +9,8 @@ from ..ops import build, unbuild, play_dev, pay_cost, can_buy, roll_dice, check_
 
 class MainPhase(TurnPhase):
 	
-	def __init__(self, player):
-		super().__init__(player=player)
+	def __init__(self, player, **other):
+		super().__init__(player=player, **other)
 		
 		self.roll = None
 		
@@ -42,7 +42,8 @@ class MainPhase(TurnPhase):
 			
 			if self.roll == 7:
 				C.stack.push('main')
-				raise SwitchPhase('robber', send_action=False, stack=False)
+				raise SwitchPhase('robber', send_action=False, stack=False,
+				                  player=player)
 		
 			hexes = C.state.numbers[self.roll]
 			for hex in hexes:
@@ -115,7 +116,7 @@ class MainPhase(TurnPhase):
 				raise Exception('Shouldnt have played a Victory point card')
 			elif obj.name == 'Knight':
 				raise SwitchPhase('robber', send_action=True, stack=True,
-				                  knight=obj)
+				                  knight=obj, player=player)
 			elif obj.name == 'Monopoly':
 				res, = rest
 				for opp in C.players.values():
@@ -158,8 +159,8 @@ class MainPhase(TurnPhase):
 		
 		out = GameActions('You rolled: {}. Take your turn.'.format(self.roll))
 		
-		with out(name='pre'):
-			if self.pre_check is not None:
+		if self.pre_check is not None:
+			with out(name='pre'):
 				if self.pre_check is not None:
 					out.add(self.pre_check)
 					self.pre_check = None
@@ -169,7 +170,7 @@ class MainPhase(TurnPhase):
 				
 				out.add('continue')
 				
-				return tdict({self.player.name:out})
+				return tdict({self.player:out})
 		
 		if self.devcard is not None:
 			with out('cancel', desc='Undo playing dev card'):
@@ -194,8 +195,8 @@ class MainPhase(TurnPhase):
 					out.add(opts)
 			
 			# buy dev card
-			with out('buy', desc='Buy a development card'):
-				if len(C.state.dev_deck) and can_buy(self.player, C.state.costs.devcard):
+			if len(C.state.dev_deck) and can_buy(self.player, C.state.costs.devcard):
+				with out('buy', desc='Buy a development card'):
 					out.add(C.state.dev_deck)
 			
 			# trading
@@ -226,6 +227,6 @@ class MainPhase(TurnPhase):
 							out.add(card)
 					
 		
-		return tdict({self.player.name:out})
+		return tdict({self.player:out})
 
 

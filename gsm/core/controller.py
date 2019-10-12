@@ -12,7 +12,7 @@ from .table import GameTable
 from .player import GameManager
 from .phase import GameStack
 from ..mixins import Named, Transactionable, Savable
-from ..signals import PhaseComplete, SwitchPhase, GameOver, NoActiveGameError, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
+from ..signals import PhaseComplete, SwitchPhase, GameOver, InvalidPlayerError, NoActiveGameError, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
 from ..util import RandomGenerator, jsonify, obj_jsonify
 
 class GameController(Named, Transactionable, Savable):
@@ -196,6 +196,10 @@ class GameController(Named, Transactionable, Savable):
 	def _step(self, player, action=None, key=None):  # returns python objs (but json readable)
 		
 		try:
+			if player in self.players:
+				player = self.players[player]
+			else:
+				raise InvalidPlayerError(player)
 			
 			if not len(self.stack):
 				raise GameOver
@@ -266,7 +270,8 @@ class GameController(Named, Transactionable, Savable):
 			self.commit()
 			# format output message
 			
-			self.active_players = out
+			self.active_players = tdict({p.name:opts for p, opts in out.items()})
+			
 			self._images.clear()
 			
 			msg = self._compose_msg(player)
@@ -328,6 +333,7 @@ class GameController(Named, Transactionable, Savable):
 			
 			msg['players'] = self.players.pull(player)
 			msg['table'] = self.table.pull(player)
+			msg['phase'] = self.stack[-1].name
 			
 		log = self.log.pull(player)
 		if len(log):

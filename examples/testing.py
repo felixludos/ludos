@@ -26,25 +26,14 @@ I.load('saves/catan_setup.pkl')
 
 I.set_player()
 I.get_status()
-I.select_action()
-I.step()
 
-# main phases
-I.set_player()
-I.get_status()
-I.select_action(0)
-I.step()
-
-I.set_player()
-I.get_status()
-I.select_action(0)
-I.step()
-
-I.set_player()
-I.get_status()
-I.select_action(1)
-I.step()
-I.view()
+for i in range(10):
+	I.select_action(0)
+	I.step()
+	I.set_player()
+	I.get_status()
+	I.view()
+	print('\n\n\n')
 
 
 

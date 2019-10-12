@@ -69,7 +69,9 @@ class GameStack(Transactionable, Savable):
 		props = self._phases[name].props
 		props.update(kwargs)
 		
-		return cls(**props)
+		phase = cls(**props)
+		phase.name = name
+		return phase
 		
 	# stack
 	
@@ -98,9 +100,17 @@ class GameStack(Transactionable, Savable):
 	
 	def peek(self, n=0):
 		return self._stack.peek(n)
+	
+	def __getitem__(self, item):
+		return self._stack[item]
 
 
-class GamePhase(tdict):
+class GamePhase(Named, tdict):
+	
+	def __init__(self, name=None, **info):
+		if name is None:
+			name = self.__class__.__name__
+		super().__init__(name=name, **info)
 	
 	def execute(self, C, player=None, action=None): # must be implemented
 		raise NotImplementedError

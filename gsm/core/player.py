@@ -142,6 +142,14 @@ class GamePlayer(Named, Typed, Jsonable, Writable, tdict):
 	# def __eq__(self, other):
 	# 	return other == self.name or other.name == self.name
 
+	def __hash__(self):
+		return hash(self.name)
+	def __eq__(self, other):
+		try:
+			return self.name == other.name
+		except AttributeError:
+			return self.name == other
+
 	def jsonify(self):
 		return {'_player':self.name}
 

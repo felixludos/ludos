@@ -212,6 +212,8 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 			options[-1]['actions'] = format_actions(opt.actions)
 			if 'desc' in opt:
 				options[-1]['desc'] = opt.desc
+			if 'name' in opt:
+				options[-1]['name'] = opt.name
 		
 		out = {
 			'options': options,

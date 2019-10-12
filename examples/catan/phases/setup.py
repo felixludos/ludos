@@ -31,7 +31,7 @@ class SetupPhase(GamePhase):
 				self.player_order.pop()
 				if len(self.player_order) == 0:
 					C.stack.push('main')
-					raise PhaseComplete()
+					raise PhaseComplete
 				if len(self.player_order) == len(C.players):
 					self.on_second = True
 				
@@ -68,14 +68,12 @@ class SetupPhase(GamePhase):
 		
 	def encode(self, C):
 		
-		player = self.player_order[-1]
-		
 		out = GameActions()
 		
 		with out('loc', 'Available Locations'):
 			if self.settled is None:
 				loc_name = 'settlement'
-				out.add(self.available,)
+				out.add(self.available)
 			else:
 				loc_name = 'road'
 				out.add(tset(e for e in self.settled.edges
@@ -83,4 +81,4 @@ class SetupPhase(GamePhase):
 			
 		out.set_status('Choose a location to place a {}'.format(loc_name))
 		
-		return tdict({player.name:out})
+		return tdict({self.player_order[-1]:out})

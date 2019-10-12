@@ -45,6 +45,10 @@ class SwitchPhase(Exception): # possibly can include an action and player
 class InvalidKeyError(Exception):
 	pass
 
+class InvalidPlayerError(Exception):
+	def __init__(self, player):
+		super().__init__('Invalid player: {}'.format(player))
+
 # Controller registry errors
 
 class ClosedRegistryError(Exception):

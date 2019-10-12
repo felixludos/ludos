@@ -67,7 +67,7 @@ class Catan(gsm.GameController):
 	
 	def _set_phase_stack(self, config):
 		self.stack.set_player_order(tlist(self.players))
-		return tlist([self.create_phase('setup', player_order=tlist(self.players.values()))])
+		return tlist([self.create_phase('setup', player_order=tlist(self.players))])
 	
 	def _init_game(self, config):
 		

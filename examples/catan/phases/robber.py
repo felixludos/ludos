@@ -37,6 +37,8 @@ class RobberPhase(GamePhase):
 				
 				if len(self.debt):
 					return
+		else:
+			self.debt = tdict()
 		
 		
 		if 'loc' not in self:
@@ -54,17 +56,30 @@ class RobberPhase(GamePhase):
 			del prev.robber
 			loc.robber = C.state.robber
 			C.state.robber.loc = loc
-		
-		else:
 			
-			opp, = action
+			if 'knight' not in self:
+				C.log.writef('{} moves {} to {}', player, C.state.robber, self.loc)
+		
+			self.steal_options = steal_options(self.loc, player)
+			if len(self.steal_options) == 0:
+				self.target = None
+			elif len(self.steal_options) == 1:
+				self.target = self.steal_options.pop()
+			else:
+				return
+		
+		if 'target' in self:
 			
 			self.stolen = None
-			if opp.num_res > 0:
-				self.stolen = C.RNG.choices(*zip(*list(opp.resources.items())), k=1)[0]
+			if self.target is not None:
 				
-				gain_res(self.stolen, C.state.bank, opp, -1)
-				gain_res(self.stolen, C.state.bank, player, 1)
+				opp, = action
+				
+				if opp.num_res > 0:
+					self.stolen = C.RNG.choices(*zip(*list(opp.resources.items())), k=1)[0]
+					
+					gain_res(self.stolen, C.state.bank, opp, -1)
+					gain_res(self.stolen, C.state.bank, player, 1)
 				
 			if 'knight' in self:
 				play_dev(player, self.knight)
@@ -80,48 +95,36 @@ class RobberPhase(GamePhase):
 		
 	def encode(self, C):
 		
+		if 'debt' in self and len(self.debt):
+			outs = tdict()
+			for player, topay in self.debt.items():
+				outs[player] = GameActions('You are robbed, choose {} resources to discard.'.format(topay))
+				with outs[player]('robbed', desc='Choose resource to discard'):
+					outs[player].add(tset(res for res, num in player.resources.items() if num > 0))
+				
+			return outs
+		
 		out = GameActions()
 		
 		if 'loc' not in self:
-			pass
-		
-		
-		if self.devcard.name == 'Knight':  # TODO: move to robber phase
-			with out:
-				if self.card_info is None:
-					options = tset(f for f in C.state.world.fields if 'robber' not in f)
-					out.add(options)
+			with out('loc', desc='Choose where to move the robber'):
+				
+				if 'knight' in self:
 					out.add('cancel')
-					out.set_status('Choose where to move the knight.')
-				else:
-					# identify players in loc
-					opps = tset(c.building.player for c in self.card_info.corners
-					            if 'building' in c and c.building.player != self.player)
-					out.add(opps)
+				
+				options = tset(f for f in C.state.world.fields if 'robber' not in f)
+				out.add(options)
+				out.set_status('Choose where to move the knight.')
+				
+		else:
+			with out('target', desc='Choose which player to steal from'):
+				
+				if 'knight' in self:
 					out.add('cancel')
-					out.set_status('Choose what player to steal from.')
+				
+				out.add(self.steal_options)
+				out.set_status('Choose what player to steal from.')
 		
-		player = C.state.player_order[C.state.turn_counter % len(C.players)]
-		
-		out = GameActions()
-		
-		L = C.state.map.shape[0]
-		
-		r, c = np.mgrid[0:L, 0:L]
-		free = C.state.map == 0
-		
-		# check for draw
-		if free.sum() == 0:
-			C.state.winner = None
-			raise GameOver
-		
-		out.begin()
-		out.update(zip(r[free], c[free]))
-		out.write('Coordinate options')
-		out.commit()
-		
-		out.status.write('Place a tick into one of these coords (row, col)')
-		
-		return tdict({player.name: out})
+		return tdict({self.player: out})
 
 

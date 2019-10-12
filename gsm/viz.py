@@ -57,8 +57,8 @@ def _format_action(tpl):
 			action.append('OBJ[{}]:{}'.format(obj['ID'], obj['val']))
 		else:
 			raise Exception('cant handle: {}'.format(repr(obj)))
-		
-	return ' '.join(action)
+	
+	return ' '.join(map(str,action))
 	
 def _package_action(action):
 	
@@ -123,7 +123,6 @@ class Ipython_Interface(object):
 			else:
 				player = self.msg.waiting_for.pop()
 			
-		
 		self.player = player
 		print('Player set to {}'.format(self.player))
 		
@@ -184,6 +183,9 @@ class Ipython_Interface(object):
 		if 'players' in self.msg:
 			self.players = self.msg.players
 			
+		if 'phase' in self.msg:
+			self.phase = self.msg.phase
+			
 		# if 'waiting_for' in self.msg:
 		# 	print('Waiting for: {}'.format(', '.join(self.msg.waiting_for)))
 	
@@ -219,11 +221,13 @@ class Ipython_Interface(object):
 			else:
 				print(_format_log(self.msg.log))
 			
-		
 		if 'error' in self.msg:
 			print('*** ERROR: {} ***'.format(self.msg.error.type))
 			print(self.msg.error.msg)
 			print('****************************')
+		
+		if 'phase' in self.msg:
+			print('Phase: {}'.format(self.msg.phase))
 		
 		if 'waiting_for' in self.msg:
 			print('Waiting for: {}'.format(', '.join(self.msg.waiting_for)))

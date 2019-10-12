@@ -45,6 +45,6 @@ class TicPhase(TurnPhase):
 		with out('tic', desc='Available spots'):
 			out.add(tset(free))
 		
-		return tdict({self.player.name:out})
+		return tdict({self.player:out})
 
 
