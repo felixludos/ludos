@@ -25,8 +25,8 @@ class MainPhase(TurnPhase):
 		
 		if action is None:
 			if self.pre_check == 'check':
-				self.pre_check = get_knight(player.devcards) \
-					if len(player.devcards) else None
+				self.pre_check = get_knight(self.player.devcards) \
+					if len(self.player.devcards) else None
 			else: # coming back from robber or trade phase
 				return
 		elif action[0] == 'continue':
@@ -37,13 +37,13 @@ class MainPhase(TurnPhase):
 			self.roll = roll_dice(C.RNG)
 			
 			C.log.zindent()
-			C.log.writef('{} rolled: {}.', player, self.roll)
+			C.log.writef('{} rolled: {}.', self.player, self.roll)
 			C.log.iindent()
 			
 			if self.roll == 7:
 				C.stack.push('main')
 				raise SwitchPhase('robber', send_action=False, stack=False,
-				                  player=player)
+				                  player=self.player)
 		
 			hexes = C.state.numbers[self.roll]
 			for hex in hexes:
@@ -73,27 +73,32 @@ class MainPhase(TurnPhase):
 		
 		# trade
 		if obj == 'offer' or obj == 'demand':
-			raise SwitchPhase('trade', send_action=True, stack=True)
+			C.log[self.player].write('You start a trade')
+			C.log[self.player].iindent()
+			raise SwitchPhase('trade', send_action=True, stack=True,
+			                  player=self.player,
+			                  bank_trades=bank_trade_options(self.player, C.state.bank_trading)
+			                        if 'maritime' in action.get_type() else None)
 		
 		if self.devcard is not None:
 			if self.devcard.name == 'Road Building':
 				if self.card_info is None:
-					bld = build(C, 'road', player, obj)
+					bld = build(C, 'road', self.player, obj)
 					self.card_info = bld
 				else:
-					bld = build(C, 'road', player, obj)
-					play_dev(player, self.devcard)
+					bld = build(C, 'road', self.player, obj)
+					play_dev(self.player, self.devcard)
 					C.log.writef('{} plays {}, and builds: {} and {}',
-					             player, self.devcard, self.card_info, bld)
+					             self.player, self.devcard, self.card_info, bld)
 					self.devcard = None
 					self.card_info = None
 			elif self.devcard.name == 'Year of Plenty':
 				res, = obj
-				gain_res(self.card_info, C.state.bank, player, 1, log=C.log)
+				gain_res(self.card_info, C.state.bank, self.player, 1, log=C.log)
 				gain_res(res, C.state.bank, player, 1, log=C.log)
-				play_dev(player, self.devcard)
+				play_dev(self.player, self.devcard)
 				C.log.writef('{} plays {}, and receives: {} and {}',
-				             player, self.devcard, self.card_info, res)
+				             self.player, self.devcard, self.card_info, res)
 				self.card_info = None
 				self.devcard = None
 			else:
@@ -105,26 +110,26 @@ class MainPhase(TurnPhase):
 		if 'build' in action.get_type():
 			if obj_type == 'settlement':
 				unbuild(C, obj, silent=False)
-				bld = build(C, 'city', player, obj.loc)
+				bld = build(C, 'city', self.player, obj.loc)
 			else:
-				bld = build(C, 'settlement' if obj_type=='Corner' else 'road', player, obj)
+				bld = build(C, 'settlement' if obj_type=='Corner' else 'road', self.player, obj)
 			
-			pay_cost(player, C.state.costs[bld.get_type()], C.state.bank)
+			pay_cost(self.player, C.state.costs[bld.get_type()], C.state.bank)
 			
 		elif obj_type == 'devcard':
 			if obj.name == 'Victory Point':
 				raise Exception('Shouldnt have played a Victory point card')
 			elif obj.name == 'Knight':
 				raise SwitchPhase('robber', send_action=True, stack=True,
-				                  knight=obj, player=player)
+				                  knight=obj, player=self.player)
 			elif obj.name == 'Monopoly':
 				res, = rest
 				for opp in C.players.values():
-					if opp != player and opp.resources[res] > 0:
-						player.resources[res] += opp.resources[res]
-						C.log.writef('{} receives {} {} from {}', player, opp.resources[res], res, opp)
-				C.log.writef('{} plays {}, claiming all {}', player, obj, res)
-				play_dev(player, obj)
+					if opp != self.player and opp.resources[res] > 0:
+						self.player.resources[res] += opp.resources[res]
+						C.log.writef('{} receives {} {} from {}', self.player, opp.resources[res], res, opp)
+				C.log.writef('{} plays {}, claiming all {}', self.player, obj, res)
+				play_dev(self.player, obj)
 			
 			elif obj.name == 'Year of Plenty':
 				res, = rest
@@ -139,16 +144,16 @@ class MainPhase(TurnPhase):
 			card = C.state.dev_deck.draw()
 			self.player.devcards.add(card)
 			self.bought_devcards.add(card)
-			C.log.writef('{} buys a development card', player)
+			C.log.writef('{} buys a development card', self.player)
 			
 			msg = ''
 			if card.name == 'Victory Point':
 				msg = ' (gaining 1 victory point)'
-				player.vps += 1
+				self.player.vps += 1
 			
-			C.log[player.name].writef('You got a {}{}', card, msg)
+			C.log[self.player.name].writef('You got a {}{}', card, msg)
 			
-			pay_cost(player, C.state.costs.devcard, C.state.bank)
+			pay_cost(self.player, C.state.costs.devcard, C.state.bank)
 		else:
 			raise Exception('Unknown obj {}: {}'.format(type(obj), obj))
 

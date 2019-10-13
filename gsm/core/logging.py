@@ -53,12 +53,27 @@ class GameLogger(RichWriter):
 	def __getitem__(self, item):
 		return self.writers[item]
 	
+	def zindent(self):  # reset indent
+		super().zindent()
+		for log in self.writers.values():
+			log.zindent()
+	
+	def iindent(self, n=1):  # increment indent
+		super().iindent(n)
+		for log in self.writers.values():
+			log.iindent(n)
+	
+	def dindent(self, n=1):  # decrement indent
+		super().dindent(n)
+		for log in self.writers.values():
+			log.dindent(n)
+	
 	def write(self, *args, **kwargs):
 		
 		super().write(*args, **kwargs)
 		
 		for log in self.writers.values():
-			log.extend(self.text)
+			log.extend(self.text[0])
 			
 		self.text.clear()
 	
@@ -67,7 +82,7 @@ class GameLogger(RichWriter):
 		super().writef(*args, **kwargs)
 		
 		for log in self.writers.values():
-			log.extend(self.text)
+			log.extend(self.text[0])
 		
 		self.text.clear()
 	

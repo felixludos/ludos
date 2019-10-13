@@ -221,9 +221,53 @@ def bank_trade_options(player, bank_trading):
 	
 	return bank_options
 
+def execute_trade(offer, demand, bank, from_player, to_player=None, log=None):
+	# gain_res(res, bank, player, delta, log=None)
+	
+	offer_res = tlist()
+	demand_res = tlist()
+	
+	for res in offer.keys():
+		
+		if offer[res] > 0:
+			offer_res.extend([res]*offer[res])
+			gain_res(res, bank, from_player, -offer[res])
+			if to_player is not None:
+				gain_res(res, bank, to_player, offer[res])
+		if demand[res] > 0:
+			demand_res.extend([res]*demand[res])
+			if to_player is not None:
+				gain_res(res, bank, to_player, -demand[res])
+			gain_res(res, bank, from_player, demand[res])
+		
+	if log is not None:
+		
+		if to_player is None:
+			log.writef('{} trades with the bank:', from_player)
+			log.iindent()
+			log.writef('Paying {} {}', len(offer_res), offer_res[0])
+			log.writef('Receiving 1 {}', demand_res[0])
+			log.dindent()
+		else:
+			log.writef('{} trades with {}:', from_player, to_player)
+			log.iindent()
+			log.writef('Paying: {}', ', '.join(offer_res))
+			log.writef('Receiving: {}', ', '.join(demand_res))
+			log.dindent()
+			
+
 def check_victory(C):
 	req = C.state.victory_condition
 	for player in C.players:
 		if player.vps >= req:
 			return True
 	return False
+
+def trade_available(player, demand):
+	for res in demand.keys():
+		if player.resources[res] < demand[res]:
+			return False
+	return True
+	
+
+

@@ -1,6 +1,6 @@
 import numpy as np
 import gsm
-from gsm import GamePhase, GameActions, PhaseComplete
+from gsm import GamePhase, GameActions, PhaseComplete, SwitchPhase
 from gsm import tset, tdict, tlist
 
 from ..ops import build
@@ -30,8 +30,7 @@ class SetupPhase(GamePhase):
 				
 				self.player_order.pop()
 				if len(self.player_order) == 0:
-					C.stack.push('main')
-					raise PhaseComplete
+					raise SwitchPhase('main', stack=False)
 				if len(self.player_order) == len(C.players):
 					self.on_second = True
 				

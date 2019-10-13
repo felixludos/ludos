@@ -16,19 +16,19 @@ import yaml
 from gsm.viz import Ipython_Interface as Interface
 from catan.main import Catan
 
-seed = 1
+seed = 3
 I = Interface(Catan(), seed=seed, full_log=True)
 I.set_player('White')
 
-# I.reset(seed=seed)
-# I.view()
-I.load('saves/catan_setup.pkl')
+I.reset(seed=seed)
+I.view()
+# I.load('saves/catan_setup.pkl')
 
 I.set_player()
 I.get_status()
 
-for i in range(10):
-	I.select_action(0)
+for i in range(16):
+	I.select_action()
 	I.step()
 	I.set_player()
 	I.get_status()

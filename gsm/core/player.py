@@ -149,6 +149,8 @@ class GamePlayer(Named, Typed, Jsonable, Writable, tdict):
 			return self.name == other.name
 		except AttributeError:
 			return self.name == other
+	def __ne__(self, other):
+		return not self.__eq__(other)
 
 	def jsonify(self):
 		return {'_player':self.name}

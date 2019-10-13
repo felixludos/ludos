@@ -230,7 +230,7 @@ class LogWriter(RichWriter):
 		
 	def extend(self, line):
 		super().extend(line)
-		self.log.extend(line)
+		self.log.append(line)
 		
 	def get_log(self):
 		return list(self.log)

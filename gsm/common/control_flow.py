@@ -43,12 +43,13 @@ class TurnPhaseStack(GameStack): # tracks turn counter, inc when creating a Turn
 		self.counter = 0
 		super().reset(phases=phases)
 		
-		
 	def set_player_order(self, players):
 		self.players = players
 	
 	def _process_turn(self, name, **kwargs):
 		if 'player' not in kwargs and self.players is not None:
+			n = self.players[self.counter % len(self.players)].name
+			c = self.counter
 			kwargs['player'] = self.players[self.counter % len(self.players)]
 			self.counter += 1
 		return kwargs

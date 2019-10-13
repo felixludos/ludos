@@ -38,7 +38,7 @@ def _format_log(lines):
 	for line in lines:
 		txt = _format_line(line['line'])
 		if 'level' in line:
-			txt = '\t' * line['level'] + txt
+			txt = '-*- ' * line['level'] + txt
 		if 'debug' in line:
 			txt = '*DEBUG: ' + txt
 		log.append(txt)
