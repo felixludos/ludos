@@ -55,6 +55,8 @@ def _format_action(tpl):
 			action.append(obj['val'])
 		elif obj['type'] == 'obj':
 			action.append('OBJ[{}]:{}'.format(obj['ID'], obj['val']))
+		elif obj['type'] == 'player':
+			action.append('PLYR:{}'.format(obj['val']))
 		else:
 			raise Exception('cant handle: {}'.format(repr(obj)))
 	
@@ -70,6 +72,8 @@ def _package_action(action):
 			final.append(obj['val'])
 		elif obj['type'] == 'obj':
 			final.append(obj['ID'])
+		elif obj['type'] == 'player':
+			final.append(obj['val'])
 		else:
 			raise Exception('cant handle: {}'.format(repr(obj)))
 
@@ -211,14 +215,13 @@ class Ipython_Interface(object):
 		if 'table' in self.msg:
 			print('Received table: {} entries'.format(len(self.msg.table)))
 		
-		if 'log' in self.msg:
+		if self.full_log or 'log' in self.msg:
 			print('-------------')
 			print('Log')
 			print('-------------')
-			
 			if self.full_log:
 				print(_format_log(self.get_log())) # TODO: make the same player is called
-			else:
+			elif 'log' in self.msg:
 				print(_format_log(self.msg.log))
 			
 		if 'error' in self.msg:

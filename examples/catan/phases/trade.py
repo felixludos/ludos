@@ -41,7 +41,7 @@ class TradePhase(GamePhase):
 		
 		if obj == 'accept' or obj == 'reject':
 			
-			self.responses[player] = obj == 'confirm'
+			self.responses[player] = obj == 'accept'
 			
 			# check if all responses have been collected
 			self.partners = tset()
@@ -77,6 +77,14 @@ class TradePhase(GamePhase):
 			if obj == 'send':
 				C.log[player].write('Asking other players for response.')
 				self.responses = tdict({p:None for p in C.players if p != self.player})
+				offer_res = sum(([res]*num for res,num in self.offer.items()),[])
+				demand_res = sum(([res] * num for res, num in self.demand.items()), [])
+				for p in self.responses:
+					C.log[p].writef('{} offers a trade:', self.player)
+					C.log[p].iindent()
+					C.log[p].writef('Paying: {}', ', '.join(offer_res) if len(offer_res) else '-nothing-')
+					C.log[p].writef('Receiving: {}', ', '.join(demand_res) if len(demand_res) else '-nothing-')
+					C.log[p].dindent()
 			else:
 				C.log[player].writef('You {} a {}', obj, rest[0])
 				self[obj][rest[0]] += 1
@@ -112,6 +120,8 @@ class TradePhase(GamePhase):
 			for p, resp in self.responses.items():
 				if resp is None:
 					out = GameActions(writef('Do you accept the trade proposed by {}.', self.player))
+					out.info.offer = self.offer
+					out.info.demand = self.demand
 					with out('domestic-response', desc='Choose to accept or reject trade'):
 						if trade_available(p, self.demand):
 							out.add('accept')

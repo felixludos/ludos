@@ -2,6 +2,7 @@
 from itertools import product, chain
 from humpack import tset, tdict, tlist
 from .object import GameObject
+from .player import GamePlayer
 from ..mixins import Typed, Named, Transactionable, Savable, Pullable, Hashable
 from ..signals import ActionMismatch, UnknownActionElement, InvalidActionError
 from ..writing import write, writef
@@ -42,6 +43,8 @@ def process_actions(raw): # process input when saving new action set (mostly tur
 		return raw
 	if isinstance(raw, GameObject):
 		return ObjectAction(raw)
+	if isinstance(raw, GamePlayer):
+		return PlayerAction(raw)
 	if isinstance(raw, (str, int, float, bool)):
 		return FixedAction(raw)
 	if type(raw).__module__ == 'numpy': # unwrap numpy types
@@ -277,7 +280,7 @@ class ObjectAction(ActionElement):
 		return {'obj': self.__class__._pack_obj(self.obj)}
 	
 	def __load__(self, data):
-		self.__init__(self.__class__._unpack_obj(data['obj']))
+		ObjectAction.__init__(self, self.__class__._unpack_obj(data['obj']))
 		
 	def encode(self):
 		return {'ID':self.obj._id, 'val':str(self.obj)}
@@ -285,6 +288,25 @@ class ObjectAction(ActionElement):
 	def evaluate(self, q):
 		if q == self.obj._id:
 			return self.obj
+		raise ActionMismatch
+
+class PlayerAction(ActionElement):
+	def __init__(self, player):
+		super().__init__('player')
+		self.player = player
+		
+	def __save__(self):
+		return {'player': self.__class__._pack_obj(self.player)}
+	
+	def __load__(self, data):
+		PlayerAction.__init__(self, self.__class__._unpack_obj(data['player']))
+		
+	def encode(self):
+		return {'val':str(self.player)}
+	
+	def evaluate(self, q):
+		if q == self.player.name:
+			return self.player
 		raise ActionMismatch
 
 class TextAction(ActionElement): # allows player to enter arbitrary text as action

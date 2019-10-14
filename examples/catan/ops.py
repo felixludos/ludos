@@ -251,8 +251,8 @@ def execute_trade(offer, demand, bank, from_player, to_player=None, log=None):
 		else:
 			log.writef('{} trades with {}:', from_player, to_player)
 			log.iindent()
-			log.writef('Paying: {}', ', '.join(offer_res))
-			log.writef('Receiving: {}', ', '.join(demand_res))
+			log.writef('Paying: {}', ', '.join(offer_res) if len(offer_res) else '-nothing-')
+			log.writef('Receiving: {}', ', '.join(demand_res) if len(demand_res) else '-nothing-')
 			log.dindent()
 			
 
