@@ -156,9 +156,9 @@ def check_building_options(player, costs):
 						locs.road.add(e)
 	
 	options = tdict()
-	for bld, cost in costs.items():
-		if _payable(player, cost) and player.reserve[bld] > 0:
-			options[bld] = locs[bld]
+	for bld, opts in locs.items():
+		if _payable(player, costs[bld]) and player.reserve[bld] > 0:
+			options[bld] = opts
 	
 	return options
 
