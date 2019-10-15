@@ -389,7 +389,9 @@ class GameController(Named, Transactionable, Savable):
 		raise NotImplementedError # TODO: by default it should return contents of a config file
 	
 	def save(self):  # returns string
-		return str(Savable.pack(self))
+		data = str(Savable.pack(self))
+		print('key: {}'.format(self.RNG.random())) # testing
+		return data
 	
 	def load(self, data):
 		
@@ -406,6 +408,8 @@ class GameController(Named, Transactionable, Savable):
 		self._in_transaction = obj._in_transaction
 		self._in_progress = obj._in_progress
 		self.DEBUG = obj.DEBUG
+		
+		print('key: {}'.format(self.RNG.random())) # testing
 	
 	
 	
