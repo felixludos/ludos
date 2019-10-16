@@ -390,7 +390,7 @@ class GameController(Named, Transactionable, Savable):
 	
 	def save(self):  # returns string
 		data = str(Savable.pack(self))
-		print('key: {}'.format(self.RNG.random())) # testing
+		# print('key: {}'.format(self.RNG.random())) # testing
 		return data
 	
 	def load(self, data):
@@ -409,7 +409,7 @@ class GameController(Named, Transactionable, Savable):
 		self._in_progress = obj._in_progress
 		self.DEBUG = obj.DEBUG
 		
-		print('key: {}'.format(self.RNG.random())) # testing
+		# print('key: {}'.format(self.RNG.random())) # testing
 	
 	
 	
