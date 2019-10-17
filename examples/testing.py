@@ -24,16 +24,23 @@ I.reset(seed=seed)
 I.view()
 # I.load('saves/catan_setup.pkl')
 
-I.set_player()
-I.get_status()
+data = I.save()
+data2 = I.save()
+print(len(data), len(data2))
 
-for i in range(16):
-	I.select_action()
-	I.step()
+
+
+if False:
 	I.set_player()
 	I.get_status()
-	I.view()
-	print('\n\n\n')
+	
+	for i in range(16):
+		I.select_action()
+		I.step()
+		I.set_player()
+		I.get_status()
+		I.view()
+		print('\n\n\n')
 
 
 
