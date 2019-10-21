@@ -1,0 +1,9 @@
+
+name: TicTacToe
+long_name: Tic-Tac-Toe
+
+num_players: [2]
+player_names: [Player1, Player2]
+
+
+

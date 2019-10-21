@@ -2,8 +2,10 @@ import sys, os
 import numpy as np
 import gsm
 from gsm import tdict, tlist, tset
+from gsm.common import world, TurnPhaseStack
 
-from .phases import TurnPhase
+from .phases import TicPhase
+from .objects import Board, Tick
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -16,7 +18,9 @@ class TicTacToe(gsm.GameController):
 		                          hidden={'val'})
 		
 		super().__init__(debug=debug,
-		                 manager=manager)
+		                 manager=manager,
+		                 stack=TurnPhaseStack(),
+		                 info_path=os.path.join(MY_PATH, 'info.yaml'))
 		
 		# register config files
 		self.register_config('basic', os.path.join(MY_PATH,'config/basics.yaml'))
@@ -26,19 +30,15 @@ class TicTacToe(gsm.GameController):
 		self.register_player('Player2', val=-1)
 		
 		# register game object types
-		self.register_obj_type(name='tick',
-		                       req={'row', 'col',
-		                            'symbol', 'player'},
-		                       open={'row', 'col', # all properties are always visible to all players -> full information game
-		                             'symbol', 'player'}
-		                       )
+		self.register_obj_type(obj_cls=Tick)
+		self.register_obj_type(obj_cls=Board)
 		
 		# register possible phases
-		self.register_phase(name='turn', cls=TurnPhase)
+		self.register_phase(name='tic', cls=TicPhase)
 	
 	def _set_phase_stack(self, config):
-		
-		return tlist([self.create_phase('turn')])
+		self.stack.set_player_order(tlist(self.players))
+		return tlist(['tic'])
 	
 	def _select_player(self):
 		return self.players['Player1']
@@ -54,23 +54,24 @@ class TicTacToe(gsm.GameController):
 		
 		side = config.basic.side_length
 		
-		self.state.map = gsm.Array(np.zeros((side, side), dtype=int))
+		grid = world.make_quadgrid(rows=side, cols=side, table=self.table,
+		                           field_obj_type='Tick', grid_obj_type='Board')
 		
-		self.state.turn_counter = -1
-		self.state.player_order = tlist(self.players.values())
-		
-		if self.state.player_order[0].name != self._select_player():
-			self.state.player_order = self.state.player_order[::-1]
+		self.state.board = grid
 		
 	def _end_game(self):
 		
 		val = self.state.winner
 		
 		if val is None:
+			self.log.writef('Game over! Draw game!')
 			return tdict(winner=None)
 		
 		for p in self.players.values():
 			if p.val == val:
+				self.log.writef('Game Over! {} wins!'.format(p))
 				return tdict(winner=p.name)
 			
 		raise Exception('No player with val: {}'.format(val))
+	
+gsm.register_game('TicTacToe', TicTacToe, os.path.join(MY_PATH, 'info.yaml'))

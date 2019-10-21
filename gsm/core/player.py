@@ -100,11 +100,11 @@ class GameManager(Transactionable, Savable, Pullable):
 		players = {}
 		
 		for name, p in self.players.items():
-			if player is None or player == name:
-				players[name] = {k:obj_jsonify(v) for k, v in p.items() if k not in self.hidden}
+			if player is None or player != name:
+				players[name] = {k: obj_jsonify(v) for k, v in p.items() if k in self.open}
 			else:
-				players[name] = {k:obj_jsonify(v) for k,v in p.items() if k in self.open}
-				
+				players[name] = {k: obj_jsonify(v) for k, v in p.items() if k not in self.hidden}
+		
 		return players
 	
 	def __getitem__(self, item):

@@ -3,6 +3,7 @@ import sys
 import json
 import random
 import traceback
+import inspect
 import yaml
 
 from humpack import tset, tdict, tlist, containerify
@@ -22,10 +23,10 @@ class GameController(Named, Transactionable, Savable):
 		
 		# meta values (neither for dev nor user) (not including soft registries - they dont change)
 		new._tmembers = {'state', 'log', 'table', 'stack', 'players', 'active_players', 'end_info',
-		                 'keys', 'RNG', '_key_rng', '_images', 'config'}
+		                 'keys', 'RNG', '_key_rng', '_images', '_advisor_images', 'config'}
 		return new
 	
-	def __init__(self, name=None, debug=False,
+	def __init__(self, name=None, debug=False, info_path=None,
 	             manager=None, stack=None, table=None, log=None,
 	             **settings):
 		if name is None:
@@ -50,6 +51,7 @@ class GameController(Named, Transactionable, Savable):
 		self.config_files = tdict()
 		
 		# GameState
+		self._pre_setup_complete = info_path # flag for pre setup
 		self._in_progress = False # flag for registration to end
 		self._in_transaction = False # flag for transactionable
 		self.DEBUG = debug # flag for dev to use as needed
@@ -57,6 +59,8 @@ class GameController(Named, Transactionable, Savable):
 		self.keys = tdict() # a one time permission to call step() (with a valid action)
 		self.RNG = RandomGenerator()
 		self._images = tdict()
+		self._advisor_images = tdict()
+		self._spec_image = None
 		
 		self.state = None
 		self.active_players = None
@@ -118,8 +122,9 @@ class GameController(Named, Transactionable, Savable):
 		data['name'] = pack(self.name)
 		data['_in_progress'] = pack(self._in_progress)
 		data['_in_transaction'] = pack(self._in_transaction)
+		data['_pre_setup_complete'] = pack(self._pre_setup_complete)
+		data['_spec_image'] = pack(self._spec_image)
 		data['debug'] = pack(self.DEBUG)
-		
 		
 		return data
 	
@@ -136,6 +141,8 @@ class GameController(Named, Transactionable, Savable):
 		self.name = unpack(data['name'])
 		self._in_transaction = unpack(data['_in_transaction'])
 		self._in_progress = unpack(data['_in_progress'])
+		self._pre_setup_complete = unpack(data['_pre_setup_complete'])
+		self._spec_image = unpack(data['_spec_image'])
 		self.DEBUG = unpack(data['debug'])
 	
 	
@@ -178,6 +185,14 @@ class GameController(Named, Transactionable, Savable):
 		self.RNG = RandomGenerator(self.seed)
 		
 		self.config.update(self._load_config())
+		
+		if self._pre_setup_complete is None:
+			info = None
+			try:
+				info = containerify(yaml.load(open(self._pre_setup_complete, 'r')))
+			except:
+				pass
+			self._pre_setup(self.config, info)
 		
 		self.end_info = None
 		self.active_players = tdict()
@@ -273,6 +288,8 @@ class GameController(Named, Transactionable, Savable):
 			self.active_players = tdict({p.name:opts for p, opts in out.items()})
 			
 			self._images.clear()
+			self._advisor_images.clear()
+			self._spec_image = None
 			
 			msg = self._compose_msg(player)
 		
@@ -294,11 +311,14 @@ class GameController(Named, Transactionable, Savable):
 		
 	# must be implemented to define initial phase sequence
 	def _set_phase_stack(self, config):
-		return None
+		raise NotImplementedError
 	
 	######################
 	# Optionally Overridden
 	######################
+	
+	def _pre_setup(self, config, info=None):
+		pass
 	
 	def _load_config(self):
 		config = tdict()
@@ -314,7 +334,7 @@ class GameController(Named, Transactionable, Savable):
 			self.keys[player] = key
 		return key
 	
-	def _compose_msg(self, player):
+	def _compose_msg(self, player=None, advisor=False):
 		
 		if self.end_info is not None:
 			# game is already over
@@ -327,19 +347,29 @@ class GameController(Named, Transactionable, Savable):
 			
 			if player in self.active_players:
 				msg = self.active_players[player].pull()
-				msg['key'] = self._gen_key(player)
-			else:
+				if not advisor:
+					msg['key'] = self._gen_key(player)
+			elif player is not None:
 				msg = {'waiting_for': list(self.active_players.keys())}
+			else:
+				msg = {}
 			
 			msg['players'] = self.players.pull(player)
 			msg['table'] = self.table.pull(player)
 			msg['phase'] = self.stack[-1].name
 			
-		log = self.log.pull(player)
-		if len(log):
-			msg['log'] = log
+		msg['log'] = self.log.pull(player)
+		# log = self.log.pull(player)
+		# if len(log):
+		# 	msg['log'] = log
 		
-		self._images[player] = json.dumps(msg)
+		if player is not None:
+			if advisor:
+				self._advisor_images[player] = json.dumps(msg)
+			else:
+				self._images[player] = json.dumps(msg)
+		else:
+			self._spec_image = json.dumps(msg)
 		
 		return msg
 	
@@ -364,11 +394,22 @@ class GameController(Named, Transactionable, Savable):
 		return json.dumps(self._reset(player, seed))
 	
 	def get_status(self, player):
-		
 		if player not in self._images:
 			self._compose_msg(player)
-		
 		return self._images[player]
+	
+	def get_advisor_status(self, player):
+		if player not in self._advisor_images:
+			self._compose_msg(player, advisor=True)
+		return self._advisor_images[player]
+	
+	def get_spectator_status(self):
+		if self._spec_image is None:
+			self._compose_msg()
+		return self._spec_image
+	
+	def get_active_players(self):
+		return json.dumps(list(self.active_players.keys()))
 	
 	def get_player(self, player):
 		return json.dumps(obj_jsonify(self.players[player]))

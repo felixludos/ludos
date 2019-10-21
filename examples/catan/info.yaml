@@ -1,0 +1,9 @@
+
+name: Catan
+long_name: The Settlers of Catan
+
+num_players: [3, 4]
+player_names: [White, Red, Blue, Orange]
+
+
+

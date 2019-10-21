@@ -69,6 +69,24 @@ class MissingObjectError(Exception):
 class NoActiveGameError(Exception):
 	pass
 
+# host errors
+
+class InvalidValueError(Exception):
+	pass
+
+class UnknownUserError(Exception):
+	pass
+class UnknownPlayerError(Exception):
+	pass
+
+class UnknownGameError(Exception):
+	pass
+class UnknownInterfaceError(Exception):
+	pass
+
+class LoadConsistencyError(Exception):
+	pass
+
 # action errors
 		
 class InvalidActionError(Exception):

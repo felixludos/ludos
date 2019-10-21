@@ -12,10 +12,11 @@ from .objects import Hex, Board, DevCard
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
+
+
 class Catan(gsm.GameController):
 	
-	def __init__(self, debug=False, player_names=None,
-	             num_players=3, colors=['White', 'Red', 'Blue', 'Orange'],
+	def __init__(self, debug=False, num_players=3,
 	             shuffle_order=False):
 		
 		# create player manager
@@ -31,20 +32,15 @@ class Catan(gsm.GameController):
 		                 manager=manager,
 		                 stack=stack,
 		                 log=log,
+		                 info_path=os.path.join(MY_PATH, 'info.yaml'),
 		                 # settings
-		                 shuffle_order=shuffle_order)
+		                 shuffle_order=shuffle_order, num_players=num_players)
 		
 		# register config files
 		self.register_config('rules', os.path.join(MY_PATH, 'config/rules.yaml'))
 		self.register_config('dev', os.path.join(MY_PATH,'config/dev_cards.yaml'))
 		self.register_config('map', os.path.join(MY_PATH,'config/map.yaml'))
 		self.register_config('msgs', os.path.join(MY_PATH, 'config/msgs.yaml'))
-		
-		# register players
-		if player_names is None:
-			player_names = colors
-		for i, name, color in zip(range(num_players), player_names, colors):
-			self.register_player(name, num_res=0, num_dev=0, color=color)
 		
 		# register game object types
 		self.register_obj_type(name='board', obj_cls=Board)
@@ -64,6 +60,12 @@ class Catan(gsm.GameController):
 		self.register_phase(name='main', cls=MainPhase)
 		self.register_phase(name='trade', cls=TradePhase)
 		self.register_phase(name='robber', cls=RobberPhase)
+	
+	def _pre_setup(self, config, info=None):
+		# register players
+		names = info.player_names[:config.settings.num_players]
+		for name in names:
+			self.register_player(name, num_res=0, color=name)
 	
 	def _set_phase_stack(self, config):
 		self.stack.set_player_order(tlist(self.players))
@@ -153,3 +155,6 @@ class Catan(gsm.GameController):
 			return out
 		out.winners = winners
 		return out
+
+
+gsm.register_game('Catan', Catan, os.path.join(MY_PATH, 'info.yaml'))

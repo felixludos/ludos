@@ -13,11 +13,13 @@ log formatting:
 - structure - print to different levels (increment or reset)
 '''
 
-class GameLogger(RichWriter):
+class GameLogger(LogWriter):
 		
 	def reset(self, players):
 		self.writers = tdict({p: LogWriter(indent_level=self.indent_level, debug=self.debug)
 		                      for p in players})
+		
+		super().reset()
 		
 	def __save__(self):
 		data = super().__save__()
@@ -73,22 +75,21 @@ class GameLogger(RichWriter):
 		super().write(*args, **kwargs)
 		
 		for log in self.writers.values():
-			log.extend(self.text[0])
-			
-		self.text.clear()
+			log.extend(self.text[-1])
 	
 	def writef(self, *args, **kwargs):
 		
 		super().writef(*args, **kwargs)
 		
 		for log in self.writers.values():
-			log.extend(self.text[0])
-		
-		self.text.clear()
+			log.extend(self.text[-1])
 	
-	def pull(self, player):
-		update = self.writers[player].pull()
-		self.writers[player].text.clear()
+	def pull(self, player=None):
+		if player is None:
+			update = self.get_log()
+		else:
+			update = self.writers[player].pull()
+			self.writers[player].text.clear()
 		return update
 		
 	def get_full(self, player=None):
