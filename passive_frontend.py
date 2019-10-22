@@ -25,7 +25,7 @@ I = None
 @app.route('/step/', methods=['POST'])
 def _step():
 	if request.method == 'POST':
-		data = request.form
+		data = json.loads(request.data)
 		I.step(data)
 	else:
 		raise Exception('Unknown call - must call step with post')
@@ -43,30 +43,33 @@ def _reset():
 	return I.reset()
 
 
-
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Start a passive frontend.')
 	parser.add_argument('interface', type=str, default=None,
 	                    help='Name of registered interface')
+	parser.add_argument('--user', default=None, type=str,
+	                    help='name of user (default: <interface.name>:<port>)')
 	parser.add_argument('--port', default=5000, type=int,
-	                    help='sum the integers (default: find the max)')
+	                    help='port for this frontend')
+	parser.add_argument('--auto-find', action='store_true',
+	                    help='find open port if current doesn\'t work.')
 	args = parser.parse_args()
 	
 	port = args.port
 	is_available = False
 	
-	while not is_available:
-		is_available = True
-		try:
-			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			sock.bind(('localhost', port))
-			port = sock.getsockname()[1]
-			sock.close()
-		except OSError:
-			is_available = False
-			port += 1
+	if args.auto_find:
+		while not is_available:
+			is_available = True
+			try:
+				sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+				sock.bind(('localhost', port))
+				port = sock.getsockname()[1]
+				sock.close()
+			except OSError:
+				is_available = False
+				port += 1
 	
-	# global I
 	I = gsm.get_interface(args.interface)()
 	
 	app.run(host='localhost', port=port)

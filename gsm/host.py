@@ -3,6 +3,7 @@ import pickle
 import yaml
 import json
 from collections import OrderedDict
+from .mixins import Named
 from .signals import InvalidValueError, RegistryCollisionError, NoActiveGameError, UnknownGameError, LoadConsistencyError, UnknownInterfaceError, UnknownPlayerError, UnknownUserError
 
 _game_registry = {}
@@ -23,7 +24,7 @@ def get_interface(name):
 		raise InvalidValueError(name)
 	return _interface_registry[name]
 
-class Interface(object):
+class Interface(Named, object):
 	
 	def ping(self):
 		return 'ping reply'
@@ -35,6 +36,8 @@ class Interface(object):
 		raise NotImplementedError
 
 class Test_Interface(Interface):
+	def __init__(self):
+		super().__init__('Test')
 	
 	def ping(self):
 		print('ping')

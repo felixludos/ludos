@@ -4,7 +4,11 @@ from ..mixins import Named
 from ..host import Interface
 from .. import tlist, tdict, tset
 
-class Agent(Named, Interface):
+class Agent(Interface):
+	def __init__(self, name=None):
+		if name is None:
+			name = 'Agent'
+		super().__init__(name)
 	
 	def ping(self):
 		return 'ping reply from: {}'.format(self.name)
