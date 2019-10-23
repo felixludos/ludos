@@ -29,10 +29,10 @@ class Interface(Named, object):
 	def ping(self):
 		return 'ping reply'
 	
-	def reset(self):
-		return
+	def reset(self, user):
+		return 'Interface Reset'
 	
-	def step(self, msg):
+	def step(self, user, msg):
 		raise NotImplementedError
 
 class Test_Interface(Interface):
@@ -43,12 +43,14 @@ class Test_Interface(Interface):
 		print('ping')
 		return 'ping reply'
 	
-	def reset(self):
+	def reset(self, user):
 		print('reset')
+		return 'Interface Reset'
 		
-	def step(self, msg):
+	def step(self, user, msg):
 		print('step')
 		print(msg)
+		return 'nothing'
 		
 register_interface('test', Test_Interface)
 
@@ -70,6 +72,9 @@ class Host(object):
 		self.advisors = OrderedDict()
 		self.spectators = set()
 		
+	def get_available_games(self):
+		return list(_game_registry.keys())
+		
 	def get_game_info(self, name):
 		if name not in _game_registry:
 			raise UnknownGameError
@@ -86,10 +91,9 @@ class Host(object):
 		self.ctrl = cls(**settings)
 		
 	
-	def add_active_client(self, interface, *users):
-		assert interface.is_active(), 'Can only add active clients (passive clients can join directly)'
+	def add_passive_client(self, address, *users):
 		for user in users:
-			self.interfaces[user] = interface
+			self.interfaces[user] = address
 			self.users.add(user)
 		
 	def add_spectator(self, user, advisor=None):

@@ -21,26 +21,29 @@ CORS(app)
 
 I = None
 
-@app.route('/step', methods=['POST'])
-@app.route('/step/', methods=['POST'])
-def _step():
+def _fmt_request():
+	try:
+		return request.get_json(force=True)
+	except:
+		return json.loads(json.loads(request.data))
+
+@app.route('/step/<user>', methods=['POST'])
+def _step(user):
 	if request.method == 'POST':
-		data = json.loads(request.data)
-		I.step(data)
+		data = _fmt_request()
+		return I.step(user, data)
 	else:
 		raise Exception('Unknown call - must call step with post')
 
 
 @app.route('/ping')
-@app.route('/ping/')
 def _ping():
 	return I.ping()
 
 
-@app.route('/reset')
-@app.route('/reset/')
-def _reset():
-	return I.reset()
+@app.route('/reset/<user>')
+def _reset(user):
+	return I.reset(user)
 
 
 if __name__ == "__main__":
@@ -71,5 +74,7 @@ if __name__ == "__main__":
 				port += 1
 	
 	I = gsm.get_interface(args.interface)()
+	
+	print(I.name)
 	
 	app.run(host='localhost', port=port)

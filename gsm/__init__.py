@@ -8,6 +8,7 @@ from .mixins import Savable
 from .util import RandomGenerator
 from .host import get_interface, register_game, register_interface, Interface
 from . import viz
+from .host import Host
 from .core import *
 #GameController, GamePhase, GameLogger, GameActions, GameObject
 

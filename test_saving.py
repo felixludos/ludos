@@ -6,9 +6,11 @@ app = Flask(__name__)
 @app.route('/post', methods=['POST'])
 def post_route():
 	if request.method == 'POST':
-
-		# data = request.get_json(force=True)
-		data = json.loads(request.data)
+		
+		try:
+			data = request.get_json(force=True)
+		except:
+			data = json.loads(request.data)
 		
 		print(request.data)
 
