@@ -60,8 +60,12 @@ class Host(object):
 		
 		self.seed = seed
 		self._in_progress = False
+		self.game = None
+		self.ctrl_cls = None
 		self.ctrl = None
 		self.info = None
+		
+		self.settings = {}
 		
 		self.roles = OrderedDict()
 		self.players = OrderedDict()
@@ -80,16 +84,16 @@ class Host(object):
 			raise UnknownGameError
 		return _game_registry[name][1]
 	
-	def set_game(self, name, **settings):
+	def set_game(self, name):
 		
 		if name not in _game_registry:
 			raise UnknownGameError
 		
 		cls, info = _game_registry[name]
 		
+		self.game = name
 		self.info = info
-		self.ctrl = cls(**settings)
-		
+		self.ctrl_cls = cls
 	
 	def add_passive_client(self, address, *users):
 		for user in users:
@@ -109,16 +113,24 @@ class Host(object):
 		self.users.add(user)
 		
 	def begin_game(self):
-		if self.ctrl is None:
+		if self.ctrl_cls is None:
 			raise Exception('Must set a game first')
 		if len(self.players) not in self.info.num_players:
 			raise Exception('Invalid number of players {}, allowed for {}: {}'.format(len(self.players), self.info.name, ', '.join(self.info.num_players)))
 		
 		player = next(iter(self.players.keys()))
 		
-		msg = self.ctrl.reset(player, seed=self.seed)
-		
-		raise NotImplementedError
+		self.ctrl = self.ctrl_cls(**self.settings)
+		self.ctrl.reset(player, seed=self.seed)
+	
+	def reset(self):
+		self.ctrl = None
+		self.settings.clear()
+	
+	def set_setting(self, key, value):
+		self.settings[key] = value
+	def del_setting(self, key):
+		del self.settings[key]
 	
 	def save_game(self, path, fixed_users=False):
 		if self.ctrl is None:
