@@ -125,9 +125,9 @@ def _save(name, overwrite='false'):
 		raise Exception('No game selected')
 	
 	filename = '{}.gsm'.format(name)
-	filedir = os.path.join(SAVE_PATH, H.game)
+	filedir = os.path.join(SAVE_PATH, H.info['short_name'])
 	
-	if H.game not in os.listdir(SAVE_PATH):
+	if H.info['short_name'] not in os.listdir(SAVE_PATH):
 		create_dir(filedir)
 	
 	if overwrite != 'true' and filename in os.listdir(filedir):
@@ -142,16 +142,16 @@ def _load(name):
 		raise Exception('No game selected')
 	
 	filename = '{}.gsm'.format(name)
-	filedir = os.path.join(SAVE_PATH, H.game)
+	filedir = os.path.join(SAVE_PATH, H.info['short_name'])
 	
-	if H.game not in os.listdir(SAVE_PATH):
+	if H.info['short_name'] not in os.listdir(SAVE_PATH):
 		return
 	
 	H.load_game(os.path.join(filedir, filename))
 
 # In-game Operations
 
-@app.route('/action/<user>/<key>/<action:action>')
+@app.route('/action/<user>/<key>/<lst:action>')
 def _action(user, key, action):
 	raise NotImplementedError
 

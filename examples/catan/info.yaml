@@ -1,7 +1,7 @@
 
 name: Catan
 long_name: The Settlers of Catan
-extension: catan
+short_name: catan
 
 num_players: [3, 4]
 player_names: [White, Red, Blue, Orange]

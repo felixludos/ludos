@@ -1,7 +1,7 @@
 
 name: TicTacToe
 long_name: Tic-Tac-Toe
-extension: ttt
+short_name: ttt
 
 num_players: [2]
 player_names: [Player1, Player2]
