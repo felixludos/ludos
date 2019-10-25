@@ -14,7 +14,6 @@ from flask_cors import CORS
 from gsm.util import jsonify
 
 from examples.tictactoe.main import TicTacToe
-from app_interface import Game, ymlFile_jString, userSpecYmlPath
 
 SAVE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
 
@@ -153,7 +152,7 @@ def _load(name):
 
 @app.route('/action/<user>/<key>/<lst:action>')
 def _action(user, key, action):
-	raise NotImplementedError
+	return H.take_action(user, action, key)
 
 @app.route('/status/<user>')
 def _get_status(user):
