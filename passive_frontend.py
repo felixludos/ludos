@@ -35,6 +35,10 @@ def _step(user):
 	else:
 		raise Exception('Unknown call - must call step with post')
 
+@app.route('/player/<user>/<player>')
+def _set_player(user, player):
+	I.set_player(user, player)
+	return '{}'
 
 @app.route('/ping')
 def _ping():
@@ -52,6 +56,7 @@ if __name__ == "__main__":
 	                    help='Name of registered interface')
 	parser.add_argument('--user', default=None, type=str,
 	                    help='name of user (default: <interface.name>:<port>)')
+	
 	parser.add_argument('--port', default=5000, type=int,
 	                    help='port for this frontend')
 	parser.add_argument('--auto-find', action='store_true',

@@ -229,7 +229,7 @@ class GameController(Named, Transactionable, Savable):
 				if key is None or key != self.keys[player]:
 					raise InvalidKeyError
 				
-				action = self.active_players[player].verify(action)
+				action = self.active_players[player].verify(*action) # action is a tuple with (action-group, (action-tuple))
 			
 			# start transaction
 			self.begin()

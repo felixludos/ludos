@@ -1,58 +1,12 @@
-
+import time
 import pickle
 import yaml
 import json
 from collections import OrderedDict
-from .mixins import Named
-from .signals import InvalidValueError, RegistryCollisionError, NoActiveGameError, UnknownGameError, LoadConsistencyError, UnknownInterfaceError, UnknownPlayerError, UnknownUserError
-
-_game_registry = {}
-def register_game(name, cls, path=None):
-	if name in _game_registry:
-		raise RegistryCollisionError(name)
-	info = path if path is None else yaml.load(open(path, 'r'))
-	_game_registry[name] = cls, info
-
-
-_interface_registry = {}
-def register_interface(name, cls):
-	if name in _interface_registry:
-		raise RegistryCollisionError(name)
-	_interface_registry[name] = cls
-def get_interface(name):
-	if name not in _interface_registry:
-		raise InvalidValueError(name)
-	return _interface_registry[name]
-
-class Interface(Named, object):
-	
-	def ping(self):
-		return 'ping reply'
-	
-	def reset(self, user):
-		return 'Interface Reset'
-	
-	def step(self, user, msg):
-		raise NotImplementedError
-
-class Test_Interface(Interface):
-	def __init__(self):
-		super().__init__('Test')
-	
-	def ping(self):
-		print('ping')
-		return 'ping reply'
-	
-	def reset(self, user):
-		print('reset')
-		return 'Interface Reset'
-		
-	def step(self, user, msg):
-		print('step')
-		print(msg)
-		return 'nothing'
-		
-register_interface('test', Test_Interface)
+from ..mixins import Named
+from ..signals import InvalidValueError, RegistryCollisionError, NoActiveGameError, UnknownGameError, LoadConsistencyError, UnknownInterfaceError, UnknownPlayerError, UnknownUserError
+from .registry import _game_registry
+from .transmit import send_msg
 
 class Host(object):
 	def __init__(self, seed=None):
@@ -111,6 +65,8 @@ class Host(object):
 		self.players[player] = user
 		self.roles[user] = player
 		self.users.add(user)
+		if user in self.interfaces:
+			self.interfaces[user].set_player()
 		
 	def begin_game(self):
 		if self.ctrl_cls is None:
@@ -155,17 +111,17 @@ class Host(object):
 				
 		self.ctrl.load(data)
 	
-	def take_action(self, user, action, key):
+	def take_action(self, user, group, action, key):
 		if user not in self.roles:
 			raise UnknownUserError
 		player = self.roles[user]
-		msg = self.ctrl.step(player, action, key)
+		msg = self.ctrl.step(player, (group, action), key)
 		
-		if self._active_backend_step():
+		if self._passive_frontend_step():
 			msg = self.ctrl.get_status(player)
 		return msg
 	
-	def _active_backend_step(self):
+	def _passive_frontend_step(self):
 		
 		all_passive = False
 		recheck = False
@@ -177,11 +133,26 @@ class Host(object):
 				if user in self.interfaces:
 					all_passive = False
 					recheck = True
-					interface = self.interfaces[user]
-					interface(self.ctrl.get_status(player))
+					address = self.interfaces[user]
+					msg = send_msg(address, 'step', data=self.ctrl.get_status(player))
+					if 'action' in msg and 'key' in msg: # TODO: enable spectator/advisor handling
+						player = self.roles[user]
+						self.ctrl.step(player, action=msg['action'], key=msg['key'])
+					elif 'error' in msg:
+						print('Error: {}'.format(msg))
+					else:
+						all_passive = True
 					break
 		
 		return recheck
+	
+	def _ping_interfaces(self):
+		pings = {}
+		for user, addr in self.interfaces.items():
+			start = time.time()
+			send_msg(addr, 'ping')
+			pings[user] = time.time() - start
+		return json.dumps(pings)
 	
 	def get_status(self, user):
 		if self.ctrl is None:

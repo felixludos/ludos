@@ -77,7 +77,7 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 	def __init__(self, status=None):
 		super().__init__()
 		self._current = None
-		self._options = tlist()
+		self._options = tdict()
 		self._name = None
 		self._desc = None
 		
@@ -92,7 +92,7 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 	def in_transaction(self):
 		return self._current is not None
 	
-	def begin(self, name=None, desc=None):
+	def begin(self, name, desc=None):
 		if self.in_transaction():
 			return
 		
@@ -108,9 +108,7 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 			opt = tdict(actions=process_actions(self._current))
 			if self._desc is not None:
 				opt.desc = self._desc
-			if self._name is not None:
-				opt.name = self._name
-			self._options.append(opt)
+			self._options[self._name] = opt
 		
 		self._name = None
 		self._desc = None
@@ -142,7 +140,7 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 			desc = write(desc)
 		self._desc = desc
 		
-	def __call__(self, name=None, desc=None):
+	def __call__(self, name, desc=None):
 		self.set_name(name)
 		self.set_desc(desc)
 		return self
@@ -176,22 +174,21 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 		self.info = unpack(data['info'])
 		self._name = unpack(data['_name'])
 	
-	def verify(self, action): # action should be a tuple
+	def verify(self, name, action): # action should be a tuple
 		
-		for option in self._options:
-			
-			actionset = decode_action_set(option.actions)
-			
-			for tpl in actionset:
-				if len(tpl) == len(action):
-					try:
-						out = ActionTuple(elm.evaluate(a) for elm, a in zip(tpl, action))
-					except ActionMismatch:
-						pass # action didnt match
-					else:
-						if 'name' in option:
-							out.obj_type = option.name
-						return out
+		option = self._options[name]
+		actionset = decode_action_set(option.actions)
+		
+		for tpl in actionset:
+			if len(tpl) == len(action):
+				try:
+					out = ActionTuple(elm.evaluate(a) for elm, a in zip(tpl, action))
+				except ActionMismatch:
+					pass # action didnt match
+				else:
+					if 'name' in option:
+						out.obj_type = option.name
+					return out
 					
 		raise InvalidActionError(action)
 	
@@ -200,7 +197,8 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 	
 	def __add__(self, other):
 		new = GameActions()
-		new._options = self._options + other._options
+		new._options.update(self._options)
+		new._options.update(other._options)
 		new.status = self.status if self.status is not None else other.status
 		return new
 		
@@ -209,14 +207,12 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 	
 	def pull(self): # returns jsonified obj
 		
-		options = []
-		for opt in self._options:
-			options.append({})
-			options[-1]['actions'] = format_actions(opt.actions)
+		options = {}
+		for name, group in self._options.items():
+			opt = {'actions': format_actions(group.actions)}
 			if 'desc' in opt:
-				options[-1]['desc'] = opt.desc
-			if 'name' in opt:
-				options[-1]['name'] = opt.name
+				opt['desc'] = group.desc
+			options[name] = opt
 		
 		out = {
 			'options': options,

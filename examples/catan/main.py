@@ -157,4 +157,4 @@ class Catan(gsm.GameController):
 		return out
 
 
-gsm.register_game('Catan', Catan, os.path.join(MY_PATH, 'info.yaml'))
+gsm.register_game(Catan, os.path.join(MY_PATH, 'info.yaml'))

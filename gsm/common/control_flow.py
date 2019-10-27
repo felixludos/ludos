@@ -1,6 +1,6 @@
 
 from .. import tdict, tlist, tset
-from .. import GamePhase, GameStack
+from ..core import GameStack, GamePhase
 
 
 class TurnPhaseStack(GameStack): # tracks turn counter, inc when creating a TurnPhase

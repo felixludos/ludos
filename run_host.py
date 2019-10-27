@@ -7,40 +7,18 @@ import time
 from collections import OrderedDict, namedtuple
 from itertools import chain, product
 from string import Formatter
-import gsm
 import numpy as np
 from flask import Flask, render_template, request, send_from_directory
 from flask_cors import CORS
-from gsm.util import jsonify
 
-from examples.tictactoe.main import TicTacToe
+import examples
+import gsm
+from gsm import jsonify
+from gsm.io.transmit import LstConverter, create_dir
+
 
 SAVE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
 
-from werkzeug.routing import BaseConverter
-
-class LstConverter(BaseConverter):
-
-	def to_python(self, value):
-		out = []
-		for v in value.split('+'):
-			try:
-				out.append(int(v))
-			except:
-				out.append(v)
-		return tuple(out)
-
-	def to_url(self, values):
-		return '+'.join(BaseConverter.to_url(value)
-						for value in values)
-
-def create_dir(path):
-	try:
-		os.mkdir(path)
-	except OSError as e:
-		raise e
-
-#endregion
 
 null = http.HTTPStatus.NO_CONTENT
 
@@ -73,48 +51,52 @@ def _get_available_games():
 @app.route('/set_game/<name>')
 def _set_game(name):
 	H.set_game(name)
-	return null
+	return 'Game set to: {}'.format(name)
 
 @app.route('/setting/<key>/<value>')
 def _setting(key, value):
 	H.set_setting(key, value)
+	return 'Set {}: {}'.format(key, value)
 	
 @app.route('/del_setting/<key>')
 def _del_setting(key):
 	H.del_setting(key)
+	return 'Del {}'.format(key)
 
 # Managing clients
 
 @app.route('/add_passive_client/<lst:users>/<path:address>')
 def _add_passive_client(users, address):
 	H.add_passive_client(address, *users)
-	return null
+	return 'Using {} for: {}'.format(address, ', '.join(users))
 
-
+@app.route('/ping_clients')
+def _ping_clients():
+	return H._ping_interfaces()
 
 # Adding Players, Spectators, and Advisors
 
-@app.route('/add_player/<user>/<player>')
+@app.route('/add/player/<user>/<player>')
 def _add_player(user, player):
 	H.add_player(user, player)
-	return null
+	return '{}'
 
-@app.route('/add_spectator/<user>')
+@app.route('/add/spectator/<user>')
 def _add_spectator(user):
 	H.add_spectator(user)
-	return null
+	return '{}'
 
-@app.route('/add_advisor/<user>/<player>')
+@app.route('/add/advisor/<user>/<player>')
 def _add_advisor(user, player):
 	H.add_spectator(user, player)
-	return null
+	return '{}'
 
 # Game Management
 
 @app.route('/begin')
 def _begin_game():
 	H.begin_game()
-	return null
+	return '{}'
 
 @app.route('/save/<name>')
 @app.route('/save/<name>/<overwrite>')
@@ -134,6 +116,8 @@ def _save(name, overwrite='false'):
 	
 	H.save_game(os.path.join(filedir, filename))
 	
+	return 'game {} saved'.format(name)
+	
 @app.route('/load/<name>')
 def _load(name):
 	
@@ -147,12 +131,14 @@ def _load(name):
 		return
 	
 	H.load_game(os.path.join(filedir, filename))
+	
+	return 'game {} loaded'.format(name)
 
 # In-game Operations
 
-@app.route('/action/<user>/<key>/<lst:action>')
-def _action(user, key, action):
-	return H.take_action(user, action, key)
+@app.route('/action/<user>/<key>/<group>/<lst:action>')
+def _action(user, key, group, action):
+	return H.take_action(user, group, action, key)
 
 @app.route('/status/<user>')
 def _get_status(user):
