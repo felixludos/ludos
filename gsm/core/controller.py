@@ -22,7 +22,7 @@ class GameController(Named, Transactionable, Savable):
 		new = super().__new__(cls)
 		
 		# meta values (neither for dev nor user) (not including soft registries - they dont change)
-		new._tmembers = {'state', 'log', 'table', 'stack', 'players', 'end_info',
+		new._tmembers = {'state', 'log', 'table', 'stack', 'players', 'end_info', '_advice',
 		                 'keys', 'RNG', '_key_rng', '_images', '_advisor_images', 'config'}
 		return new
 	
@@ -59,6 +59,7 @@ class GameController(Named, Transactionable, Savable):
 		self.keys = tdict() # a one time permission to call step() (with a valid action)
 		self.RNG = RandomGenerator()
 		self._images = tdict()
+		self._advice = tdict()
 		self._advisor_images = tdict()
 		self._spec_image = None
 		
@@ -210,7 +211,7 @@ class GameController(Named, Transactionable, Savable):
 		
 		return self._step(player)
 	
-	def _step(self, player, action=None, key=None):  # returns python objs (but json readable)
+	def _step(self, player, group=None, action=None, key=None):  # returns python objs (but json readable)
 		
 		try:
 			if player in self.players:
@@ -231,7 +232,7 @@ class GameController(Named, Transactionable, Savable):
 				if key is None or key != self.keys[player]:
 					raise InvalidKeyError
 				
-				action = self.active_players[player].verify(*action) # action is a tuple with (action-group, (action-tuple))
+				action = self.active_players[player].verify(group, action) # action is a tuple with (action-group, (action-tuple))
 			
 			# start transaction
 			self.begin()
@@ -291,6 +292,7 @@ class GameController(Named, Transactionable, Savable):
 			
 			self._images.clear()
 			self._advisor_images.clear()
+			self._advice.clear()
 			self._spec_image = None
 			
 			msg = self._compose_msg(player)
@@ -389,8 +391,11 @@ class GameController(Named, Transactionable, Savable):
 	# User functions (return json str)
 	######################
 	
-	def step(self, player, action=None, key=None):  # returns json bytes (str)
-		return json.dumps(self._step(player=player, action=action, key=key))
+	def step(self, player, group=None, action=None, key=None):  # returns json bytes (str)
+		return json.dumps(self._step(player=player, group=group, action=action, key=key))
+	
+	def give_advice(self, player, action):
+		raise NotImplementedError # TODO
 	
 	def reset(self, player, seed=None):
 		return json.dumps(self._reset(player, seed))

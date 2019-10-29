@@ -8,6 +8,7 @@ from .mixins import Jsonable
 from .core.actions import decode_action_set
 from .core import GameObject, GamePlayer
 from .util import unjsonify, obj_unjsonify
+from .io import send_msg
 
 def _format(obj):
 	return unjsonify(json.loads(obj))
@@ -78,6 +79,89 @@ def _package_action(action):
 			raise Exception('cant handle: {}'.format(repr(obj)))
 
 	return tuple(final)
+
+class Ipython_Runner(object):
+	def __init__(self, addr):
+		self.addr = addr
+		
+		self.msg = None
+		self.key = None
+		self.user = None
+		
+	def available_games(self):
+		return send_msg(self.addr, 'game/available')
+	
+	def select_game(self, name):
+		return send_msg(self.addr, 'game/select', name)
+	
+	def game_info(self):
+		return send_msg(self.addr, 'game/info')
+	
+	def game_players(self):
+		return send_msg(self.addr, 'game/players')
+	
+	def add_client(self, user, port):
+		return send_msg(self.addr, 'add/client', user, data=r'http://localhost:{}/'.format(port))
+	
+	def add_player(self, user, player):
+		return send_msg(self.addr, 'add/player', user, player)
+	
+	def set_user(self, user=None):
+		if user is None:
+			assert self.msg is not None
+			if 'waiting_for' in self.msg:
+				pass
+	
+	def begin(self):
+		return send_msg(self.addr, 'begin')
+	
+	def status(self, user):
+		self.msg = send_msg(self.addr, 'status', user)
+		
+		self.key = self.msg.key if 'key' in self.msg else None
+		return self.msg
+	
+	def action(self, action, user=None):
+		
+		if user is None:
+			user = self.user
+			assert user is not None
+			
+		
+		
+		self._process_msg()
+	
+	def _process_msg(self):
+		
+		if 'error' in self.msg:
+			print('*** ERROR: {} ***'.format(self.msg.error.type))
+			print(self.msg.error.msg)
+			print('****************************')
+		
+		if 'end' in self.msg:
+			self.in_progress = False
+		
+		if 'options' in self.msg:
+			self.actions = tlist()
+			
+			self.in_progress = True
+			
+			for opt in self.msg.options:
+				self.actions.extend(decode_action_set(opt.actions))
+		
+		if 'key' in self.msg:
+			self.key = self.msg.key
+		
+		if 'table' in self.msg:
+			self.table = self.msg.table
+		
+		if 'players' in self.msg:
+			self.players = self.msg.players
+		
+		if 'phase' in self.msg:
+			self.phase = self.msg.phase
+	
+
 
 
 class Ipython_Interface(object):

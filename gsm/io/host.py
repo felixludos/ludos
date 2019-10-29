@@ -126,7 +126,7 @@ class Host(object):
 		if user not in self.roles:
 			raise UnknownUserError
 		player = self.roles[user]
-		msg = self.ctrl.step(player, (group, action), key)
+		msg = self.ctrl.step(player, group, action, key)
 		
 		if self._passive_frontend_step():
 			msg = self.ctrl.get_status(player)
