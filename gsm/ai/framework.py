@@ -5,6 +5,7 @@ from ..mixins import Named
 from .. import Interface, containerify, RandomGenerator
 from ..viz import _package_action
 from ..core.actions import decode_action_set
+from ..io import get_ai, register_interface, register_ai
 
 class Agent_Interface(Interface):
 	def __init__(self, *users, agent_type=None, host_addr=None):
@@ -14,7 +15,7 @@ class Agent_Interface(Interface):
 	
 	def set_player(self, user, player):
 		super().set_player(user, player)
-		self.agents[user] = self.agent_type
+		self.agents[user] = get_ai(self.agent_type)(player)
 	
 	def ping(self):
 		return 'ping reply from: {}'.format(', '.join(self.users))
@@ -55,6 +56,7 @@ class Agent_Interface(Interface):
 		if self.agents[user] is not None:
 			self.agents[user].reset()
 	
+register_interface('agent', Agent_Interface)
 
 class Agent(Named, tdict):
 	# def __init__(self, name): # player name
@@ -81,12 +83,10 @@ class RandomAgent(Agent):
 			self.gen.seed(seed)
 	
 	def decide(self, options):
-		
 		actions = []
-		
 		for name, opts in options.items():
-			actions.extend((name, _package_action(o) for o in opts))
+			actions.extend((name, _package_action(o)) for o in opts)
 			
 		return self.gen.choice(actions)
 
-
+register_ai('random', RandomAgent)

@@ -18,3 +18,13 @@ def get_interface(name):
 		raise InvalidValueError(name)
 	return _interface_registry[name]
 
+_ai_registry = {}
+def register_ai(name, cls):
+	if name in _ai_registry:
+		raise RegistryCollisionError(name)
+	_ai_registry[name] = cls
+def get_ai(name):
+	if name not in _ai_registry:
+		raise InvalidValueError(name)
+	return _ai_registry[name]
+

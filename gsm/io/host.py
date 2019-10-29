@@ -33,7 +33,16 @@ class Host(object):
 	def get_available_games(self):
 		return list(_game_registry.keys())
 		
-	def get_game_info(self, name):
+	def get_available_players(self):
+		all_players = list(self.get_game_info()['player_names'])
+		for p in self.players:
+			if p in all_players:
+				all_players.remove(p)
+		return all_players
+		
+	def get_game_info(self, name=None):
+		if name is None:
+			name = self.game
 		if name not in _game_registry:
 			raise UnknownGameError
 		return _game_registry[name][1]
@@ -66,18 +75,20 @@ class Host(object):
 		self.roles[user] = player
 		self.users.add(user)
 		if user in self.interfaces:
-			self.interfaces[user].set_player()
+			send_msg(self.interfaces[user], 'player', user, player)
 		
 	def begin_game(self):
 		if self.ctrl_cls is None:
 			raise Exception('Must set a game first')
-		if len(self.players) not in self.info.num_players:
+		if len(self.players) not in self.info['num_players']:
 			raise Exception('Invalid number of players {}, allowed for {}: {}'.format(len(self.players), self.info.name, ', '.join(self.info.num_players)))
 		
 		player = next(iter(self.players.keys()))
 		
 		self.ctrl = self.ctrl_cls(**self.settings)
 		self.ctrl.reset(player, seed=self.seed)
+		
+		self._passive_frontend_step()
 	
 	def reset(self):
 		self.ctrl = None

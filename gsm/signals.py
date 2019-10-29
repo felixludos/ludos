@@ -72,7 +72,8 @@ class NoActiveGameError(Exception):
 # host errors
 
 class InvalidValueError(Exception):
-	pass
+	def __init__(self, name):
+		super().__init__('Unknown value: {}'.format(name))
 
 class UnknownUserError(Exception):
 	pass

@@ -22,7 +22,7 @@ class GameController(Named, Transactionable, Savable):
 		new = super().__new__(cls)
 		
 		# meta values (neither for dev nor user) (not including soft registries - they dont change)
-		new._tmembers = {'state', 'log', 'table', 'stack', 'players', 'active_players', 'end_info',
+		new._tmembers = {'state', 'log', 'table', 'stack', 'players', 'end_info',
 		                 'keys', 'RNG', '_key_rng', '_images', '_advisor_images', 'config'}
 		return new
 	
@@ -125,6 +125,7 @@ class GameController(Named, Transactionable, Savable):
 		data['_pre_setup_complete'] = pack(self._pre_setup_complete)
 		data['_spec_image'] = pack(self._spec_image)
 		data['debug'] = pack(self.DEBUG)
+		data['active_players'] = pack(self.active_players)
 		
 		return data
 	
@@ -144,6 +145,7 @@ class GameController(Named, Transactionable, Savable):
 		self._pre_setup_complete = unpack(data['_pre_setup_complete'])
 		self._spec_image = unpack(data['_spec_image'])
 		self.DEBUG = unpack(data['debug'])
+		self.active_players = unpack(data['active_players'])
 	
 	
 	

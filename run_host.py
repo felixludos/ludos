@@ -36,41 +36,50 @@ def _fmt_output(data):
 def _hard_restart():
 	global H
 	H = gsm.Host()
-	return null
+	return '{}'
 
 # Game Info and Selection
 
-@app.route('/get_game_info/<name>')
-def _get_game_info(name):
+@app.route('/game/info')
+@app.route('/game/info/<name>')
+def _get_game_info(name=None):
 	return _fmt_output(H.get_game_info(name))
 
-@app.route('/get_available_games')
+@app.route('/game/available')
 def _get_available_games():
 	return _fmt_output(H.get_available_games())
 
-@app.route('/set_game/<name>')
+@app.route('/game/select/<name>')
 def _set_game(name):
 	H.set_game(name)
 	return 'Game set to: {}'.format(name)
+
+@app.route('/game/players')
+def _get_available_players():
+	return _fmt_output(H.get_available_players())
 
 @app.route('/setting/<key>/<value>')
 def _setting(key, value):
 	H.set_setting(key, value)
 	return 'Set {}: {}'.format(key, value)
 	
-@app.route('/del_setting/<key>')
+@app.route('/del/setting/<key>')
 def _del_setting(key):
 	H.del_setting(key)
 	return 'Del {}'.format(key)
 
 # Managing clients
 
-@app.route('/add_passive_client/<lst:users>/<path:address>')
-def _add_passive_client(users, address):
+@app.route('/add/client/<lst:users>', methods=['POST'])
+def _add_passive_client(users):
+	
+	address = request.get_json(force=True)#['address']
+	
+	print(users, address)
 	H.add_passive_client(address, *users)
 	return 'Using {} for: {}'.format(address, ', '.join(users))
 
-@app.route('/ping_clients')
+@app.route('/ping/clients')
 def _ping_clients():
 	return H._ping_interfaces()
 
@@ -79,24 +88,24 @@ def _ping_clients():
 @app.route('/add/player/<user>/<player>')
 def _add_player(user, player):
 	H.add_player(user, player)
-	return '{}'
+	return '{} is now playing {}'.format(user, player)
 
 @app.route('/add/spectator/<user>')
 def _add_spectator(user):
 	H.add_spectator(user)
-	return '{}'
+	return '{} has joined as a spectator'.format(user)
 
 @app.route('/add/advisor/<user>/<player>')
 def _add_advisor(user, player):
 	H.add_spectator(user, player)
-	return '{}'
+	return '{} has joined as an advisor for {}'.format(user, player)
 
 # Game Management
 
 @app.route('/begin')
 def _begin_game():
 	H.begin_game()
-	return '{}'
+	return '{} has started'.format(H.info['name'])
 
 @app.route('/save/<name>')
 @app.route('/save/<name>/<overwrite>')

@@ -54,6 +54,9 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Start a passive frontend.')
 	parser.add_argument('interface', type=str, default=None,
 	                    help='Name of registered interface')
+
+	parser.add_argument('--settings', type=str, default='{}',
+	                    help='optional args for interface, specified as a json str (of a dict with kwargs)')
 	parser.add_argument('--user', default=None, type=str,
 	                    help='name of user (default: <interface.name>:<port>)')
 	
@@ -61,6 +64,7 @@ if __name__ == "__main__":
 	                    help='port for this frontend')
 	parser.add_argument('--auto-find', action='store_true',
 	                    help='find open port if current doesn\'t work.')
+	# args = parser.parse_args(['agent', '--settings', '{"agent_type":"random"}', '--auto-find'])
 	args = parser.parse_args()
 	
 	port = args.port
@@ -78,8 +82,8 @@ if __name__ == "__main__":
 				is_available = False
 				port += 1
 	
-	I = gsm.get_interface(args.interface)()
+	I = gsm.get_interface(args.interface)(**json.loads(args.settings))
 	
-	print(I.name)
+	print(I.get_type())
 	
 	app.run(host='localhost', port=port)

@@ -10,10 +10,11 @@ class LstConverter(BaseConverter):
 	def to_python(value):
 		out = []
 		for v in value.split('+'):
-			try:
-				out.append(int(v))
-			except:
-				out.append(v)
+			out.append(v)
+			# try:
+			# 	out.append(int(v))
+			# except:
+			# 	out.append(v)
 		return tuple(out)
 
 	@staticmethod
@@ -48,6 +49,9 @@ def send_msg(addr, *command, data=None):
 	
 	out = send_fn(route, **kwargs)
 	
-	return out.json()
+	try:
+		return out.json()
+	except Exception:
+		return out.text
 
 

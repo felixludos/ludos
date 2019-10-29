@@ -96,6 +96,8 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 		if self.in_transaction():
 			return
 		
+		# assert name is not None, 'must specify a name'
+		
 		self.set_name(name)
 		self.set_desc(desc)
 		self._current = tset()
