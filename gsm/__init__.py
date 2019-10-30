@@ -1,10 +1,11 @@
 from humpack import tdict, tlist, tset, tdeque, tstack, containerify, Array
+from humpack import Savable, Transactionable
 from .util import jsonify, unjsonify
 from .signals import PhaseComplete, SwitchPhase, GameOver
 from .writing import write, writef, RichText
 from .util import RandomGenerator
 from .io import Host, Interface, Test_Interface, register_game, register_interface, get_interface, send_msg
-# from . import viz
+from . import viz
 from . import common
 from . import ai
 from . import io

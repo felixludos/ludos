@@ -36,7 +36,7 @@ def _fmt_output(data):
 def _hard_restart():
 	global H
 	H = gsm.Host()
-	return '{}'
+	return 'Host restarted'
 
 # Game Info and Selection
 
@@ -153,6 +153,9 @@ def _action(user, key, group, action):
 def _get_status(user):
 	return H.get_status(user)
 
+@app.route('/log/<user>')
+def _get_log(user):
+	return H.get_log(user)
 
 
 if __name__ == "__main__":

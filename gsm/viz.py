@@ -3,11 +3,11 @@ import json
 import random
 import pickle
 from itertools import chain
-from humpack import tset, tdict, tlist
+from humpack import tset, tdict, tlist, tdeque
 from .mixins import Jsonable
 from .core.actions import decode_action_set
 from .core import GameObject, GamePlayer
-from .util import unjsonify, obj_unjsonify
+from .util import unjsonify, obj_unjsonify, RandomGenerator
 from .io import send_msg
 
 def _format(obj):
@@ -81,12 +81,25 @@ def _package_action(action):
 	return tuple(final)
 
 class Ipython_Runner(object):
-	def __init__(self, addr):
+	def __init__(self, addr, *users, seed=0, full_log=False):
 		self.addr = addr
+		self.full_log = full_log
 		
+		self.rng = RandomGenerator()
+		if seed is None:
+			seed = random.getrandbits(64)
+		self.rng.seed(seed)
+		self.seed = seed
+		
+		self.in_progress = False
 		self.msg = None
+		self.log = None
 		self.key = None
-		self.user = None
+		self.actions = None
+		self.users = tdeque(users)
+		
+	def restart(self):
+		return send_msg(self.addr, 'restart')
 		
 	def available_games(self):
 		return send_msg(self.addr, 'game/available')
@@ -103,33 +116,120 @@ class Ipython_Runner(object):
 	def add_client(self, user, port):
 		return send_msg(self.addr, 'add/client', user, data=r'http://localhost:{}/'.format(port))
 	
-	def add_player(self, user, player):
+	def add_player(self, player, user=None):
+		if user is None:
+			user = self.users[0]
 		return send_msg(self.addr, 'add/player', user, player)
 	
 	def set_user(self, user=None):
-		if user is None:
-			assert self.msg is not None
-			if 'waiting_for' in self.msg:
+		if user is not None:
+			try:
+				self.users.remove(user)
+			except:
 				pass
+			self.users.appendleft(user)
+		else:
+			self.users.append(self.users.popleft())
+		print('set user: {}'.format(self.users[0]))
 	
 	def begin(self):
+		self.in_progress = True
 		return send_msg(self.addr, 'begin')
 	
-	def status(self, user):
-		self.msg = send_msg(self.addr, 'status', user)
-		
-		self.key = self.msg.key if 'key' in self.msg else None
-		return self.msg
-	
-	def action(self, action, user=None):
-		
+	def status(self, user=None):
 		if user is None:
-			user = self.user
-			assert user is not None
-			
-		
+			user = self.users[0]
+		self.msg = unjsonify(send_msg(self.addr, 'status', user))
+		self.key = self.msg.key if 'key' in self.msg else None
 		
 		self._process_msg()
+		
+		return self.msg
+	
+	def step(self, idx=None, user=None):
+		if user is None:
+			user = self.users[0]
+		
+		group, action = self._select_action() if idx is None else self.actions[idx]
+		
+		action = _package_action(action)
+		
+		assert self.key is not None
+		
+		self.msg = unjsonify(send_msg(self.addr, 'action', user, self.key, group, action))
+		
+		self.actions = None
+		self.key = None
+		self._process_msg()
+	
+	def get_log(self, user=None):
+		if user is None:
+			user = self.users[0]
+		self.log = send_msg(self.addr, 'log', user)
+		return self.log
+	
+	def view(self):
+		if self.msg is None:
+			print('No message found')
+			return
+		
+		if 'info' in self.msg:
+			print('Received info: {}'.format(list(self.msg.info.keys())))
+		
+		if 'key' in self.msg:
+			print('Received key: {}'.format(self.msg.key))
+		
+		if 'table' in self.msg:
+			print('Received table: {} entries'.format(len(self.msg.table)))
+		
+		if self.full_log or 'log' in self.msg:
+			print('-------------')
+			print('Log')
+			print('-------------')
+			if self.full_log:
+				print(_format_log(self.get_log()))  # TODO: make the same player is called
+			elif 'log' in self.msg:
+				print(_format_log(self.msg.log))
+		
+		if 'error' in self.msg:
+			print('*** ERROR: {} ***'.format(self.msg.error.type))
+			print(self.msg.error.msg)
+			print('****************************')
+		
+		if 'phase' in self.msg:
+			print('Phase: {}'.format(self.msg.phase))
+		
+		if 'waiting_for' in self.msg:
+			print('Waiting for: {}'.format(', '.join(self.msg.waiting_for)))
+		elif 'end' in self.msg:
+			print('--- Game Ended ---')
+		else:
+			
+			if 'status' in self.msg:
+				status = _format_line(self.msg.status['line'])
+				print('+' + '-' * (len(status) + 2) + '+')
+				print('| {} |'.format(status))
+				print('+' + '-' * (len(status) + 2) + '+')
+			
+			# print('Status: {}'.format(_format_line(self.msg.status)))
+			else:
+				print('No status found')
+			
+			if 'options' in self.msg:
+				idx = 0
+				
+				for name, opt in self.msg.options.items():
+					
+					if 'desc' in opt:
+						print('-- {} : {} --'.format(name, _format_line(opt.desc['line'])))
+					
+					for tpl in decode_action_set(opt.actions):
+						print('{:>4} - {}'.format(idx, _format_action(tpl)))
+						idx += 1
+	
+	def _select_action(self):
+		idx = self.rng.randint(0,len(self.actions)-1)
+		return self.actions[idx]
 	
 	def _process_msg(self):
 		
@@ -143,25 +243,12 @@ class Ipython_Runner(object):
 		
 		if 'options' in self.msg:
 			self.actions = tlist()
-			
-			self.in_progress = True
-			
-			for opt in self.msg.options:
-				self.actions.extend(decode_action_set(opt.actions))
+			for name, opts in self.msg.options.items():
+				self.actions.extend((name, action) for action in decode_action_set(opts.actions))
 		
 		if 'key' in self.msg:
 			self.key = self.msg.key
-		
-		if 'table' in self.msg:
-			self.table = self.msg.table
-		
-		if 'players' in self.msg:
-			self.players = self.msg.players
-		
-		if 'phase' in self.msg:
-			self.phase = self.msg.phase
 	
-
 
 
 class Ipython_Interface(object):

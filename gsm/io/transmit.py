@@ -19,8 +19,7 @@ class LstConverter(BaseConverter):
 
 	@staticmethod
 	def to_url(values):
-		return '+'.join(BaseConverter.to_url(value)
-						for value in values)
+		return '+'.join(str(value) for value in values)
 
 def create_dir(path):
 	try:
