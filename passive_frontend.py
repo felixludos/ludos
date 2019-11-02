@@ -28,33 +28,31 @@ def _fmt_request():
 		return json.loads(json.loads(request.data))
 
 @app.route('/step/<user>', methods=['POST'])
-def _step(user):
-	if request.method == 'POST':
+def step(user, data=None):
+	if data is None:
 		data = _fmt_request()
-		return I.step(user, data)
-	else:
-		raise Exception('Unknown call - must call step with post')
+	return I.step(user, data)
 
 @app.route('/player/<user>/<player>')
-def _set_player(user, player):
+def set_player(user, player):
 	I.set_player(user, player)
 	return '{}'
 
 @app.route('/ping')
-def _ping():
+def ping():
 	return I.ping()
 
 
 @app.route('/reset/<user>')
-def _reset(user):
+def reset(user):
 	return I.reset(user)
 
 
-if __name__ == "__main__":
+def main(argv=None):
 	parser = argparse.ArgumentParser(description='Start a passive frontend.')
 	parser.add_argument('interface', type=str, default=None,
 	                    help='Name of registered interface')
-
+	
 	parser.add_argument('--settings', type=str, default='{}',
 	                    help='optional args for interface, specified as a json str (of a dict with kwargs)')
 	parser.add_argument('--user', default=None, type=str,
@@ -65,7 +63,7 @@ if __name__ == "__main__":
 	parser.add_argument('--auto-find', action='store_true',
 	                    help='find open port if current doesn\'t work.')
 	# args = parser.parse_args(['agent', '--settings', '{"agent_type":"random"}', '--auto-find'])
-	args = parser.parse_args()
+	args = parser.parse_args(argv)
 	
 	port = args.port
 	is_available = False
@@ -82,8 +80,12 @@ if __name__ == "__main__":
 				is_available = False
 				port += 1
 	
+	global I
 	I = gsm.get_interface(args.interface)(**json.loads(args.settings))
 	
 	print(I.get_type())
 	
 	app.run(host='localhost', port=port)
+
+if __name__ == "__main__":
+	main()

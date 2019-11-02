@@ -103,8 +103,9 @@ def _add_advisor(user, player):
 # Game Management
 
 @app.route('/begin')
-def _begin_game():
-	H.begin_game()
+@app.route('/begin/<seed>')
+def _begin_game(seed=None):
+	H.begin_game(seed)
 	return '{} has started'.format(H.info['name'])
 
 @app.route('/save/<name>')

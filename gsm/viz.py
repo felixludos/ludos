@@ -132,9 +132,11 @@ class Ipython_Runner(object):
 			self.users.append(self.users.popleft())
 		print('set user: {}'.format(self.users[0]))
 	
-	def begin(self):
+	def begin(self, seed=None):
+		if seed is None:
+			seed = self.seed
 		self.in_progress = True
-		return send_msg(self.addr, 'begin')
+		return send_msg(self.addr, 'begin', seed)
 	
 	def status(self, user=None):
 		if user is None:

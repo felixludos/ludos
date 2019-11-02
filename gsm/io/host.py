@@ -9,10 +9,9 @@ from .registry import _game_registry
 from .transmit import send_msg
 
 class Host(object):
-	def __init__(self, seed=None):
+	def __init__(self):
 		super().__init__()
 		
-		self.seed = seed
 		self._in_progress = False
 		self.game = None
 		self.ctrl_cls = None
@@ -77,7 +76,7 @@ class Host(object):
 		if user in self.interfaces:
 			send_msg(self.interfaces[user], 'player', user, player)
 		
-	def begin_game(self):
+	def begin_game(self, seed=None):
 		if self.ctrl_cls is None:
 			raise Exception('Must set a game first')
 		if len(self.players) not in self.info['num_players']:
@@ -86,7 +85,7 @@ class Host(object):
 		player = next(iter(self.players.keys()))
 		
 		self.ctrl = self.ctrl_cls(**self.settings)
-		self.ctrl.reset(player, seed=self.seed)
+		self.ctrl.reset(player, seed=seed)
 		
 		self._passive_frontend_step()
 	

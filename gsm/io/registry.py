@@ -28,3 +28,12 @@ def get_ai(name):
 		raise InvalidValueError(name)
 	return _ai_registry[name]
 
+_trans_registry = {}
+def register_trans(name, cls):
+	if name in _trans_registry:
+		raise RegistryCollisionError(name)
+	_trans_registry[name] = cls
+def get_trans(name):
+	if name not in _trans_registry:
+		raise InvalidValueError(name)
+	return _trans_registry[name]
