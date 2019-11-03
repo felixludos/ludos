@@ -47,6 +47,15 @@ def ping():
 def reset(user):
 	return I.reset(user)
 
+@app.route('/save')
+def save():
+	return I.save()
+
+@app.route('/load', methods=['POST'])
+def load(data=None):
+	if data is None:
+		data = _fmt_request()
+	return I.load(data)
 
 def main(argv=None):
 	parser = argparse.ArgumentParser(description='Start a passive frontend.')

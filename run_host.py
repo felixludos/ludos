@@ -8,6 +8,7 @@ from collections import OrderedDict, namedtuple
 from itertools import chain, product
 from string import Formatter
 import numpy as np
+import argparse
 from flask import Flask, render_template, request, send_from_directory
 from flask_cors import CORS
 
@@ -32,10 +33,17 @@ def _fmt_output(data):
 
 # Meta Host
 
+H = None
+
 @app.route('/restart')
-def _hard_restart():
+def _hard_restart(address=None, **settings):
 	global H
-	H = gsm.Host()
+	
+	if address is None:
+		assert H is not None, 'must provide an address if no host is running'
+		address = H.address
+	
+	H = gsm.Host(address, **settings)
 	return 'Host restarted'
 
 # Game Info and Selection
@@ -70,18 +78,22 @@ def _del_setting(key):
 
 # Managing clients
 
+@app.route('/add/client/<interface>/<lst:users>')
 @app.route('/add/client/<lst:users>', methods=['POST'])
-def _add_passive_client(users):
+def _add_passive_client(users, interface=None):
 	
-	address = request.get_json(force=True)#['address']
+	address = request.get_json(force=True) if interface is None else None
 	
-	print(users, address)
-	H.add_passive_client(address, *users)
-	return 'Using {} for: {}'.format(address, ', '.join(users))
+	H.add_passive_client(*users, address=address, interface=interface)
+	
+	out = 'Using {} for: {}'.format(address, ', '.join(users)) if address is not None else \
+		'Created an interface ({}) for: {}'.format(interface, ', '.join(users))
+	
+	return out
 
 @app.route('/ping/clients')
 def _ping_clients():
-	return H._ping_interfaces()
+	return H.ping_interfaces()
 
 # Adding Players, Spectators, and Advisors
 
@@ -159,7 +171,29 @@ def _get_log(user):
 	return H.get_log(user)
 
 
-if __name__ == "__main__":
-	_hard_restart()
+def main(argv=None):
+	parser = argparse.ArgumentParser(description='Start the host server.')
 	
-	app.run(host='localhost', port=5000)
+	parser.add_argument('host', default='localhost', type=str,
+	                    help='host for the backend')
+	parser.add_argument('port', default=5000, type=int,
+	                    help='port for the backend')
+	
+	parser.add_argument('--settings', type=str, default='{}',
+	                    help='optional args for interface, specified as a json str (of a dict with kwargs)')
+	
+	args = parser.parse_args(argv)
+	
+	address = 'http://{host}:{port}/'.format(args.host, args.port)
+	settings = json.loads(args.settings)
+	
+	_hard_restart(address, **settings)
+	
+	app.run(host=args.host, port=args.port)
+	
+	
+
+if __name__ == "__main__":
+	main()
+	
+	

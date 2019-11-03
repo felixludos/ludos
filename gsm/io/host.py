@@ -5,11 +5,11 @@ import json
 from collections import OrderedDict
 from ..mixins import Named
 from ..signals import InvalidValueError, RegistryCollisionError, NoActiveGameError, UnknownGameError, LoadConsistencyError, UnknownInterfaceError, UnknownPlayerError, UnknownUserError
-from .registry import _game_registry
-from .transmit import send_msg
+from .registry import _game_registry, get_trans
+from .transmit import send_http
 
 class Host(object):
-	def __init__(self):
+	def __init__(self, address, **settings):
 		super().__init__()
 		
 		self._in_progress = False
@@ -18,7 +18,8 @@ class Host(object):
 		self.ctrl = None
 		self.info = None
 		
-		self.settings = {}
+		self.address = address
+		self.settings = settings
 		
 		self.roles = OrderedDict()
 		self.players = OrderedDict()
@@ -57,9 +58,22 @@ class Host(object):
 		self.info = info
 		self.ctrl_cls = cls
 	
-	def add_passive_client(self, address, *users):
+	def add_passive_client(self, *users, address=None,
+	                       interface=None, timeout=5, settings={}):
+		
+		if address is None:
+			assert interface is not None, 'must specify the interface to be used'
+			trans = 'http'
+			args = (address, self.address)
+			settings = {}
+		else:
+			trans = 'proc'
+			args = self.address, interface, *users
+		
+		interface = get_trans(trans)(*args, timeout=timeout, **settings)
+		
 		for user in users:
-			self.interfaces[user] = address
+			self.interfaces[user] = interface
 			self.users.add(user)
 		
 	def add_spectator(self, user, advisor=None):
@@ -74,7 +88,7 @@ class Host(object):
 		self.roles[user] = player
 		self.users.add(user)
 		if user in self.interfaces:
-			send_msg(self.interfaces[user], 'player', user, player)
+			self.interfaces[user].set_player(user, player)
 		
 	def begin_game(self, seed=None):
 		if self.ctrl_cls is None:
@@ -156,11 +170,11 @@ class Host(object):
 		
 		return recheck
 	
-	def _ping_interfaces(self):
+	def ping_interfaces(self):
 		pings = {}
-		for user, addr in self.interfaces.items():
+		for user, interface in self.interfaces.items():
 			start = time.time()
-			send_msg(addr, 'ping')
+			interface.ping() # TODO: check to make sure theres no timeout
 			pings[user] = time.time() - start
 		return json.dumps(pings)
 	

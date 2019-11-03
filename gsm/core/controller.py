@@ -189,7 +189,7 @@ class GameController(Named, Transactionable, Savable):
 		
 		self.config.update(self._load_config())
 		
-		if self._pre_setup_complete is None:
+		if self._pre_setup_complete is not None:
 			info = None
 			try:
 				info = containerify(yaml.load(open(self._pre_setup_complete, 'r')))

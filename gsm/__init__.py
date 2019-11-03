@@ -4,7 +4,7 @@ from .util import jsonify, unjsonify
 from .signals import PhaseComplete, SwitchPhase, GameOver
 from .writing import write, writef, RichText
 from .util import RandomGenerator
-from .io import Host, Interface, Test_Interface, register_game, register_interface, get_interface, send_msg
+from .io import Host, Interface, Test_Interface, register_game, register_interface, get_interface, send_http
 from . import viz
 from . import common
 from . import ai

@@ -32,6 +32,10 @@ class Test_Interface(Interface):
 		print('ping')
 		return 'ping reply'
 	
+	def set_player(self, user, player):
+		print('{} : {}'.format(user, player))
+		return 'set_player'
+	
 	def reset(self, user):
 		print('reset')
 		return 'Interface Reset'
@@ -40,6 +44,12 @@ class Test_Interface(Interface):
 		print('step')
 		print(msg)
 		return 'nothing'
+	
+	def save(self):
+		return 'save'
+	
+	def load(self, state):
+		return 'load'
 
 register_interface('test', Test_Interface)
 
