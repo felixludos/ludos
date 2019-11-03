@@ -78,7 +78,7 @@ def _package_action(action):
 		else:
 			raise Exception('cant handle: {}'.format(repr(obj)))
 
-	return tuple(final)
+	return list(final)
 
 class Ipython_Runner(object):
 	def __init__(self, addr, *users, seed=0, full_log=False):
@@ -113,12 +113,27 @@ class Ipython_Runner(object):
 	def game_players(self):
 		return send_http(self.addr, 'game/players')
 	
-	def add_client(self, user, port):
-		return send_http(self.addr, 'add/client', user, data=r'http://localhost:{}/'.format(port))
+	def add_client(self, *users, port=None, interface=None, agent_type=None, timeout=5, **settings):
+		
+		data = r'http://localhost:{}/'.format(port) if port is not None else None
+		
+		if agent_type is not None:
+			assert data is None
+			data = {'agent_type':agent_type, 'timeout':timeout}
+			data.update(settings)
+			
+		
+		msg = ('add', 'client', users) if interface is None else ('add', 'client', interface, users)
+		
+		return send_http(self.addr, *msg, data=data)
 	
-	def add_player(self, player, user=None):
+	def ping(self):
+		return send_http(self.addr, 'ping', 'clients')
+	
+	def add_player(self, user=None, player=None):
 		if user is None:
 			user = self.users[0]
+		assert player is not None # TODO maybe automatically load available players
 		return send_http(self.addr, 'add/player', user, player)
 	
 	def set_user(self, user=None):
@@ -144,6 +159,9 @@ class Ipython_Runner(object):
 		self.msg = unjsonify(send_http(self.addr, 'status', user))
 		self.key = self.msg.key if 'key' in self.msg else None
 		
+		if isinstance(self.msg, str):
+			print('Error: {}'.format(self.msg))
+		
 		self._process_msg()
 		
 		return self.msg
@@ -159,6 +177,9 @@ class Ipython_Runner(object):
 		assert self.key is not None
 		
 		self.msg = unjsonify(send_http(self.addr, 'action', user, self.key, group, action))
+		
+		if isinstance(self.msg, str):
+			print('Error: {}'.format(self.msg))
 		
 		self.actions = None
 		self.key = None

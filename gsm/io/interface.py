@@ -30,7 +30,7 @@ class Interface(Typed, object):
 class Test_Interface(Interface):
 	def ping(self):
 		print('ping')
-		return 'ping reply'
+		return 'ping reply from test interface'
 	
 	def set_player(self, user, player):
 		print('{} : {}'.format(user, player))

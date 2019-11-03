@@ -78,13 +78,14 @@ def _del_setting(key):
 
 # Managing clients
 
-@app.route('/add/client/<interface>/<lst:users>')
-@app.route('/add/client/<lst:users>', methods=['POST'])
+@app.route('/add/client/<interface>/<lst:users>', methods=['POST']) # post data are the interface settings
+@app.route('/add/client/<lst:users>', methods=['POST']) # post data is the passive frontend address
 def _add_passive_client(users, interface=None):
 	
 	address = request.get_json(force=True) if interface is None else None
+	settings = {} if interface is None else request.get_json(force=True)
 	
-	H.add_passive_client(*users, address=address, interface=interface)
+	H.add_passive_client(*users, address=address, interface=interface, settings=settings)
 	
 	out = 'Using {} for: {}'.format(address, ', '.join(users)) if address is not None else \
 		'Created an interface ({}) for: {}'.format(interface, ', '.join(users))
@@ -99,8 +100,8 @@ def _ping_clients():
 
 @app.route('/add/player/<user>/<player>')
 def _add_player(user, player):
-	H.add_player(user, player)
-	return '{} is now playing {}'.format(user, player)
+	return H.add_player(user, player)
+	
 
 @app.route('/add/spectator/<user>')
 def _add_spectator(user):
@@ -115,7 +116,7 @@ def _add_advisor(user, player):
 # Game Management
 
 @app.route('/begin')
-@app.route('/begin/<seed>')
+@app.route('/begin/<int:seed>')
 def _begin_game(seed=None):
 	H.begin_game(seed)
 	return '{} has started'.format(H.info['name'])

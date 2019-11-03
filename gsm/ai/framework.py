@@ -2,26 +2,29 @@ import json
 from humpack import Savable, Transactionable
 from .. import tdict, tset, tlist
 from ..mixins import Named
-from .. import Interface, containerify, RandomGenerator
+from .. import Interface, RandomGenerator, unjsonify
 from ..viz import _package_action
 from ..core.actions import decode_action_set
 from ..io import get_ai, register_interface, register_ai
 
 class Agent_Interface(Interface):
-	def __init__(self, *users, agent_type=None, host_addr=None):
+	def __init__(self, *users, agent_type=None, host_addr=None, **agent_kwargs):
 		super().__init__(*users, host_addr=host_addr)
 		self.agents = {user:None for user in users}
+		assert agent_type is not None
 		self.agent_type = agent_type
+		self.agent_kwargs = agent_kwargs
 	
 	def set_player(self, user, player):
 		super().set_player(user, player)
-		self.agents[user] = get_ai(self.agent_type)(player)
+		self.agents[user] = get_ai(self.agent_type)(player, **self.agent_kwargs)
+		print('Agent for {} is initialized'.format(user))
 	
 	def ping(self):
-		return 'ping reply from: {}'.format(', '.join(self.users))
+		return 'ping reply from {} agent/s: {}'.format(self.agent_type, ', '.join(self.users))
 	
 	def step(self, user, msg):
-		msg = containerify(msg)
+		msg = unjsonify(msg)
 		
 		if 'error' in msg:
 			print('*** ERROR: {} ***'.format(msg.error.type))
@@ -46,9 +49,9 @@ class Agent_Interface(Interface):
 			
 			options = tdict()
 			for name, opts in msg.options.items():
-				options[name] = decode_action_set(opts)
+				options[name] = decode_action_set(opts.actions)
 			
-			out['action'] = agent.decide(options)
+			out['group'], out['action'] = agent.decide(options)
 		
 		return json.dumps(out)
 	
@@ -79,8 +82,13 @@ class RandomAgent(Agent):
 	def __init__(self, name, seed=None):
 		super().__init__(name)
 		self.gen = RandomGenerator()
-		if seed is not None:
-			self.gen.seed(seed)
+		self.seed = seed
+		self.reset()
+	
+	def reset(self):
+		if self.seed is not None:
+			self.gen.seed(self.seed)
+			print('Reset seed to: {}'.format(self.seed))
 	
 	def decide(self, options):
 		actions = []

@@ -1,5 +1,6 @@
 import sys, os
 import traceback
+import json
 import requests
 import urllib.parse
 from queue import Queue, Empty
@@ -40,7 +41,7 @@ def send_http(addr, *command, data=None, timeout=None):
 		if isinstance(c, (tuple,list)):
 			payload.append(LstConverter.to_url(c))
 		else:
-			payload.append(c)
+			payload.append(str(c))
 			
 	route = urllib.parse.urljoin(addr, '/'.join(payload))
 	
@@ -58,6 +59,8 @@ def send_http(addr, *command, data=None, timeout=None):
 		return out.text
 
 def worker_fn(in_q, out_q, interface_type, users, settings):
+	
+	# print(interface_type, users, settings)
 	
 	interface = get_interface(interface_type)(*users, **settings)
 	
@@ -130,8 +133,12 @@ class Process_Transceiver(Transceiver): # running the interface in a parallel pr
 		if self.proc is not None:
 			self.send_q.put(('kill',))
 		self.proc = mp.Process(target=worker_fn,
-		                       args=(self.receive_q, self.send_q, self.interface, self.users, self.settings))
+		                       args=(self.send_q, self.receive_q,
+		                             self.interface, self.users, self.settings))
 		self.proc.start()
+	
+	# def step(self, user, status):
+	# 	return json.loads(self._transmit('step', user, json.loads(status)))
 	
 	def _transmit(self, *msg):
 		
@@ -140,7 +147,7 @@ class Process_Transceiver(Transceiver): # running the interface in a parallel pr
 		try:
 			out = self.receive_q.get(timeout=self.timeout)
 		except Empty:
-			out = '{}'
+			out = None
 		
 		return out
 

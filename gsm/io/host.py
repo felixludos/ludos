@@ -59,9 +59,9 @@ class Host(object):
 		self.ctrl_cls = cls
 	
 	def add_passive_client(self, *users, address=None,
-	                       interface=None, timeout=5, settings={}):
+	                       interface=None, settings={}):
 		
-		if address is None:
+		if address is not None:
 			assert interface is not None, 'must specify the interface to be used'
 			trans = 'http'
 			args = (address, self.address)
@@ -70,7 +70,7 @@ class Host(object):
 			trans = 'proc'
 			args = self.address, interface, *users
 		
-		interface = get_trans(trans)(*args, timeout=timeout, **settings)
+		interface = get_trans(trans)(*args, **settings)
 		
 		for user in users:
 			self.interfaces[user] = interface
@@ -84,17 +84,26 @@ class Host(object):
 			self.spectators.add(user)
 	
 	def add_player(self, user, player):
+		
+		if player not in self.info['player_names']:
+			return 'No player is called: {}'.format(player)
+		
 		self.players[player] = user
 		self.roles[user] = player
 		self.users.add(user)
 		if user in self.interfaces:
 			self.interfaces[user].set_player(user, player)
 		
+		return '{} is now playing {}'.format(user, player)
+		
 	def begin_game(self, seed=None):
 		if self.ctrl_cls is None:
 			raise Exception('Must set a game first')
 		if len(self.players) not in self.info['num_players']:
 			raise Exception('Invalid number of players {}, allowed for {}: {}'.format(len(self.players), self.info.name, ', '.join(self.info.num_players)))
+		
+		for user, interface in self.interfaces.items():
+			interface.reset(user)
 		
 		player = next(iter(self.players.keys()))
 		
@@ -156,12 +165,19 @@ class Host(object):
 				user = self.players[player]
 				if user in self.interfaces:
 					all_passive = False
-					recheck = True
-					address = self.interfaces[user]
-					msg = send_msg(address, 'step', data=self.ctrl.get_status(player))
-					if 'action' in msg and 'key' in msg: # TODO: enable spectator/advisor handling
-						player = self.roles[user]
-						self.ctrl.step(player, action=msg['action'], key=msg['key'])
+					
+					status = json.loads(self.ctrl.get_status(player))
+					
+					if 'options' in status:
+						msg = json.loads(self.interfaces[user].step(user, status))
+					else:
+						msg = None
+					
+					if msg is None:
+						return recheck
+					elif 'action' in msg and 'key' in msg: # TODO: enable spectator/advisor handling
+						self.ctrl.step(player, group=msg['group'], action=msg['action'], key=msg['key'])
+						recheck = True
 					elif 'error' in msg:
 						print('Error: {}'.format(msg))
 					else:
@@ -174,8 +190,8 @@ class Host(object):
 		pings = {}
 		for user, interface in self.interfaces.items():
 			start = time.time()
-			interface.ping() # TODO: check to make sure theres no timeout
-			pings[user] = time.time() - start
+			response = interface.ping() # TODO: check to make sure theres no timeout
+			pings[user] = response, time.time() - start
 		return json.dumps(pings)
 	
 	def get_status(self, user):

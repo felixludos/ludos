@@ -267,7 +267,7 @@ class GameController(Named, Transactionable, Savable):
 			self.commit()
 			
 			if self.end_info is None:
-				self._images.clear()
+				self._clear_images()
 				self.end_info = self._end_game()
 				self._in_progress = False
 			
@@ -290,10 +290,7 @@ class GameController(Named, Transactionable, Savable):
 			
 			self.active_players = tdict({p.name:opts for p, opts in out.items()})
 			
-			self._images.clear()
-			self._advisor_images.clear()
-			self._advice.clear()
-			self._spec_image = None
+			self._clear_images()
 			
 			msg = self._compose_msg(player)
 		
@@ -320,6 +317,12 @@ class GameController(Named, Transactionable, Savable):
 	######################
 	# Optionally Overridden
 	######################
+	
+	def _clear_images(self):
+		self._images.clear()
+		self._advisor_images.clear()
+		self._advice.clear()
+		self._spec_image = None
 	
 	def _pre_setup(self, config, info=None):
 		pass
