@@ -81,7 +81,7 @@ def _package_action(action):
 	return list(final)
 
 class Ipython_Runner(object):
-	def __init__(self, addr, *users, seed=0, full_log=False):
+	def __init__(self, addr, *users, seed=None, full_log=False):
 		self.addr = addr
 		self.full_log = full_log
 		

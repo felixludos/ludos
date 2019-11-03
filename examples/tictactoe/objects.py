@@ -24,7 +24,7 @@ class Board(Grid):
 		if (sums == L).any():
 			return 1
 		elif (sums == -L).any():
-			return 1
+			return -1
 		
 		# check diag
 		diag = np.diag(self.map).sum()

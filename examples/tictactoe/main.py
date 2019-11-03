@@ -67,10 +67,10 @@ class TicTacToe(gsm.GameController):
 			self.log.writef('Game over! Draw game!')
 			return tdict(winner=None)
 		
-		for p in self.players.values():
-			if p.val == val:
-				self.log.writef('Game Over! {} wins!'.format(p))
-				return tdict(winner=p.name)
+		for player in self.players:
+			if player.val == val:
+				self.log.writef('Game Over! {} wins!', player)
+				return tdict(winner=player.name)
 			
 		raise Exception('No player with val: {}'.format(val))
 	
