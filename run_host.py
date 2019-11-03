@@ -174,9 +174,9 @@ def _get_log(user):
 def main(argv=None):
 	parser = argparse.ArgumentParser(description='Start the host server.')
 	
-	parser.add_argument('host', default='localhost', type=str,
+	parser.add_argument('--host', default='localhost', type=str,
 	                    help='host for the backend')
-	parser.add_argument('port', default=5000, type=int,
+	parser.add_argument('--port', default=5000, type=int,
 	                    help='port for the backend')
 	
 	parser.add_argument('--settings', type=str, default='{}',
@@ -184,7 +184,7 @@ def main(argv=None):
 	
 	args = parser.parse_args(argv)
 	
-	address = 'http://{host}:{port}/'.format(args.host, args.port)
+	address = 'http://{}:{}/'.format(args.host, args.port)
 	settings = json.loads(args.settings)
 	
 	_hard_restart(address, **settings)

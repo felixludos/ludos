@@ -8,7 +8,7 @@ from .mixins import Jsonable
 from .core.actions import decode_action_set
 from .core import GameObject, GamePlayer
 from .util import unjsonify, obj_unjsonify, RandomGenerator
-from .io import send_msg
+from .io import send_http
 
 def _format(obj):
 	return unjsonify(json.loads(obj))
@@ -99,27 +99,27 @@ class Ipython_Runner(object):
 		self.users = tdeque(users)
 		
 	def restart(self):
-		return send_msg(self.addr, 'restart')
+		return send_http(self.addr, 'restart')
 		
 	def available_games(self):
-		return send_msg(self.addr, 'game/available')
+		return send_http(self.addr, 'game/available')
 	
 	def select_game(self, name):
-		return send_msg(self.addr, 'game/select', name)
+		return send_http(self.addr, 'game/select', name)
 	
 	def game_info(self):
-		return send_msg(self.addr, 'game/info')
+		return send_http(self.addr, 'game/info')
 	
 	def game_players(self):
-		return send_msg(self.addr, 'game/players')
+		return send_http(self.addr, 'game/players')
 	
 	def add_client(self, user, port):
-		return send_msg(self.addr, 'add/client', user, data=r'http://localhost:{}/'.format(port))
+		return send_http(self.addr, 'add/client', user, data=r'http://localhost:{}/'.format(port))
 	
 	def add_player(self, player, user=None):
 		if user is None:
 			user = self.users[0]
-		return send_msg(self.addr, 'add/player', user, player)
+		return send_http(self.addr, 'add/player', user, player)
 	
 	def set_user(self, user=None):
 		if user is not None:
@@ -136,12 +136,12 @@ class Ipython_Runner(object):
 		if seed is None:
 			seed = self.seed
 		self.in_progress = True
-		return send_msg(self.addr, 'begin', seed)
+		return send_http(self.addr, 'begin', seed)
 	
 	def status(self, user=None):
 		if user is None:
 			user = self.users[0]
-		self.msg = unjsonify(send_msg(self.addr, 'status', user))
+		self.msg = unjsonify(send_http(self.addr, 'status', user))
 		self.key = self.msg.key if 'key' in self.msg else None
 		
 		self._process_msg()
@@ -158,7 +158,7 @@ class Ipython_Runner(object):
 		
 		assert self.key is not None
 		
-		self.msg = unjsonify(send_msg(self.addr, 'action', user, self.key, group, action))
+		self.msg = unjsonify(send_http(self.addr, 'action', user, self.key, group, action))
 		
 		self.actions = None
 		self.key = None
@@ -167,7 +167,7 @@ class Ipython_Runner(object):
 	def get_log(self, user=None):
 		if user is None:
 			user = self.users[0]
-		self.log = send_msg(self.addr, 'log', user)
+		self.log = send_http(self.addr, 'log', user)
 		return self.log
 	
 	def view(self):
