@@ -63,6 +63,16 @@ def _format_action(tpl):
 	
 	return ' '.join(map(str,action))
 	
+def _find_action(action, options):
+
+	action = tuple(action)
+	outs = [_package_action(a) for a in options]
+	
+	for o, full in zip(outs, options):
+		if action == tuple(o):
+			return full
+	raise Exception('couldnt find: {}'.format(action))
+
 def _package_action(action):
 	
 	final = []
@@ -97,6 +107,7 @@ class Ipython_Runner(object):
 		self.key = None
 		self.actions = None
 		self.users = tdeque(users)
+		self.specs = tset()
 		
 	def restart(self):
 		return send_http(self.addr, 'restart')
@@ -127,6 +138,14 @@ class Ipython_Runner(object):
 		
 		return send_http(self.addr, *msg, data=data)
 	
+	def go(self, user=None):
+		if user is not None:
+			return send_http(self.addr, 'continue', user)
+		return send_http(self.addr, 'continue')
+	
+	def toggle_pause(self):
+		return send_http(self.addr, 'autopause')
+	
 	def ping(self):
 		return send_http(self.addr, 'ping', 'clients')
 	
@@ -135,6 +154,18 @@ class Ipython_Runner(object):
 			user = self.users[0]
 		assert player is not None # TODO maybe automatically load available players
 		return send_http(self.addr, 'add/player', user, player)
+	
+	def add_advisor(self, user=None, player=None):
+		if user is None:
+			user = self.users[0]
+		assert player is not None # TODO maybe automatically load available players
+		return send_http(self.addr, 'add/advisor', user, player)
+	
+	def add_spectator(self, user=None):
+		if user is None:
+			user = self.users[0]
+		self.specs.add(user)
+		return send_http(self.addr, 'add/spectator', user)
 	
 	def set_user(self, user=None):
 		if user is not None:
@@ -222,11 +253,22 @@ class Ipython_Runner(object):
 		if 'phase' in self.msg:
 			print('Phase: {}'.format(self.msg.phase))
 		
+		
+		
 		if 'waiting_for' in self.msg:
 			print('Waiting for: {}'.format(', '.join(self.msg.waiting_for)))
 		elif 'end' in self.msg:
 			print('--- Game Ended ---')
 		else:
+			
+			if 'advice' in self.msg:
+				advice = []
+				for adv in self.msg.advice:
+					action = _find_action(adv.action, decode_action_set(self.msg.options[adv.group].actions))
+					# action = tuple(adv.action) # TODO: find correctly formatted action
+					advice.append('{} recommends: {} - {}'.format(adv.user, adv.group, _format_action(action)))
+				print('Advice:')
+				print('\n'.join(advice))
 			
 			if 'status' in self.msg:
 				status = _format_line(self.msg.status['line'])

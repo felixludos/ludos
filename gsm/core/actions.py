@@ -184,12 +184,10 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 		for tpl in actionset:
 			if len(tpl) == len(action):
 				try:
-					out = ActionTuple(elm.evaluate(a) for elm, a in zip(tpl, action))
+					out = ActionTuple(name, (elm.evaluate(a) for elm, a in zip(tpl, action)))
 				except ActionMismatch:
 					pass # action didnt match
 				else:
-					if 'name' in option:
-						out.obj_type = option.name
 					return out
 					
 		raise InvalidActionError(action)
@@ -232,7 +230,10 @@ class GameActions(Transactionable, Savable, Pullable): # created and returned in
 # Advanced action queries
 
 class ActionTuple(Typed, tuple):
-	pass
+	def __new__(cls, name, tpl):
+		return super().__new__(cls, tpl)
+	def __init__(self, group, tpl):
+		super().__init__(group)
 
 class ActionElement(Typed, Transactionable, Savable, Hashable):
 	

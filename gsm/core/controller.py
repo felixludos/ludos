@@ -343,32 +343,39 @@ class GameController(Named, Transactionable, Savable):
 	
 	def _compose_msg(self, player=None, advisor=False):
 		
-		if self.end_info is not None:
-			# game is already over
-			msg = {
-				'end': jsonify(self.end_info),
-				'table': self.table.pull(), # full table
-			}
-		
+		if player in self._images and not advisor:
+			msg = json.loads(self._images[player])
 		else:
-			
-			if player in self.active_players:
-				msg = self.active_players[player].pull()
-				if not advisor:
-					msg['key'] = self._gen_key(player)
-			elif player is not None:
-				msg = {'waiting_for': list(self.active_players.keys())}
+			if self.end_info is not None:
+				# game is already over
+				msg = {
+					'end': jsonify(self.end_info),
+					'table': self.table.pull(), # full table
+				}
 			else:
-				msg = {}
+				if player in self.active_players:
+					msg = self.active_players[player].pull()
+					if not advisor:
+						msg['key'] = self._gen_key(player)
+				elif player is not None:
+					msg = {'waiting_for': list(self.active_players.keys())}
+				else:
+					msg = {}
+				
+				msg['players'] = self.players.pull(player)
+				msg['table'] = self.table.pull(player)
+				msg['phase'] = self.stack[-1].name
+				
+			msg['log'] = self.log.pull(player)
+			# log = self.log.pull(player)
+			# if len(log):
+			# 	msg['log'] = log
 			
-			msg['players'] = self.players.pull(player)
-			msg['table'] = self.table.pull(player)
-			msg['phase'] = self.stack[-1].name
-			
-		msg['log'] = self.log.pull(player)
-		# log = self.log.pull(player)
-		# if len(log):
-		# 	msg['log'] = log
+		if not advisor and player in self._advice:
+			if 'advice' not in msg:
+				msg['advice'] = []
+			msg['advice'].extend(self._advice[player])
+			del self._advice[player]
 		
 		if player is not None:
 			if advisor:
@@ -397,14 +404,19 @@ class GameController(Named, Transactionable, Savable):
 	def step(self, player, group=None, action=None, key=None):  # returns json bytes (str)
 		return json.dumps(self._step(player=player, group=group, action=action, key=key))
 	
-	def give_advice(self, player, action):
-		raise NotImplementedError # TODO
+	def give_advice(self, player, group, action, **info):
+		if player not in self._advice:
+			self._advice[player] = tlist()
+			
+		advice = info
+		advice.update({'group':group, 'action':action})
+		self._advice[player].append(advice)
 	
 	def reset(self, player, seed=None):
 		return json.dumps(self._reset(player, seed))
 	
 	def get_status(self, player):
-		if player not in self._images:
+		if player not in self._images or player in self._advice:
 			self._compose_msg(player)
 		return self._images[player]
 	

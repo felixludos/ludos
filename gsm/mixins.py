@@ -14,8 +14,8 @@ class Named(object):
 		return self.name
 
 class Typed(object):
-	def __init__(self, obj_type, **kwargs):
-		super().__init__(**kwargs)
+	def __init__(self, obj_type, *args, **kwargs):
+		super().__init__(*args, **kwargs)
 		self.obj_type = obj_type
 	
 	def get_type(self):

@@ -30,6 +30,18 @@ class Host(object):
 		self.advisors = OrderedDict()
 		self.spectators = set()
 		
+		self.auto_pause = False
+		
+	def toggle_pause(self):
+		self.auto_pause ^= True
+		return 'auto pause is {}activated'.format('' if self.auto_pause else 'de')
+		
+	def continue_step(self, user=None):
+		self._passive_frontend_step()
+		if user is None:
+			return 'continued'
+		return self.get_status(user)
+	
 	def get_available_games(self):
 		return list(_game_registry.keys())
 		
@@ -80,6 +92,11 @@ class Host(object):
 		self.users.add(user)
 		if advisor is not None:
 			self.advisors[user] = advisor
+			if advisor not in self.players:
+				self.players[advisor] = []
+			self.players[advisor].append(user)
+			if user in self.interfaces:
+				self.interfaces[user].set_player(user, advisor)
 		else:
 			self.spectators.add(user)
 	
@@ -88,7 +105,9 @@ class Host(object):
 		if player not in self.info['player_names']:
 			return 'No player is called: {}'.format(player)
 		
-		self.players[player] = user
+		if player not in self.players:
+			self.players[player] = []
+		self.players[player].append(user)
 		self.roles[user] = player
 		self.users.add(user)
 		if user in self.interfaces:
@@ -125,7 +144,7 @@ class Host(object):
 		if self.ctrl is None:
 			raise NoActiveGameError
 		state = self.ctrl.save()
-		data = {'state':state, 'players':self.players}
+		data = {'state':state, 'players': self.players}
 		if fixed_users:
 			data['fixed_users'] = True
 		
@@ -137,10 +156,10 @@ class Host(object):
 		
 		data = pickle.load(open(path, 'rb'))
 		
-		if 'fixed_users' in data:
-			for player, user in data['players'].items():
-				if player not in self.players or self.players[player] != user:
-					raise LoadConsistencyError
+		# if 'fixed_users' in data:
+		# 	for player, user in data['players'].items():
+		# 		if player not in self.players or self.players[player] != user:
+		# 			raise LoadConsistencyError
 				
 		self.ctrl.load(data)
 	
@@ -154,35 +173,59 @@ class Host(object):
 			msg = self.ctrl.get_status(player)
 		return msg
 	
+	def give_advice(self, user, group, action):
+		if user not in self.advisors:
+			raise UnknownUserError
+		player = self.advisors[user]
+		self.ctrl.give_advice(player, group=group, action=action, user=user)
+		return 'Advice for {} is posted'.format(player)
+	
 	def _passive_frontend_step(self):
 		
-		all_passive = False
+		no_passive = False
 		recheck = False
-		while not all_passive:
-			all_passive = True
+		first = True
+		
+		advised = set()
+		
+		while not no_passive:
+			no_passive = True
 			players = json.loads(self.ctrl.get_active_players())
+			
+			if self.auto_pause and not first:
+				return recheck
 			for player in players:
-				user = self.players[player]
-				if user in self.interfaces:
-					all_passive = False
-					
-					status = json.loads(self.ctrl.get_status(player))
-					
-					if 'options' in status:
-						msg = json.loads(self.interfaces[user].step(user, status))
-					else:
-						msg = None
-					
-					if msg is None:
-						return recheck
-					elif 'action' in msg and 'key' in msg: # TODO: enable spectator/advisor handling
-						self.ctrl.step(player, group=msg['group'], action=msg['action'], key=msg['key'])
-						recheck = True
-					elif 'error' in msg:
-						print('Error: {}'.format(msg))
-					else:
-						all_passive = True
-					break
+				for user in self.players[player]:
+					if user in self.interfaces and user not in advised:
+						no_passive = False
+						
+						if user in self.roles:
+							status = self.ctrl.get_status(player)
+						else:
+							status = self.ctrl.get_advisor_status(player)
+							advised.add(user)
+						
+						status = json.loads(status)
+						
+						if 'options' in status:
+							msg = json.loads(self.interfaces[user].step(user, status))
+						else:
+							msg = None
+						
+						if msg is None:
+							return recheck
+						elif 'key' in msg: # TODO: enable spectator/advisor handling
+							self.ctrl.step(player, group=msg['group'], action=msg['action'], key=msg['key'])
+							recheck = True
+						elif 'action' in msg:
+							self.give_advice(user, group=msg['group'], action=msg['action'])
+							recheck = True
+						elif 'error' in msg:
+							print('Error: {}'.format(msg))
+						else:
+							no_passive = True
+						break
+			first = False
 		
 		return recheck
 	

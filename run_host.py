@@ -159,9 +159,22 @@ def _load(name):
 
 # In-game Operations
 
+@app.route('/autopause')
+def _toggle_autopause():
+	return H.toggle_pause()
+
+@app.route('/continue')
+@app.route('/continue/<user>')
+def _continue(user=None):
+	return H.continue_step(user)
+
 @app.route('/action/<user>/<key>/<group>/<lst:action>')
 def _action(user, key, group, action):
 	return H.take_action(user, group, action, key)
+
+@app.route('/advise/<user>/<group>/<lst:action>')
+def _advise(user, group, action):
+	return H.give_advice(user, group, action)
 
 @app.route('/status/<user>')
 def _get_status(user):
