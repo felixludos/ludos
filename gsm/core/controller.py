@@ -318,6 +318,9 @@ class GameController(Named, Transactionable, Savable):
 	# Optionally Overridden
 	######################
 	
+	def cheat(self, code=None):
+		pass
+	
 	def _clear_images(self):
 		self._images.clear()
 		self._advisor_images.clear()

@@ -108,6 +108,8 @@ class GameTable(Transactionable, Savable, Pullable):
 		
 		self.table[obj._id] = obj
 		
+		obj._verify()
+		
 		return obj
 	
 	def is_available(self, ID):

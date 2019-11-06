@@ -109,8 +109,9 @@ class Ipython_Runner(object):
 		self.users = tdeque(users)
 		self.specs = tset()
 		
-	def restart(self):
-		return send_http(self.addr, 'restart')
+	def restart(self, debug=False):
+		debug = 1 if debug else 0
+		return send_http(self.addr, 'restart', debug)
 		
 	def available_games(self):
 		return send_http(self.addr, 'game/available')
@@ -183,6 +184,11 @@ class Ipython_Runner(object):
 			seed = self.seed
 		self.in_progress = True
 		return send_http(self.addr, 'begin', seed)
+	
+	def cheat(self, code=None):
+		if code is None:
+			return send_http(self.addr, 'cheat')
+		return send_http(self.addr, 'cheat', code)
 	
 	def status(self, user=None):
 		if user is None:
@@ -315,237 +321,237 @@ class Ipython_Runner(object):
 			self.key = self.msg.key
 	
 
-
-class Ipython_Interface(object):
-	
-	def __init__(self, controller, seed=None, full_log=False):
-		super().__init__()
-		
-		self.ctrl = controller
-		self.in_progress = False
-		
-		self.msg = None
-		self.table = None
-		if seed is None:
-			seed = random.getrandbits(64)
-		self.rng = random.Random(seed)
-		self.seed = seed
-		self.full_log = full_log
-		
-		self.actions = None
-		self.action = None
-		
-		self.waiting_for = None
-		
-		self.player = None
-		self.key = None
-		
-	def save(self, filename=None):
-		data = self.ctrl.save()
-		if filename is not None:
-			pickle.dump(data, open(filename, 'wb'))
-		else:
-			return data
-	
-	def load(self, data):
-		if isinstance(data, str):
-			data = pickle.load(open(data, 'rb'))
-		return self.ctrl.load(data)
-	
-	def set_player(self, player=None):
-		
-		if player is None:
-			if self.msg is None:
-				player = self.rng.choice(self.get_players())
-			elif 'waiting_for' not in self.msg:
-				print('Player set to {}'.format(self.player))
-				return
-			else:
-				player = self.msg.waiting_for.pop()
-			
-		self.player = player
-		print('Player set to {}'.format(self.player))
-		
-	def get_player(self, player=None):
-		if player is None:
-			player = self.player
-		return _format(self.ctrl.get_player(player))
-	
-	def get_players(self):
-		return _format(self.ctrl.get_players())
-	
-	def get_table(self, player=None):
-		self.table = _format(self.ctrl.get_table(player=player))
-	
-	def get_obj_types(self):
-		return _format(self.ctrl.get_obj_types())
-	
-	def get_log(self, player=None):
-		if player is None:
-			player = self.player
-		return _format(self.ctrl.get_log(player))
-	
-	def get_IU_spec(self):
-		return _format(self.ctrl.get_UI_spec())
-	
-	def get_status(self, player=None):
-		if player is None:
-			player = self.player
-		
-		self.msg = _format(self.ctrl.get_status(player))
-		
-		self._process_msg()
-		
-	def _process_msg(self):
-		
-		if 'error' in self.msg:
-			print('*** ERROR: {} ***'.format(self.msg.error.type))
-			print(self.msg.error.msg)
-			print('****************************')
-			
-		if 'end' in self.msg:
-			self.in_progress = False
-		
-		if 'options' in self.msg:
-			self.actions = tlist()
-			
-			self.in_progress = True
-			
-			for opt in self.msg.options:
-				self.actions.extend(decode_action_set(opt.actions))
-				
-		if 'key' in self.msg:
-			self.key = self.msg.key
-		
-		if 'table' in self.msg:
-			self.table = self.msg.table
-			
-		if 'players' in self.msg:
-			self.players = self.msg.players
-			
-		if 'phase' in self.msg:
-			self.phase = self.msg.phase
-			
-		# if 'waiting_for' in self.msg:
-		# 	print('Waiting for: {}'.format(', '.join(self.msg.waiting_for)))
-	
-	def reset(self, player=None, seed=None):
-		if player is None:
-			player = self.player
-		self.msg = _format(self.ctrl.reset(player=player, seed=seed))
-		
-		self._process_msg()
-				
-		
-	def view(self):
-		if self.msg is None:
-			print('No message found')
-			return
-		
-		if 'info' in self.msg:
-			print('Received info: {}'.format(list(self.msg.info.keys())))
-		
-		if 'key' in self.msg:
-			print('Received key: {}'.format(self.msg.key))
-		
-		if 'table' in self.msg:
-			print('Received table: {} entries'.format(len(self.msg.table)))
-		
-		if self.full_log or 'log' in self.msg:
-			print('-------------')
-			print('Log')
-			print('-------------')
-			if self.full_log:
-				print(_format_log(self.get_log())) # TODO: make the same player is called
-			elif 'log' in self.msg:
-				print(_format_log(self.msg.log))
-			
-		if 'error' in self.msg:
-			print('*** ERROR: {} ***'.format(self.msg.error.type))
-			print(self.msg.error.msg)
-			print('****************************')
-		
-		if 'phase' in self.msg:
-			print('Phase: {}'.format(self.msg.phase))
-		
-		if 'waiting_for' in self.msg:
-			print('Waiting for: {}'.format(', '.join(self.msg.waiting_for)))
-		elif 'end' in self.msg:
-			print('--- Game Ended ---')
-		else:
-			
-			if 'status' in self.msg:
-				status = _format_line(self.msg.status['line'])
-				print('+' + '-' * (len(status) + 2) + '+')
-				print('| {} |'.format(status))
-				print('+' + '-' * (len(status) + 2) + '+')
-				
-				# print('Status: {}'.format(_format_line(self.msg.status)))
-			else:
-				print('No status found')
-		
-			if 'options' in self.msg:
-				idx = 0
-				
-				for opt in self.msg.options:
-					
-					if 'desc' in opt:
-						print('-- {} --'.format(_format_line(opt.desc['line'])))
-					
-					for tpl in decode_action_set(opt.actions):
-						print('{:>4} - {}'.format(idx, _format_action(tpl)))
-						idx += 1
-					
-		
-			
-	def view_info(self):
-		if self.msg is None or 'info' not in self.msg:
-			print('No info to print')
-		return render_dict(self.msg.info)
-		
-	def view_table(self):
-		if self.table is None:
-			print('No table to print')
-			
-		return render_dict(self.table)
-		
-	def select_action(self, idx=None):
-		
-		if self.actions is None or not len(self.actions):
-			print('No actions to select')
-			return
-		
-		if idx is None:
-			idx = self.rng.randint(0,len(self.actions)-1)
-		
-		self.action = self.actions[idx]
-		
-		print('Selected action {}: {}'.format(idx, _format_action(self.action)))
-	
-	
-	def step(self):
-		
-		if not self.in_progress:
-			print('No game in progress')
-			return
-		
-		if self.action is None:
-			print('Must first select an action')
-			return
-			
-		if self.key is None:
-			print('No key found')
-			return
-		
-		self.msg = _format(self.ctrl.step(player=self.player, action=_package_action(self.action), key=self.key))
-		
-		self.key = None
-		
-		self._process_msg()
-		
-		self.action = None
-		self.actions = None
-
+#
+# class Ipython_Interface(object):
+#
+# 	def __init__(self, controller, seed=None, full_log=False):
+# 		super().__init__()
+#
+# 		self.ctrl = controller
+# 		self.in_progress = False
+#
+# 		self.msg = None
+# 		self.table = None
+# 		if seed is None:
+# 			seed = random.getrandbits(64)
+# 		self.rng = random.Random(seed)
+# 		self.seed = seed
+# 		self.full_log = full_log
+#
+# 		self.actions = None
+# 		self.action = None
+#
+# 		self.waiting_for = None
+#
+# 		self.player = None
+# 		self.key = None
+#
+# 	def save(self, filename=None):
+# 		data = self.ctrl.save()
+# 		if filename is not None:
+# 			pickle.dump(data, open(filename, 'wb'))
+# 		else:
+# 			return data
+#
+# 	def load(self, data):
+# 		if isinstance(data, str):
+# 			data = pickle.load(open(data, 'rb'))
+# 		return self.ctrl.load(data)
+#
+# 	def set_player(self, player=None):
+#
+# 		if player is None:
+# 			if self.msg is None:
+# 				player = self.rng.choice(self.get_players())
+# 			elif 'waiting_for' not in self.msg:
+# 				print('Player set to {}'.format(self.player))
+# 				return
+# 			else:
+# 				player = self.msg.waiting_for.pop()
+#
+# 		self.player = player
+# 		print('Player set to {}'.format(self.player))
+#
+# 	def get_player(self, player=None):
+# 		if player is None:
+# 			player = self.player
+# 		return _format(self.ctrl.get_player(player))
+#
+# 	def get_players(self):
+# 		return _format(self.ctrl.get_players())
+#
+# 	def get_table(self, player=None):
+# 		self.table = _format(self.ctrl.get_table(player=player))
+#
+# 	def get_obj_types(self):
+# 		return _format(self.ctrl.get_obj_types())
+#
+# 	def get_log(self, player=None):
+# 		if player is None:
+# 			player = self.player
+# 		return _format(self.ctrl.get_log(player))
+#
+# 	def get_IU_spec(self):
+# 		return _format(self.ctrl.get_UI_spec())
+#
+# 	def get_status(self, player=None):
+# 		if player is None:
+# 			player = self.player
+#
+# 		self.msg = _format(self.ctrl.get_status(player))
+#
+# 		self._process_msg()
+#
+# 	def _process_msg(self):
+#
+# 		if 'error' in self.msg:
+# 			print('*** ERROR: {} ***'.format(self.msg.error.type))
+# 			print(self.msg.error.msg)
+# 			print('****************************')
+#
+# 		if 'end' in self.msg:
+# 			self.in_progress = False
+#
+# 		if 'options' in self.msg:
+# 			self.actions = tlist()
+#
+# 			self.in_progress = True
+#
+# 			for opt in self.msg.options:
+# 				self.actions.extend(decode_action_set(opt.actions))
+#
+# 		if 'key' in self.msg:
+# 			self.key = self.msg.key
+#
+# 		if 'table' in self.msg:
+# 			self.table = self.msg.table
+#
+# 		if 'players' in self.msg:
+# 			self.players = self.msg.players
+#
+# 		if 'phase' in self.msg:
+# 			self.phase = self.msg.phase
+#
+# 		# if 'waiting_for' in self.msg:
+# 		# 	print('Waiting for: {}'.format(', '.join(self.msg.waiting_for)))
+#
+# 	def reset(self, player=None, seed=None):
+# 		if player is None:
+# 			player = self.player
+# 		self.msg = _format(self.ctrl.reset(player=player, seed=seed))
+#
+# 		self._process_msg()
+#
+#
+# 	def view(self):
+# 		if self.msg is None:
+# 			print('No message found')
+# 			return
+#
+# 		if 'info' in self.msg:
+# 			print('Received info: {}'.format(list(self.msg.info.keys())))
+#
+# 		if 'key' in self.msg:
+# 			print('Received key: {}'.format(self.msg.key))
+#
+# 		if 'table' in self.msg:
+# 			print('Received table: {} entries'.format(len(self.msg.table)))
+#
+# 		if self.full_log or 'log' in self.msg:
+# 			print('-------------')
+# 			print('Log')
+# 			print('-------------')
+# 			if self.full_log:
+# 				print(_format_log(self.get_log())) # TODO: make the same player is called
+# 			elif 'log' in self.msg:
+# 				print(_format_log(self.msg.log))
+#
+# 		if 'error' in self.msg:
+# 			print('*** ERROR: {} ***'.format(self.msg.error.type))
+# 			print(self.msg.error.msg)
+# 			print('****************************')
+#
+# 		if 'phase' in self.msg:
+# 			print('Phase: {}'.format(self.msg.phase))
+#
+# 		if 'waiting_for' in self.msg:
+# 			print('Waiting for: {}'.format(', '.join(self.msg.waiting_for)))
+# 		elif 'end' in self.msg:
+# 			print('--- Game Ended ---')
+# 		else:
+#
+# 			if 'status' in self.msg:
+# 				status = _format_line(self.msg.status['line'])
+# 				print('+' + '-' * (len(status) + 2) + '+')
+# 				print('| {} |'.format(status))
+# 				print('+' + '-' * (len(status) + 2) + '+')
+#
+# 				# print('Status: {}'.format(_format_line(self.msg.status)))
+# 			else:
+# 				print('No status found')
+#
+# 			if 'options' in self.msg:
+# 				idx = 0
+#
+# 				for opt in self.msg.options:
+#
+# 					if 'desc' in opt:
+# 						print('-- {} --'.format(_format_line(opt.desc['line'])))
+#
+# 					for tpl in decode_action_set(opt.actions):
+# 						print('{:>4} - {}'.format(idx, _format_action(tpl)))
+# 						idx += 1
+#
+#
+#
+# 	def view_info(self):
+# 		if self.msg is None or 'info' not in self.msg:
+# 			print('No info to print')
+# 		return render_dict(self.msg.info)
+#
+# 	def view_table(self):
+# 		if self.table is None:
+# 			print('No table to print')
+#
+# 		return render_dict(self.table)
+#
+# 	def select_action(self, idx=None):
+#
+# 		if self.actions is None or not len(self.actions):
+# 			print('No actions to select')
+# 			return
+#
+# 		if idx is None:
+# 			idx = self.rng.randint(0,len(self.actions)-1)
+#
+# 		self.action = self.actions[idx]
+#
+# 		print('Selected action {}: {}'.format(idx, _format_action(self.action)))
+#
+#
+# 	def step(self):
+#
+# 		if not self.in_progress:
+# 			print('No game in progress')
+# 			return
+#
+# 		if self.action is None:
+# 			print('Must first select an action')
+# 			return
+#
+# 		if self.key is None:
+# 			print('No key found')
+# 			return
+#
+# 		self.msg = _format(self.ctrl.step(player=self.player, action=_package_action(self.action), key=self.key))
+#
+# 		self.key = None
+#
+# 		self._process_msg()
+#
+# 		self.action = None
+# 		self.actions = None
+#
 
 
 

@@ -98,7 +98,7 @@ def gain_res(res, bank, player, delta, log=None):
 	player.resources[res] += delta
 	player.num_res += delta
 	
-	change = 'gains' if delta > 0 else 'loses'
+	change = ' gains ' if delta > 0 else ' loses '
 	if log is not None:
 		log.writef('{} {} {} {}.', player, change, abs(delta), res)
 	

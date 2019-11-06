@@ -29,7 +29,7 @@ class GameObject(Typed, Writable, Jsonable, Pullable, tdict):
 		super().__init__(obj_type, **props) # all GameObjects are basically just tdicts with a obj_type and visible attrs and they can use a table to signal track changes
 		
 		self.visible = visible
-		self._verify()
+		# self._verify()
 		
 	def _verify(self):
 		assert 'obj_type' in self

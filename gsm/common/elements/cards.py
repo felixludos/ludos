@@ -30,7 +30,7 @@ class Deck(SafeGenerator):
 		super().__init__(seed=seed, objs=tdeque(cards), default=default, **info)
 		
 		self._top_face_up = top_face_up
-		self._in_play = tdict()
+		self._in_play = tset()
 		self._kwargs = tdict()
 		
 		self.shuffle()
@@ -44,6 +44,7 @@ class Deck(SafeGenerator):
 		objs = tlist()
 		for _ in range(n):
 			obj = self._objs.popleft()
+			obj.deck = self
 			obj.update(self._kwargs)
 			objs.append(obj)
 			
@@ -74,7 +75,10 @@ class Deck(SafeGenerator):
 			self._kwargs = {'visible': tset([player.name])}
 		
 		cards = self.get(n)
-		self._in_play.update({c._id:c for c in cards})
+		if n is None:
+			self._in_play.add(cards)
+		else:
+			self._in_play.update(cards)
 		
 		self._kwargs = {}
 		
@@ -83,9 +87,9 @@ class Deck(SafeGenerator):
 	def discard(self, *cards):
 		
 		for c in cards:
-			del self._in_play[c._id]
+			self._in_play.remove(c)
 			
 		self.extend(cards)
 
 	def retrieve_all(self):
-		self.discard(*self._in_play.values())
+		self.discard(*self._in_play)

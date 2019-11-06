@@ -9,10 +9,11 @@ from .registry import _game_registry, get_trans
 from .transmit import send_http
 
 class Host(object):
-	def __init__(self, address, **settings):
+	def __init__(self, address, debug=False, **settings):
 		super().__init__()
 		
 		self._in_progress = False
+		self.debug = debug
 		self.game = None
 		self.ctrl_cls = None
 		self.ctrl = None
@@ -126,7 +127,7 @@ class Host(object):
 		
 		player = next(iter(self.players.keys()))
 		
-		self.ctrl = self.ctrl_cls(**self.settings)
+		self.ctrl = self.ctrl_cls(debug=self.debug, **self.settings)
 		self.ctrl.reset(player, seed=seed)
 		
 		self._passive_frontend_step()
@@ -139,6 +140,10 @@ class Host(object):
 		self.settings[key] = value
 	def del_setting(self, key):
 		del self.settings[key]
+	
+	def cheat(self, code=None):
+		self.ctrl.cheat(code)
+		return 'Cheat code: {}'.format(code)
 	
 	def save_game(self, path, fixed_users=False):
 		if self.ctrl is None:
@@ -168,6 +173,10 @@ class Host(object):
 			raise UnknownUserError
 		player = self.roles[user]
 		msg = self.ctrl.step(player, group, action, key)
+		
+		out = json.loads(msg)
+		if 'error' in out:
+			return msg
 		
 		if self._passive_frontend_step():
 			msg = self.ctrl.get_status(player)

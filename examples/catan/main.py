@@ -6,7 +6,7 @@ from gsm.common.elements import Card, Deck
 from gsm.common.world import grid
 from gsm.common import TurnPhaseStack
 
-from .ops import build_catan_map
+from .ops import build_catan_map, gain_res
 from .phases import *
 from .objects import Hex, Board, DevCard
 
@@ -155,6 +155,36 @@ class Catan(gsm.GameController):
 			return out
 		out.winners = winners
 		return out
+	
+	def cheat(self, code=None):
+		
+		self.log.writef('Cheat code activated: {}', code)
+		self.log.iindent()
+		
+		if code == 'devcard':
+			for player in self.players:
+				gain_res('wheat', self.state.bank, player, 1, log=self.log)
+				gain_res('ore', self.state.bank, player, 1, log=self.log)
+				gain_res('sheep', self.state.bank, player, 1, log=self.log)
+
+		if code == 'road':
+			for player in self.players:
+				gain_res('wood', self.state.bank, player, 1, log=self.log)
+				gain_res('brick', self.state.bank, player, 1, log=self.log)
+				
+		if code == 'settlement':
+			for player in self.players:
+				gain_res('wood', self.state.bank, player, 1, log=self.log)
+				gain_res('brick', self.state.bank, player, 1, log=self.log)
+				gain_res('wheat', self.state.bank, player, 1, log=self.log)
+				gain_res('sheep', self.state.bank, player, 1, log=self.log)
+				
+		if code == 'city':
+			for player in self.players:
+				gain_res('wheat', self.state.bank, player, 2, log=self.log)
+				gain_res('ore', self.state.bank, player, 3, log=self.log)
+		
+		self.log.dindent()
 
 
 gsm.register_game(Catan, os.path.join(MY_PATH, 'info.yaml'))

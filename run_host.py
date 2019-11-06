@@ -36,15 +36,23 @@ def _fmt_output(data):
 H = None
 
 @app.route('/restart')
-def _hard_restart(address=None, **settings):
+@app.route('/restart/<int:debug>')
+def _hard_restart(address=None, debug=False, **settings):
 	global H
 	
 	if address is None:
 		assert H is not None, 'must provide an address if no host is running'
 		address = H.address
 	
-	H = gsm.Host(address, **settings)
-	return 'Host restarted'
+	debug = bool(debug)
+	
+	H = gsm.Host(address, debug=debug, **settings)
+	return 'Host restarted (debug={})'.format(debug)
+
+@app.route('/cheat')
+@app.route('/cheat/<code>')
+def _cheat(code=None):
+	return H.cheat(code)
 
 # Game Info and Selection
 
@@ -183,7 +191,6 @@ def _get_status(user):
 @app.route('/log/<user>')
 def _get_log(user):
 	return H.get_log(user)
-
 
 def main(argv=None):
 	parser = argparse.ArgumentParser(description='Start the host server.')

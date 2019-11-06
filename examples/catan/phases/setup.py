@@ -3,7 +3,7 @@ import gsm
 from gsm import GamePhase, GameActions, PhaseComplete, SwitchPhase
 from gsm import tset, tdict, tlist
 
-from ..ops import build
+from ..ops import build, gain_res
 
 class SetupPhase(GamePhase):
 	
@@ -51,8 +51,7 @@ class SetupPhase(GamePhase):
 							res.append(f.res)
 					
 					for r in res:
-						C.state.bank[r] -= 1
-						player.resources[r] += 1
+						gain_res(r, C.state.bank, player, 1)
 					
 					if len(res) == 3:
 						s = '{}, {}, and {}'.format(*res)
