@@ -1,4 +1,4 @@
-from humpack import tdict, tlist, tset, tdeque, tstack, containerify, Array
+from humpack import tdict, tlist, tset, tdeque, tstack, theap, containerify, Array
 from humpack import Savable, Transactionable
 from .util import jsonify, unjsonify
 from .signals import PhaseComplete, SwitchPhase, GameOver
