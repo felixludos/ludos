@@ -8,16 +8,17 @@ from ..core.actions import decode_action_set
 from ..io import get_ai, register_interface, register_ai
 
 class Agent_Interface(Interface):
-	def __init__(self, *users, agent_type=None, host_addr=None, **agent_kwargs):
+	def __init__(self, *users, agent_type=None, game=None, host_addr=None, **agent_kwargs):
 		super().__init__(*users, host_addr=host_addr)
 		self.agents = {user:None for user in users}
 		assert agent_type is not None
 		self.agent_type = agent_type
 		self.agent_kwargs = agent_kwargs
+		self.game = game
 	
 	def set_player(self, user, player):
 		super().set_player(user, player)
-		self.agents[user] = get_ai(self.agent_type)(player, **self.agent_kwargs)
+		self.agents[user] = get_ai(self.agent_type, game=self.game)(player, **self.agent_kwargs)
 		print('Agent for {} is initialized'.format(user))
 	
 	def ping(self):
@@ -59,7 +60,7 @@ class Agent_Interface(Interface):
 		if self.agents[user] is not None:
 			self.agents[user].reset()
 	
-register_interface('agent', Agent_Interface)
+# register_interface('agent', Agent_Interface)
 
 class Agent(Named, tdict):
 	# def __init__(self, name): # player name
@@ -98,3 +99,47 @@ class RandomAgent(Agent):
 		return self.gen.choice(actions)
 
 register_ai('random', RandomAgent)
+
+
+class PassingAgent(RandomAgent):
+	def __init__(self, name, prob=0.5, seed=None, groups=['pass', 'cancel']):
+		super().__init__(name, seed=seed)
+		self.prob = prob
+		self.groups = groups
+		
+	def decide(self, options):
+		if self.gen.uniform(0,1) < self.prob:
+			for group in self.groups:
+				if group in self.options:
+					return group, _package_action(options[group].actions.pop())
+		
+		return super().decide(options)
+		
+register_ai('pass', PassingAgent)
+
+
+class AgentComposer(Agent):
+	def __init__(self, name, agents=[]): # each agent element has: [agent_type, game, kwargs]
+		super().__init__(name)
+		self.agents = [get_ai(agent_type, game)(name, **kwargs)
+		               for agent_type, game, kwargs in agents]
+		assert len(agents), 'no agents provided'
+		self.active = None
+		
+	def process(self, agent, me, **status):
+		return 0
+		
+	def observe(self, me, **status):
+		max_rank, best_agent = None, None
+		
+		for agent in self.agents:
+			rank = self.process(agent, me, **status)
+			if max_rank is None or rank > max_rank:
+				max_rank, best_agent = rank, agent
+		
+		self.active = best_agent
+		self.active.observe(me, **status)
+		
+	def decide(self, options):
+		return self.active.decide(options)
+

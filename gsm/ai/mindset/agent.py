@@ -1,6 +1,6 @@
 
 from ...mixins import Named, Typed
-from ... import tlist, tdict, tset, Transactionable, Savable
+from ... import tlist, tdict, tset, theap, Transactionable, Savable
 from .. import RandomAgent
 
 
@@ -9,7 +9,7 @@ class Tactic(Typed, Named, tdict):
 	def observe(self, me, **status):
 		pass
 	
-	def decide(self, actions):
+	def decide(self, mind, actions):
 		raise NotImplementedError
 	
 class StopThinking(Exception):
@@ -30,10 +30,7 @@ class Idea(tdict):
 		
 	def __cmp__(self, other):
 		return other.rank - self.rank
-		# try: # not necessary, but I dont know why. maybe __cmp__ already does this automatically?
-		# 	return other.rank - self.rank
-		# except:
-		# 	return -other.__cmp__(self)
+	
 	def __gt__(self, other):
 		return self.__cmp__(other) > 0
 	def __ge__(self, other):
@@ -53,10 +50,18 @@ class Killer_Idea(Idea):
 class Mind(tdict):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		self._ideas =
+		self._ideas = theap()
 	
-	def prioritize(self):
-		return iter(self._ideas)
+	def __setitem__(self, key, value):
+		if isinstance(value, Idea):
+			self._ideas.add(value)
+		return super().__setitem__(key, value)
+	def __delitem__(self, item):
+		if isinstance(item, Idea):
+			self._ideas.discard(item)
+	
+	def ideas(self):
+		return self._ideas
 	
 
 class Mindset_Agent(RandomAgent):
@@ -68,7 +73,11 @@ class Mindset_Agent(RandomAgent):
 		
 		self.mind = tdict()
 		
-	def add_mindset(self, phase, group, mindset):
+	def register_mindset(self, phase, group, mindset):
+		pass
+	
+	def register_tactic(self, phase, group, tactic):
+		pass
 	
 	def observe(self, me, **status):
 		pass

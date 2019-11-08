@@ -18,14 +18,32 @@ def get_interface(name):
 		raise InvalidValueError(name)
 	return _interface_registry[name]
 
+
 _ai_registry = {}
-def register_ai(name, cls):
+_game_ai_registry = {}
+def register_ai(name, cls, game=None):
+	if game is not None:
+		if game not in _game_ai_registry:
+			_game_ai_registry[game] = {}
+		_game_ai_registry[game][name] = cls
+		return
 	if name in _ai_registry:
 		raise RegistryCollisionError(name)
 	_ai_registry[name] = cls
-def get_ai(name):
-	if name not in _ai_registry:
-		raise InvalidValueError(name)
+def available_ai(name, game=None):
+	if game is not None and name in _game_ai_registry[game]:
+		return _game_ai_registry[game][name]
+	return _ai_registry[name]
+def get_ai(name=None, game=None):
+	assert name is not None or game is not None, 'nothing selected'
+	if game is not None and name is None:
+		if game not in _game_ai_registry:
+			raise InvalidValueError(game)
+		ais = _ai_registry.copy()
+		ais.update(_game_ai_registry[game])
+		return ais
+	elif name is not None:
+		return _game_ai_registry[game][name]
 	return _ai_registry[name]
 
 _trans_registry = {}
