@@ -36,14 +36,14 @@ def available_ai(name, game=None):
 	return _ai_registry[name]
 def get_ai(name=None, game=None):
 	assert name is not None or game is not None, 'nothing selected'
-	if game is not None and name is None:
+	if game is not None:
+		if name is not None:
+			return _game_ai_registry[game][name]
 		if game not in _game_ai_registry:
 			raise InvalidValueError(game)
 		ais = _ai_registry.copy()
 		ais.update(_game_ai_registry[game])
 		return ais
-	elif name is not None:
-		return _game_ai_registry[game][name]
 	return _ai_registry[name]
 
 _trans_registry = {}

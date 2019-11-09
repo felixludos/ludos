@@ -5,6 +5,7 @@ import requests
 import urllib.parse
 from queue import Queue, Empty
 import multiprocessing as mp
+from ..mixins import Named
 from .registry import register_trans, get_interface
 
 from werkzeug.routing import BaseConverter
@@ -79,13 +80,13 @@ def worker_fn(in_q, out_q, interface_type, users, settings):
 			out_q.put(('Command failed:', cmd, data,
 			           e.__class__.__name__, ''.join(traceback.format_exception(*sys.exc_info()))))
 	
-	pass
 
 
 # used by the host - each passive frontend has one transceiver to communicate.
 class Transceiver(object):
 	
 	def __init__(self, host_addr, timeout=5):
+		super().__init__()
 		self.host_addr = host_addr
 		self.timeout = timeout
 	
@@ -157,7 +158,6 @@ class Server_Transceiver(Transceiver): # requires that the server is already run
 	
 	def __init__(self, client_addr, host_addr, timeout=5):
 		super().__init__(host_addr, timeout=timeout)
-	
 		self.client_addr = client_addr
 		
 	def _transmit(self, cmd, *msg):
@@ -171,8 +171,6 @@ class Server_Transceiver(Transceiver): # requires that the server is already run
 			msg = ()
 	
 		return send_http(self.client_addr, cmd, *msg, data=data, timeout=self.timeout)
-	
-	pass
 
 
 register_trans('http', Process_Transceiver)

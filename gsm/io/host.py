@@ -145,15 +145,18 @@ class Host(object):
 		self.ctrl.cheat(code)
 		return 'Cheat code: {}'.format(code)
 	
-	def save_game(self, path, fixed_users=False):
+	def save_game(self, path, save_interfaces=False):
 		if self.ctrl is None:
 			raise NoActiveGameError
 		state = self.ctrl.save()
-		data = {'state':state, 'players': self.players}
-		if fixed_users:
-			data['fixed_users'] = True
+		data = {'state':state, 'players':self.roles}
+		
+		if save_interfaces:
+			data['interfaces'] = {user:interface.save() for user, interface in self.interfaces.items()}
 		
 		pickle.dump(data, open(path, 'wb'))
+		
+		return 'Game saved to: {}'.format(path)
 	
 	def load_game(self, path):
 		if self.ctrl is None:
@@ -161,12 +164,26 @@ class Host(object):
 		
 		data = pickle.load(open(path, 'rb'))
 		
-		# if 'fixed_users' in data:
-		# 	for player, user in data['players'].items():
-		# 		if player not in self.players or self.players[player] != user:
-		# 			raise LoadConsistencyError
+		missing = []
+		for user, player in data['players'].items():
+			if user in self.users:
+				self.add_player(user, player)
+			else:
+				missing.append(player)
+		
+		if 'interfaces' in data:
+			for user, state in data['interfaces'].items():
+				if user in self.interfaces:
+					self.interfaces[user].load(state)
+					print('Loaded {}'.format(user))
 				
-		self.ctrl.load(data)
+		self.ctrl.load(data['state'])
+		
+		ms = ''
+		if len(missing):
+			ms = ' Missing players: {}'.format(', '.join(missing))
+		
+		return 'Game {} loaded.{}'.format(path, ms)
 	
 	def take_action(self, user, group, action, key):
 		if user not in self.roles:

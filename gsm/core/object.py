@@ -196,7 +196,7 @@ class SafeGenerator(GameObjectGenerator):
 		self._rng = RandomGenerator(seed=seed)
 		
 	def _gen_ID(self):
-		ID = '{}-{}'.format(self._id, hex(self._rng.getrandbits(32)))
+		ID = '{}-{}'.format(self._id, hex(self._rng.getrandbits(32))[2:])
 		
 		if not self._table.is_available(ID):
 			return self._gen_ID()

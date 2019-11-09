@@ -321,6 +321,14 @@ class Ipython_Runner(object):
 			self.key = self.msg.key
 	
 
+	def save(self, name, overwrite=False):
+		if overwrite:
+			return send_http(self.addr, 'save', name, 'true')
+		return send_http(self.addr, 'save', name)
+	
+	def load(self, name):
+		return send_http(self.addr, 'load', name)
+
 #
 # class Ipython_Interface(object):
 #

@@ -145,7 +145,7 @@ def _save(name, overwrite='false'):
 	if overwrite != 'true' and filename in os.listdir(filedir):
 		raise Exception('This savefile already exists')
 	
-	H.save_game(os.path.join(filedir, filename))
+	H.save_game(os.path.join(filedir, filename), save_interfaces=True)
 	
 	return 'game {} saved'.format(name)
 	

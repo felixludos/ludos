@@ -59,8 +59,15 @@ class Agent_Interface(Interface):
 	def reset(self, user):
 		if self.agents[user] is not None:
 			self.agents[user].reset()
+			
+	def save(self):
+		return {user:Savable.pack(agent) for user, agent in self.agents.items()}
 	
-# register_interface('agent', Agent_Interface)
+	def load(self, state):
+		self.agents = {user:Savable.unpack(data) for user, data in state.items()}
+		
+	
+register_interface('agent', Agent_Interface)
 
 class Agent(Named, tdict):
 	# def __init__(self, name): # player name

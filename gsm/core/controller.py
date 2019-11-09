@@ -339,7 +339,7 @@ class GameController(Named, Transactionable, Savable):
 		return config
 	
 	def _gen_key(self, player=None):
-		key = hex(self._key_rng.getrandbits(64))
+		key = hex(self._key_rng.getrandbits(64))[2:]
 		if player is not None:
 			self.keys[player] = key
 		return key
