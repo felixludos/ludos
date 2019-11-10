@@ -72,7 +72,7 @@ def format_actions(raw): # format action sets to be sent to frontend (mostly enc
 
 
 
-class GameActions(Transactionable, Savable, Pullable): # created and returned in phases
+class GameActions(Savable, Pullable): # created and returned in phases
 	
 	def __init__(self, status=None):
 		super().__init__()

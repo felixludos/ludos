@@ -1,3 +1,4 @@
+import sys, os
 import time
 import pickle
 import yaml
@@ -43,6 +44,9 @@ class Host(object):
 			return 'continued'
 		return self.get_status(user)
 	
+	def get_roles(self):
+		return self.roles
+	
 	def get_available_games(self):
 		return list(_game_registry.keys())
 		
@@ -70,6 +74,8 @@ class Host(object):
 		self.game = name
 		self.info = info
 		self.ctrl_cls = cls
+		
+		return 'Game set to: {}'.format(name)
 	
 	def add_passive_client(self, *users, address=None,
 	                       interface=None, settings={}):
@@ -83,11 +89,18 @@ class Host(object):
 			trans = 'proc'
 			args = self.address, interface, *users
 		
+		interface_type = interface
+		
 		interface = get_trans(trans)(*args, **settings)
 		
 		for user in users:
 			self.interfaces[user] = interface
 			self.users.add(user)
+		
+		out = 'Using {} for: {}'.format(address, ', '.join(users)) if address is not None else \
+			'Created an interface ({}) for: {}'.format(interface_type, ', '.join(users))
+		
+		return out
 		
 	def add_spectator(self, user, advisor=None):
 		self.users.add(user)
@@ -100,6 +113,10 @@ class Host(object):
 				self.interfaces[user].set_player(user, advisor)
 		else:
 			self.spectators.add(user)
+		
+		if advisor is None:
+			return '{} has joined as a spectator'.format(user)
+		return '{} has joined as an advisor for {}'.format(user, advisor)
 	
 	def add_player(self, user, player):
 		
@@ -116,11 +133,13 @@ class Host(object):
 		
 		return '{} is now playing {}'.format(user, player)
 		
-	def begin_game(self, seed=None):
+	def init_game(self, seed=None):
+		
 		if self.ctrl_cls is None:
 			raise Exception('Must set a game first')
 		if len(self.players) not in self.info['num_players']:
-			raise Exception('Invalid number of players {}, allowed for {}: {}'.format(len(self.players), self.info.name, ', '.join(self.info.num_players)))
+			raise Exception('Invalid number of players {}, allowed for {}: {}'.format(len(self.players), self.info.name,
+			                                                                          ', '.join(self.info.num_players)))
 		
 		for user, interface in self.interfaces.items():
 			interface.reset(user)
@@ -130,7 +149,14 @@ class Host(object):
 		self.ctrl = self.ctrl_cls(debug=self.debug, **self.settings)
 		self.ctrl.reset(player, seed=seed)
 		
+		
+	def begin_game(self, seed=None):
+		
+		self.init_game(seed)
+		
 		self._passive_frontend_step()
+		
+		return '{} has started'.format(self.info['name'])
 	
 	def reset(self):
 		self.ctrl = None
@@ -138,8 +164,13 @@ class Host(object):
 	
 	def set_setting(self, key, value):
 		self.settings[key] = value
+		return 'Set {}: {}'.format(key, value)
 	def del_setting(self, key):
 		del self.settings[key]
+		return 'Del {}'.format(key)
+	
+	def get_active_players(self):
+		return self.ctrl.get_active_players()
 	
 	def cheat(self, code=None):
 		self.ctrl.cheat(code)
@@ -156,11 +187,13 @@ class Host(object):
 		
 		pickle.dump(data, open(path, 'wb'))
 		
-		return 'Game saved to: {}'.format(path)
+		print('Game saved to: {}'.format(path))
+		
+		return 'game {} saved'.format(os.path.basename(path))
 	
-	def load_game(self, path):
-		if self.ctrl is None:
-			raise NoActiveGameError
+	def load_game(self, path, load_interfaces=True):
+		
+		self.init_game(seed=None)
 		
 		data = pickle.load(open(path, 'rb'))
 		
@@ -171,7 +204,7 @@ class Host(object):
 			else:
 				missing.append(player)
 		
-		if 'interfaces' in data:
+		if load_interfaces and 'interfaces' in data:
 			for user, state in data['interfaces'].items():
 				if user in self.interfaces:
 					self.interfaces[user].load(state)
@@ -183,7 +216,7 @@ class Host(object):
 		if len(missing):
 			ms = ' Missing players: {}'.format(', '.join(missing))
 		
-		return 'Game {} loaded.{}'.format(path, ms)
+		return 'Game {} loaded.{}'.format(os.path.basename(path), ms)
 	
 	def take_action(self, user, group, action, key):
 		if user not in self.roles:
@@ -241,13 +274,19 @@ class Host(object):
 						if msg is None:
 							return recheck
 						elif 'key' in msg: # TODO: enable spectator/advisor handling
-							self.ctrl.step(player, group=msg['group'], action=msg['action'], key=msg['key'])
+							msg = self.ctrl.step(player, group=msg['group'], action=msg['action'], key=msg['key'])
 							recheck = True
 						elif 'action' in msg:
 							self.give_advice(user, group=msg['group'], action=msg['action'])
 							recheck = True
-						elif 'error' in msg:
-							print('Error: {}'.format(msg))
+						
+						if 'error' in msg:
+							print(msg)
+							print('*** ERROR: {} ***'.format(msg['error']['type']))
+							print(msg['error']['msg'])
+							print('****************************')
+							assert False
+							
 						else:
 							no_passive = True
 						break
@@ -292,13 +331,13 @@ class Host(object):
 		player = self.roles[user]
 		return self.ctrl.get_table(player)
 	
-	def get_log(self, user):
-		if user not in self.roles:
-			raise InvalidValueError(user)
+	def get_log(self, user, god=False):
 		if self.ctrl is None:
 			raise NoActiveGameError
+		if user not in self.roles:
+			return self.ctrl.get_log(god_mode=god)
 		player = self.roles[user]
-		return self.ctrl.get_log(player)
+		return self.ctrl.get_log(player, god_mode=god)
 	
 	def get_obj_types(self):
 		if self.ctrl is None:

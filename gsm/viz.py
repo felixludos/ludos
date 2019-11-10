@@ -91,9 +91,10 @@ def _package_action(action):
 	return list(final)
 
 class Ipython_Runner(object):
-	def __init__(self, addr, *users, seed=None, full_log=False):
+	def __init__(self, addr, *users, seed=None, full_log=False, god_mode=False):
 		self.addr = addr
 		self.full_log = full_log
+		self.god_mode = god_mode
 		
 		self.rng = RandomGenerator()
 		if seed is None:
@@ -113,17 +114,32 @@ class Ipython_Runner(object):
 		debug = 1 if debug else 0
 		return send_http(self.addr, 'restart', debug)
 		
+	def _execute(self, *args, **kwargs):
+		msg = send_http(self.addr, *args, **kwargs)
+		if 'error' in msg:
+			if isinstance(msg, dict):
+				self.print_error(msg['error'])
+			else:
+				print(msg)
+			assert False
+		return msg
+		
+	def print_error(self, error):
+		print('*** ERROR: {} ***'.format(error['type']))
+		print(error['msg'])
+		print('****************************')
+	
 	def available_games(self):
-		return send_http(self.addr, 'game/available')
+		return self._execute('game/available')
 	
 	def select_game(self, name):
-		return send_http(self.addr, 'game/select', name)
+		return self._execute('game/select', name)
 	
 	def game_info(self):
-		return send_http(self.addr, 'game/info')
+		return self._execute('game/info')
 	
 	def game_players(self):
-		return send_http(self.addr, 'game/players')
+		return self._execute('game/players')
 	
 	def add_client(self, *users, port=None, interface=None, agent_type=None, timeout=5, **settings):
 		
@@ -137,36 +153,36 @@ class Ipython_Runner(object):
 		
 		msg = ('add', 'client', users) if interface is None else ('add', 'client', interface, users)
 		
-		return send_http(self.addr, *msg, data=data)
+		return self._execute(*msg, data=data)
 	
 	def go(self, user=None):
 		if user is not None:
-			return send_http(self.addr, 'continue', user)
-		return send_http(self.addr, 'continue')
+			return self._execute('continue', user)
+		return self._execute('continue')
 	
 	def toggle_pause(self):
-		return send_http(self.addr, 'autopause')
+		return self._execute('autopause')
 	
 	def ping(self):
-		return send_http(self.addr, 'ping', 'clients')
+		return self._execute('ping', 'clients')
 	
 	def add_player(self, user=None, player=None):
 		if user is None:
 			user = self.users[0]
 		assert player is not None # TODO maybe automatically load available players
-		return send_http(self.addr, 'add/player', user, player)
+		return self._execute('add/player', user, player)
 	
 	def add_advisor(self, user=None, player=None):
 		if user is None:
 			user = self.users[0]
 		assert player is not None # TODO maybe automatically load available players
-		return send_http(self.addr, 'add/advisor', user, player)
+		return self._execute('add/advisor', user, player)
 	
 	def add_spectator(self, user=None):
 		if user is None:
 			user = self.users[0]
 		self.specs.add(user)
-		return send_http(self.addr, 'add/spectator', user)
+		return self._execute('add/spectator', user)
 	
 	def set_user(self, user=None):
 		if user is not None:
@@ -179,21 +195,24 @@ class Ipython_Runner(object):
 			self.users.append(self.users.popleft())
 		print('set user: {}'.format(self.users[0]))
 	
+	def get_active_players(self):
+		return self._execute('active')
+	
 	def begin(self, seed=None):
 		if seed is None:
 			seed = self.seed
 		self.in_progress = True
-		return send_http(self.addr, 'begin', seed)
+		return self._execute('begin', seed)
 	
 	def cheat(self, code=None):
 		if code is None:
 			return send_http(self.addr, 'cheat')
-		return send_http(self.addr, 'cheat', code)
+		return self._execute('cheat', code)
 	
 	def status(self, user=None):
 		if user is None:
 			user = self.users[0]
-		self.msg = unjsonify(send_http(self.addr, 'status', user))
+		self.msg = unjsonify(self._execute('status', user))
 		self.key = self.msg.key if 'key' in self.msg else None
 		
 		if isinstance(self.msg, str):
@@ -213,7 +232,7 @@ class Ipython_Runner(object):
 		
 		assert self.key is not None
 		
-		self.msg = unjsonify(send_http(self.addr, 'action', user, self.key, group, action))
+		self.msg = unjsonify(self._execute('action', user, self.key, group, action))
 		
 		if isinstance(self.msg, str):
 			print('Error: {}'.format(self.msg))
@@ -222,11 +241,13 @@ class Ipython_Runner(object):
 		self.key = None
 		self._process_msg()
 	
-	def get_log(self, user=None):
+	def get_log(self, user=None, god=None):
 		if user is None:
 			user = self.users[0]
-		self.log = send_http(self.addr, 'log', user)
-		return self.log
+		if god is None:
+			god = self.god_mode
+		self.log = self._execute('log', user, 'true') if god else self._execute('log', user)
+		return unjsonify(self.log)
 	
 	def view(self):
 		if self.msg is None:
@@ -252,9 +273,7 @@ class Ipython_Runner(object):
 				print(_format_log(self.msg.log))
 		
 		if 'error' in self.msg:
-			print('*** ERROR: {} ***'.format(self.msg.error.type))
-			print(self.msg.error.msg)
-			print('****************************')
+			self.print_error(self.msg.error)
 		
 		if 'phase' in self.msg:
 			print('Phase: {}'.format(self.msg.phase))
@@ -297,6 +316,9 @@ class Ipython_Runner(object):
 					for tpl in decode_action_set(opt.actions):
 						print('{:>4} - {}'.format(idx, _format_action(tpl)))
 						idx += 1
+			
+			else:
+				print('Active: {}'.format(', '.join(self.get_active_players())))
 	
 	def _select_action(self):
 		idx = self.rng.randint(0,len(self.actions)-1)
@@ -321,13 +343,13 @@ class Ipython_Runner(object):
 			self.key = self.msg.key
 	
 
-	def save(self, name, overwrite=False):
+	def save(self, name, overwrite=True):
 		if overwrite:
-			return send_http(self.addr, 'save', name, 'true')
-		return send_http(self.addr, 'save', name)
+			return self._execute('save', name, 'true')
+		return self._execute('save', name)
 	
 	def load(self, name):
-		return send_http(self.addr, 'load', name)
+		return self._execute('load', name)
 
 #
 # class Ipython_Interface(object):

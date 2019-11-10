@@ -59,6 +59,24 @@ def send_http(addr, *command, data=None, timeout=None):
 	except Exception:
 		return out.text
 
+class ExceptionWrapper(object):
+	r"""Wraps an exception plus traceback to communicate across threads"""
+	def __init__(self, interface=None):
+		# It is important that we don't store exc_info, see
+		# NOTE [ Python Traceback Reference Cycle Problem ]
+		exc_info = sys.exc_info()
+		self.exc_type = exc_info[0]
+		self.exc_msg = "".join(traceback.format_exception(*exc_info))
+		self.where = interface
+
+	def reraise(self):
+		r"""Reraises the wrapped exception in the current thread"""
+		# Format a message such as: "Caught ValueError in DataLoader worker
+		# process 2. Original Traceback:", followed by the traceback.
+		msg = "Caught {} {}.\nOriginal {}".format(
+			self.exc_type.__name__, self.where, self.exc_msg)
+		raise self.exc_type(msg)
+
 def worker_fn(in_q, out_q, interface_type, users, settings):
 	
 	# print(interface_type, users, settings)
@@ -74,12 +92,13 @@ def worker_fn(in_q, out_q, interface_type, users, settings):
 			
 		try:
 			out = interface.__getattribute__(cmd)(*data)
-			out_q.put(out)
-	
+			
 		except Exception as e:
-			out_q.put(('Command failed:', cmd, data,
-			           e.__class__.__name__, ''.join(traceback.format_exception(*sys.exc_info()))))
-	
+			out = ExceptionWrapper(interface)
+			# out_q.put(('Command failed:', cmd, data,
+			#            e.__class__.__name__, ''.join(traceback.format_exception(*sys.exc_info()))))
+		
+		out_q.put(out)
 
 
 # used by the host - each passive frontend has one transceiver to communicate.
@@ -149,6 +168,9 @@ class Process_Transceiver(Transceiver): # running the interface in a parallel pr
 			out = self.receive_q.get(timeout=self.timeout)
 		except Empty:
 			out = None
+		
+		if isinstance(out, ExceptionWrapper):
+			out.reraise()
 		
 		return out
 

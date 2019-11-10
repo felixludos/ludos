@@ -4,6 +4,7 @@ import os
 import random
 import sys
 import time
+import traceback
 from collections import OrderedDict, namedtuple
 from itertools import chain, product
 from string import Formatter
@@ -31,6 +32,18 @@ CORS(app)
 def _fmt_output(data):
 	return json.dumps(data)
 
+def _ex_wrap(cmd, *args, **kwargs):
+	try:
+		return cmd(*args, **kwargs)
+	except Exception as e:
+		msg = {
+			'error': {
+				'type': e.__class__.__name__,
+				'msg': ''.join(traceback.format_exception(*sys.exc_info())),
+			},
+		}
+		return _fmt_output(msg)
+
 # Meta Host
 
 H = None
@@ -52,37 +65,37 @@ def _hard_restart(address=None, debug=False, **settings):
 @app.route('/cheat')
 @app.route('/cheat/<code>')
 def _cheat(code=None):
-	return H.cheat(code)
+	return _ex_wrap(H.cheat, code)
 
 # Game Info and Selection
 
 @app.route('/game/info')
 @app.route('/game/info/<name>')
 def _get_game_info(name=None):
-	return _fmt_output(H.get_game_info(name))
+	return _fmt_output(_ex_wrap(H.get_game_info, name))
 
 @app.route('/game/available')
 def _get_available_games():
-	return _fmt_output(H.get_available_games())
+	return _fmt_output(_ex_wrap(H.get_available_games))
 
 @app.route('/game/select/<name>')
 def _set_game(name):
-	H.set_game(name)
-	return 'Game set to: {}'.format(name)
+	return _ex_wrap(H.set_game, name)
+	
 
 @app.route('/game/players')
 def _get_available_players():
-	return _fmt_output(H.get_available_players())
+	return _fmt_output(_ex_wrap(H.get_available_players))
 
 @app.route('/setting/<key>/<value>')
 def _setting(key, value):
-	H.set_setting(key, value)
-	return 'Set {}: {}'.format(key, value)
+	return _ex_wrap(H.set_setting, key, value)
+	
 	
 @app.route('/del/setting/<key>')
 def _del_setting(key):
-	H.del_setting(key)
-	return 'Del {}'.format(key)
+	return _ex_wrap(H.del_setting, key)
+	
 
 # Managing clients
 
@@ -93,41 +106,37 @@ def _add_passive_client(users, interface=None):
 	address = request.get_json(force=True) if interface is None else None
 	settings = {} if interface is None else request.get_json(force=True)
 	
-	H.add_passive_client(*users, address=address, interface=interface, settings=settings)
+	return _ex_wrap(H.add_passive_client, *users,
+	                address=address, interface=interface,
+	                settings=settings)
 	
-	out = 'Using {} for: {}'.format(address, ', '.join(users)) if address is not None else \
-		'Created an interface ({}) for: {}'.format(interface, ', '.join(users))
-	
-	return out
 
 @app.route('/ping/clients')
 def _ping_clients():
-	return H.ping_interfaces()
+	return _ex_wrap(H.ping_interfaces)
 
 # Adding Players, Spectators, and Advisors
 
 @app.route('/add/player/<user>/<player>')
 def _add_player(user, player):
-	return H.add_player(user, player)
+	return _ex_wrap(H.add_player, user, player)
 	
 
 @app.route('/add/spectator/<user>')
 def _add_spectator(user):
-	H.add_spectator(user)
-	return '{} has joined as a spectator'.format(user)
+	return _ex_wrap(H.add_spectator, user)
 
 @app.route('/add/advisor/<user>/<player>')
 def _add_advisor(user, player):
-	H.add_spectator(user, player)
-	return '{} has joined as an advisor for {}'.format(user, player)
-
+	return _ex_wrap(H.add_spectator, user, player)
+	
 # Game Management
 
 @app.route('/begin')
 @app.route('/begin/<int:seed>')
 def _begin_game(seed=None):
-	H.begin_game(seed)
-	return '{} has started'.format(H.info['name'])
+	return _ex_wrap(H.begin_game, seed)
+	
 
 @app.route('/save/<name>')
 @app.route('/save/<name>/<overwrite>')
@@ -145,12 +154,12 @@ def _save(name, overwrite='false'):
 	if overwrite != 'true' and filename in os.listdir(filedir):
 		raise Exception('This savefile already exists')
 	
-	H.save_game(os.path.join(filedir, filename), save_interfaces=True)
-	
-	return 'game {} saved'.format(name)
+	return _ex_wrap(H.save_game, os.path.join(filedir, filename),
+	                save_interfaces=True)
 	
 @app.route('/load/<name>')
-def _load(name):
+@app.route('/load/<name>/<load_interfaces>')
+def _load(name, load_interfaces='true'):
 	
 	if H.game is None:
 		raise Exception('No game selected')
@@ -161,36 +170,43 @@ def _load(name):
 	if H.info['short_name'] not in os.listdir(SAVE_PATH):
 		return
 	
-	H.load_game(os.path.join(filedir, filename))
+	return _ex_wrap(H.load_game, os.path.join(filedir, filename), load_interfaces=='true')
 	
-	return 'game {} loaded'.format(name)
-
 # In-game Operations
 
 @app.route('/autopause')
 def _toggle_autopause():
-	return H.toggle_pause()
+	return _ex_wrap(H.toggle_pause)
 
 @app.route('/continue')
 @app.route('/continue/<user>')
 def _continue(user=None):
-	return H.continue_step(user)
+	return _ex_wrap(H.continue_step, user)
 
 @app.route('/action/<user>/<key>/<group>/<lst:action>')
 def _action(user, key, group, action):
-	return H.take_action(user, group, action, key)
+	return _ex_wrap(H.take_action, user, group, action, key)
 
 @app.route('/advise/<user>/<group>/<lst:action>')
 def _advise(user, group, action):
-	return H.give_advice(user, group, action)
+	return _ex_wrap(H.give_advice, user, group, action)
 
 @app.route('/status/<user>')
 def _get_status(user):
-	return H.get_status(user)
+	return _ex_wrap(H.get_status, user)
 
 @app.route('/log/<user>')
-def _get_log(user):
-	return H.get_log(user)
+@app.route('/log/<user>/<god>')
+def _get_log(user, god='false'):
+	return _ex_wrap(H.get_log, user, god == 'true')
+
+@app.route('/roles')
+def _get_roles():
+	return _ex_wrap(H.get_roles)
+
+@app.route('/active')
+def _get_active_players():
+	return _ex_wrap(H.get_active_players)
 
 def main(argv=None):
 	parser = argparse.ArgumentParser(description='Start the host server.')

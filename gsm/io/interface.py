@@ -26,6 +26,9 @@ class Interface(Typed, object):
 	
 	def load(self, state):
 		pass
+	
+	def __str__(self):
+		return self.get_type()
 
 class Test_Interface(Interface):
 	def ping(self):

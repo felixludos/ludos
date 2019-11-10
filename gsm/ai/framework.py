@@ -66,6 +66,8 @@ class Agent_Interface(Interface):
 	def load(self, state):
 		self.agents = {user:Savable.unpack(data) for user, data in state.items()}
 		
+	def __str__(self):
+		return '{}({})'.format(super().__str__(), self.agent_type)
 	
 register_interface('agent', Agent_Interface)
 
@@ -74,17 +76,40 @@ class Agent(Named, tdict):
 	# 	super().__init__(name)
 	# 	self.msg = None
 	
+	def _fmt_error(self, cmd):
+		print('\n\nException occurred for {}'.format(self.name))
+	
 	def reset(self):
+		try:
+			return self._reset()
+		except Exception as e:
+			self._fmt_error('reset')
+			raise e
+	
+	def _reset(self):
 		pass
 	
 	# Optional override - to use data from current status
 	def observe(self, me, **status):
+		try:
+			return self._observe(me, **status)
+		except Exception as e:
+			self._fmt_error('observe')
+			raise e
+	
+	def _observe(self, me, **status):
 		pass
 	
 	# Required override - choose from possible actions
 	def decide(self, options):
-		raise NotImplementedError
+		try:
+			return self._decide(options)
+		except Exception as e:
+			self._fmt_error('decide')
+			raise e
 	
+	def _decide(self, options):
+		raise NotImplementedError
 	
 class RandomAgent(Agent):
 	def __init__(self, name, seed=None):
@@ -93,12 +118,12 @@ class RandomAgent(Agent):
 		self.seed = seed
 		self.reset()
 	
-	def reset(self):
+	def _reset(self):
 		if self.seed is not None:
 			self.gen.seed(self.seed)
 			print('Reset seed to: {}'.format(self.seed))
 	
-	def decide(self, options):
+	def _decide(self, options):
 		actions = []
 		for name, opts in options.items():
 			actions.extend((name, _package_action(o)) for o in opts)
@@ -114,13 +139,13 @@ class PassingAgent(RandomAgent):
 		self.prob = prob
 		self.groups = groups
 		
-	def decide(self, options):
+	def _decide(self, options):
 		if self.gen.uniform(0,1) < self.prob:
 			for group in self.groups:
-				if group in self.options:
-					return group, _package_action(options[group].actions.pop())
+				if group in options:
+					return group, _package_action(options[group].pop())
 		
-		return super().decide(options)
+		return super()._decide(options)
 		
 register_ai('pass', PassingAgent)
 
@@ -136,7 +161,7 @@ class AgentComposer(Agent):
 	def process(self, agent, me, **status):
 		return 0
 		
-	def observe(self, me, **status):
+	def _observe(self, me, **status):
 		max_rank, best_agent = None, None
 		
 		for agent in self.agents:
@@ -145,8 +170,9 @@ class AgentComposer(Agent):
 				max_rank, best_agent = rank, agent
 		
 		self.active = best_agent
-		self.active.observe(me, **status)
+		self.active._observe(me, **status)
 		
-	def decide(self, options):
-		return self.active.decide(options)
+	def _decide(self, options):
+		return self.active._decide(options)
 
+register_ai('composer', AgentComposer)

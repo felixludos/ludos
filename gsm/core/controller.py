@@ -22,7 +22,7 @@ class GameController(Named, Transactionable, Savable):
 		new = super().__new__(cls)
 		
 		# meta values (neither for dev nor user) (not including soft registries - they dont change)
-		new._tmembers = {'state', 'log', 'table', 'stack', 'players', 'end_info', '_advice',
+		new._tmembers = {'state', 'log', 'table', 'stack', 'players', 'end_info', '_advice', 'active_players',
 		                 'keys', 'RNG', '_key_rng', '_images', '_advisor_images', 'config'}
 		return new
 	
@@ -448,8 +448,9 @@ class GameController(Named, Transactionable, Savable):
 	def get_obj_types(self):
 		return json.dumps(self.table.get_obj_types())
 	
-	def get_log(self, player):
-		return json.dumps(self.log.get_full(player))
+	def get_log(self, player=None, god_mode=False):
+		log = self.log.get_full(player, god_mode)
+		return json.dumps(jsonify(log))
 	
 	def get_UI_spec(self): # returns a specification for gUsIm - may be overridden to include extra data
 		raise NotImplementedError # TODO: by default it should return contents of a config file
