@@ -35,6 +35,8 @@ class MainPhase(TurnPhase):
 		if self.roll is None and self.pre_check is None:
 			
 			self.roll = roll_dice(C.RNG)
+			if len(C.state.rolls):
+				self.roll = C.state.rolls.pop()
 			
 			C.log.zindent()
 			C.log.writef('{} rolled: {}.', self.player, self.roll)

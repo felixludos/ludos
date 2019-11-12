@@ -198,6 +198,9 @@ class Ipython_Runner(object):
 	def get_active_players(self):
 		return self._execute('active')
 	
+	def get_roles(self):
+		return self._execute('roles')
+	
 	def begin(self, seed=None):
 		if seed is None:
 			seed = self.seed
@@ -348,7 +351,9 @@ class Ipython_Runner(object):
 			return self._execute('save', name, 'true')
 		return self._execute('save', name)
 	
-	def load(self, name):
+	def load(self, name, load_interface=False):
+		if not load_interface:
+			return self._execute('load', name, 'false')
 		return self._execute('load', name)
 
 #

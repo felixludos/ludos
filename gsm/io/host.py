@@ -216,7 +216,7 @@ class Host(object):
 		if len(missing):
 			ms = ' Missing players: {}'.format(', '.join(missing))
 		
-		return 'Game {} loaded.{}'.format(os.path.basename(path), ms)
+		return 'Game {} loaded{}.{}'.format(os.path.basename(path), ' with the interfaces' if load_interfaces else '', ms)
 	
 	def take_action(self, user, group, action, key):
 		if user not in self.roles:

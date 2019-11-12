@@ -1,7 +1,7 @@
 import sys, os
 import numpy as np
 import gsm
-from gsm import tdict, tlist, tset, containerify
+from gsm import tdict, tlist, tset, tdeque, tstack, containerify
 from gsm.common.elements import Card, Deck
 from gsm.common.world import grid
 from gsm.common import TurnPhaseStack
@@ -136,6 +136,8 @@ class Catan(gsm.GameController):
 		self.state.bank_trading = config.rules.bank_trading
 		self.state.msgs = config.msgs
 		
+		self.state.rolls = tstack()
+		
 	def _end_game(self):
 		
 		out = tdict()
@@ -183,6 +185,11 @@ class Catan(gsm.GameController):
 			for player in self.players:
 				gain_res('wheat', self.state.bank, player, 2, log=self.log)
 				gain_res('ore', self.state.bank, player, 3, log=self.log)
+		
+		if code == 'next7' and 'rolls' in self.state:
+			self.log.write('The next roll will be a 7')
+			
+			self.state.rolls.push(7)
 		
 		self.log.dindent()
 

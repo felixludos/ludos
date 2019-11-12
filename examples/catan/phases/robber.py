@@ -114,7 +114,7 @@ class RobberPhase(GamePhase):
 				
 				options = tset(f for f in C.state.world.fields if 'robber' not in f)
 				out.add(options)
-				out.set_status('Choose where to move the knight.')
+				out.set_status('Choose where to move the robber.')
 				
 		else:
 			with out('target', desc='Choose which player to steal from'):
