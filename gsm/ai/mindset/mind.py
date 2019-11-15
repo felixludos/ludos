@@ -1,12 +1,17 @@
 
+import numpy as np
+
 from ...mixins import Named, Typed
 from ... import tlist, tdict, tset, theap, Transactionable, Savable
 from .. import RandomAgent
 
 class Tactic(Typed, Named, tdict):
 	
-	def observe(self, me, **status):
+	def observe(self, mind, me, **status):
 		pass
+	
+	def priority(self, mind, actions):
+		return 0.
 	
 	def decide(self, mind, actions):
 		raise NotImplementedError
@@ -16,11 +21,11 @@ class StopThinking(Exception):
 
 class Mindset(tdict): # high level goal
 	
-	def process(self, me, **status):
-		return 0 # returns int of how important it is to edit current mindset
+	def observe(self, mind, me, **status):
+		pass
 	
-	def edit(self, mind):
-		return mind
+	def prioritize(self, mind, groups):
+		raise NotImplementedError # returns array of floats of corresponding priorities of each group
 
 class Idea(tdict):
 	def __init__(self, rank, *args, **items):

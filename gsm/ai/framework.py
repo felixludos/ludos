@@ -126,9 +126,12 @@ class RandomAgent(Agent):
 	def _decide(self, options):
 		actions = []
 		for name, opts in options.items():
-			actions.extend((name, _package_action(o)) for o in opts)
+			actions.extend((name, self.package_action(o)) for o in opts)
 			
 		return self.gen.choice(actions)
+	
+	def package_action(self, action):
+		return _package_action(action)
 
 register_ai('random', RandomAgent)
 
@@ -143,7 +146,7 @@ class PassingAgent(RandomAgent):
 		if self.gen.uniform(0,1) < self.prob:
 			for group in self.groups:
 				if group in options:
-					return group, _package_action(options[group].pop())
+					return group, self.package_action(options[group].pop())
 		
 		return super()._decide(options)
 		
