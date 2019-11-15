@@ -1,6 +1,6 @@
-import json
+import json, yaml
 from humpack import Savable, Transactionable
-from .. import tdict, tset, tlist
+from .. import tdict, tset, tlist, containerify
 from ..mixins import Named
 from .. import Interface, RandomGenerator, unjsonify
 from ..viz import _package_action
@@ -42,7 +42,8 @@ class Agent_Interface(Interface):
 		agent = self.agents[user]
 		player = agent.name
 		me = msg.players[player]
-		# del msg.players[player] # remove self from players list
+		msg.opponents = msg.players.copy()
+		del msg.opponents[player] # remove self from players list
 		
 		agent.observe(me, **msg)
 		
@@ -111,6 +112,22 @@ class Agent(Named, tdict):
 	def _decide(self, options):
 		raise NotImplementedError
 	
+class ConfigAgent(Agent): # mixin only, this isnt a full agent
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.config_registry = tdict()
+		
+	def register_config(self, name, path):
+		self.config_registry[name] = path
+		
+	def load_config(self):
+		config = tdict()
+		
+		for name, path in self.config_files.items():
+			config[name] = containerify(yaml.load(open(path, 'r')))
+			
+		return config
+
 class RandomAgent(Agent):
 	def __init__(self, name, seed=None):
 		super().__init__(name)

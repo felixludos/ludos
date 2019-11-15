@@ -65,15 +65,15 @@ class SetupPhase(GamePhase):
 				
 		
 	def encode(self, C):
-		
 		out = GameActions()
 		
-		with out('loc', 'Available Locations'):
-			if self.settled is None:
-				loc_name = 'settlement'
+		if self.settled is None:
+			loc_name = 'settlement'
+			with out('loc-settlement', 'Available Locations'):
 				out.add(self.available)
-			else:
-				loc_name = 'road'
+		else:
+			loc_name = 'road'
+			with out('loc-road', 'Available Locations'):
 				out.add(tset(e for e in self.settled.edges
 				              if e is not None and 'building' not in e),)
 			

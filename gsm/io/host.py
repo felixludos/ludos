@@ -200,7 +200,8 @@ class Host(object):
 		missing = []
 		for user, player in data['players'].items():
 			if user in self.users:
-				self.add_player(user, player)
+				if player not in self.players: # player is not already registered
+					self.add_player(user, player)
 			else:
 				missing.append(player)
 		

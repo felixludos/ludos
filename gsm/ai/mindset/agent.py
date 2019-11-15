@@ -34,12 +34,14 @@ class Mindset_Agent(RandomAgent):
 		
 		self.mind = tdict()
 		
-	def register_mindset(self, phase, mindset):
+	def register_mindset(self, mindset):
+		phase = mindset.get_type()
 		if phase not in self._mindsets:
 			self._mindsets[phase] = tlist()
 		self._mindsets[phase].append(mindset)
 		
-	def register_tactic(self, phase, group, tactic):
+	def register_tactic(self, tactic):
+		phase, group = tactic.get_type(), tactic.name
 		if phase not in self._tactics:
 			self._tactics[phase] = tdict()
 		if group not in self._tactics[phase]:

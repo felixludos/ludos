@@ -19,13 +19,33 @@ class Tactic(Typed, Named, tdict):
 class StopThinking(Exception):
 	pass
 
-class Mindset(tdict): # high level goal
+class Mindset(Typed, tdict): # high level goal
 	
 	def observe(self, mind, me, **status):
 		pass
 	
 	def prioritize(self, mind, groups):
 		raise NotImplementedError # returns array of floats of corresponding priorities of each group
+
+
+class Random_Tactic(Tactic):
+	def __init__(self, phase, group, gen):
+		super().__init__(phase, group)
+		self.gen = gen
+	
+	def decide(self, mind, actions):
+		return self.gen.choice(actions)
+
+
+class Random_Mindset(Mindset):
+	def __init__(self, phase, gen):
+		super().__init__(phase)
+		self.gen = gen
+	
+	def prioritize(self, mind, groups):
+		return np.array([self.gen.gauss(0, 1) for _ in range(len(groups))])
+
+
 
 class Idea(tdict):
 	def __init__(self, rank, *args, **items):
