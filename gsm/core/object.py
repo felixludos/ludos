@@ -4,7 +4,7 @@ from itertools import chain
 from ..signals import InvalidInitializationError, MissingValueError, UnknownElementError
 from ..mixins import Named, Typed, Jsonable, Writable, Transactionable, Savable, Pullable, Hashable
 from humpack import tset, tdict, tlist, tdeque
-from ..util import _primitives, RandomGenerator, obj_jsonify
+from ..util import _primitives, RandomGenerator, jsonify
 
 # TODO: fix so it works with cross referencing
 
@@ -89,7 +89,7 @@ class GameObject(Typed, Writable, Jsonable, Pullable, tdict):
 					(player is None
 					 or player in self.visible
 					 or k in self._open):
-				data[k] = obj_jsonify(v)
+				data[k] = jsonify(v)
 				
 		return data
 	

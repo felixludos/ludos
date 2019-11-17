@@ -6,6 +6,8 @@ from ..main import MY_PATH
 import gsm
 from gsm import ai
 
+from .ops import compute_missing
+
 # Phases
 
 # main: pre, cancel, dev-res, pass, build-road, build-settlement, build-city, buy, maritime-trade, domestic-trade, play
@@ -29,7 +31,8 @@ class Regular(ai.Mindset_Agent, ai.ConfigAgent):
 		self.register_config('map', os.path.join(MY_PATH, 'config/map.yaml'))
 		self.register_config('msgs', os.path.join(MY_PATH, 'config/msgs.yaml'))
 		
-		pass
+		config = self.load_config()
+		self.mind.costs = config.building_costs
 	
 	def think(self, me, players, table, **status):
 		
@@ -37,12 +40,11 @@ class Regular(ai.Mindset_Agent, ai.ConfigAgent):
 		# me.vps
 		# me.buildings.road
 		
-		
 		pass
 
 	class main_ms(ai.mindset.Random_Mindset):
 		def observe(self, mind, me, **status):
-			mind
+			
 			pass
 		def prioritize(self, mind, group):
 			pass

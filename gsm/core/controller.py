@@ -14,7 +14,7 @@ from .player import GameManager
 from .phase import GameStack
 from ..mixins import Named, Transactionable, Savable
 from ..signals import PhaseComplete, SwitchPhase, GameOver, InvalidPlayerError, NoActiveGameError, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
-from ..util import RandomGenerator, jsonify, obj_jsonify
+from ..util import RandomGenerator, jsonify
 
 class GameController(Named, Transactionable, Savable):
 	
@@ -437,7 +437,7 @@ class GameController(Named, Transactionable, Savable):
 		return json.dumps(list(self.active_players.keys()))
 	
 	def get_player(self, player):
-		return json.dumps(obj_jsonify(self.players[player]))
+		return json.dumps(jsonify(self.players[player]))
 	
 	def get_players(self):
 		return json.dumps(list(self.players.names()))

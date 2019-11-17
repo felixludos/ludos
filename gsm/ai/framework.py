@@ -2,7 +2,7 @@ import json, yaml
 from humpack import Savable, Transactionable
 from .. import tdict, tset, tlist, containerify
 from ..mixins import Named
-from .. import Interface, RandomGenerator, unjsonify
+from .. import Interface, RandomGenerator, unjsonify, obj_unjsonify, util
 from ..viz import _package_action
 from ..core.actions import decode_action_set
 from ..io import get_ai, register_interface, register_ai
@@ -25,7 +25,10 @@ class Agent_Interface(Interface):
 		return 'ping reply from {} agent/s: {}'.format(self.agent_type, ', '.join(self.users))
 	
 	def step(self, user, msg):
-		msg = unjsonify(msg)
+		msg = obj_unjsonify(msg)
+		util.obj_cross_ref(msg, {'_obj':msg.table, '_player':msg.players})
+		for ID, obj in msg.table.items():
+			obj._id = ID
 		
 		if 'error' in msg:
 			print('*** ERROR: {} ***'.format(msg.error.type))
@@ -44,6 +47,7 @@ class Agent_Interface(Interface):
 		me = msg.players[player]
 		msg.opponents = msg.players.copy()
 		del msg.opponents[player] # remove self from players list
+		msg.groups = tlist(msg.options.keys())
 		
 		agent.observe(me, **msg)
 		

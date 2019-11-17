@@ -73,10 +73,10 @@ class RobberPhase(GamePhase):
 			self.stolen = None
 			if self.target is not None:
 				
-				opp, = action
+				opp = self.target
 				
 				if opp.num_res > 0:
-					self.stolen = C.RNG.choices(*zip(*list(opp.resources.items())), k=1)[0]
+					self.stolen = C.RNG.choice(sum([[r]*n for r,n in opp.resources.items()],[]))
 					
 					gain_res(self.stolen, C.state.bank, opp, -1)
 					gain_res(self.stolen, C.state.bank, player, 1)

@@ -6,7 +6,7 @@ from .player import GamePlayer
 from ..mixins import Typed, Named, Transactionable, Savable, Pullable, Hashable
 from ..signals import ActionMismatch, UnknownActionElement, InvalidActionError
 from ..writing import write, writef
-from ..util import obj_jsonify
+from ..util import jsonify
 
 
 def _expand_actions(code):
@@ -222,7 +222,7 @@ class GameActions(Savable, Pullable): # created and returned in phases
 			out['status'] = self.status
 			
 		if len(self.info):
-			out['info'] = obj_jsonify(self.info)
+			out['info'] = jsonify(self.info)
 			
 		return out
 

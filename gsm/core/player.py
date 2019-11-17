@@ -2,7 +2,7 @@
 from humpack import tset, tdict, tlist
 from ..mixins import Named, Typed, Jsonable, Transactionable, Savable, Pullable, Writable
 from ..signals import MissingValueError
-from ..util import obj_jsonify
+from ..util import jsonify
 
 class GameManager(Transactionable, Savable, Pullable):
 	
@@ -17,6 +17,7 @@ class GameManager(Transactionable, Savable, Pullable):
 		self.players = tdict()
 		self.req = tset(req)
 		self.open = tset(open)
+		self.open.add('name')
 		self.hidden = tset(hidden)
 		self._in_transaction = False
 		
@@ -101,9 +102,9 @@ class GameManager(Transactionable, Savable, Pullable):
 		
 		for name, p in self.players.items():
 			if player is None or player != name:
-				players[name] = {k: obj_jsonify(v) for k, v in p.items() if k in self.open}
+				players[name] = {k: jsonify(v) for k, v in p.items() if k in self.open}
 			else:
-				players[name] = {k: obj_jsonify(v) for k, v in p.items() if k not in self.hidden}
+				players[name] = {k: jsonify(v) for k, v in p.items() if k not in self.hidden}
 		
 		return players
 	

@@ -4,85 +4,90 @@ import random
 from humpack import tdict, tset, tlist
 
 from .mixins import Named, Typed, Jsonable, Savable, Transactionable, _primitives
-from .signals import UnknownElementError
-
-
-def obj_jsonify(obj):
-	if isinstance(obj, _primitives):
-		return obj
-	if isinstance(obj, Jsonable):
-		return obj.jsonify()
-	if isinstance(obj, list):
-		return [obj_jsonify(o) for o in obj]
-	if isinstance(obj, dict):
-		return {obj_jsonify(k): obj_jsonify(v) for k, v in obj.items()}
-	if isinstance(obj, tuple):
-		return {'_tuple': [obj_jsonify(o) for o in obj]}
-	# return [jsonify(o) for o in obj]
-	if isinstance(obj, set):
-		return {'_set': [obj_jsonify(o) for o in obj]}
-	if isinstance(obj, np.ndarray):  # TODO: make this work for obj.dtype = 'obj', maybe recurse elements of .tolist()?
-		return {'_ndarray': obj_jsonify(obj.tolist()), '_dtype': obj.dtype.name}
-	
-	raise UnknownElementError(obj)
-
-def obj_unjsonify(obj):
-	if isinstance(obj, _primitives):
-		return obj
-	if isinstance(obj, tuple):
-		return tuple([obj_unjsonify(o) for o in obj])
-	if isinstance(obj, set):
-		return tset([obj_unjsonify(o) for o in obj])
-	if isinstance(obj, list):
-		return tlist([obj_unjsonify(o) for o in obj])
-	if isinstance(obj, dict):
-		if '_set' in obj and len(obj) == 1:
-			return tset([obj_unjsonify(o) for o in obj['set']])
-		if '_tuple' in obj and len(obj) == 1:
-			return tuple(obj_unjsonify(o) for o in obj['tuple'])
-		if '_ndarray' in obj and '_dtype' in obj:
-			return np.array(obj_unjsonify(obj['_ndarray']), dtype=obj['_dtype'])
-		return tdict({obj_unjsonify(k): obj_unjsonify(v) for k, v in obj.items()})
-	
-	raise UnknownElementError(obj)
-
+from .signals import UnknownElementError, InvalidKeyError
 
 
 def jsonify(obj, tfm=None):
+	if tfm is not None:
+		try:
+			return tfm(obj, jsonify)
+		except UnknownElementError:
+			pass
+	
 	if isinstance(obj, _primitives):
 		return obj
 	
+	if isinstance(obj, Jsonable):
+		return obj.jsonify()
 	if isinstance(obj, dict):
-		return {k: jsonify(v) for k, v in obj.items()}
+		out = {}
+		for k, v in obj.items():
+			if not isinstance(k, str):
+				raise InvalidKeyError(k)
+			out[k] = jsonify(v, tfm=tfm)
+		return out
 	if isinstance(obj, list):
-		return [jsonify(r) for r in obj]
+		return [jsonify(r, tfm=tfm) for r in obj]
 	if isinstance(obj, tuple):
-		return {'_tuple': [jsonify(r) for r in obj]}
+		return {'_tuple': [jsonify(r, tfm=tfm) for r in obj]}
 	if isinstance(obj, set):
-		return {'_set': [jsonify(r) for r in obj]}
-	
-	if tfm is not None:
-		return tfm(obj, jsonify)
+		return {'_set': [jsonify(r, tfm=tfm) for r in obj]}
+	if isinstance(obj, np.ndarray):
+		return {'_ndarray': jsonify(obj.tolist(), tfm=tfm), '_dtype': obj.dtype.name}
 	
 	raise UnknownElementError(obj)
 
+
 def unjsonify(obj, tfm=None):
+	if tfm is not None:
+		try:
+			return tfm(obj, unjsonify)
+		except UnknownElementError:
+			pass
 	if isinstance(obj, _primitives):
 		return obj
 	if isinstance(obj, list):
-		return tlist([unjsonify(o) for o in obj])
+		return tlist([unjsonify(o, tfm=tfm) for o in obj])
 	if isinstance(obj, dict):
 		if len(obj) == 1 and '_tuple' in obj:
-			return tuple(unjsonify(o) for o in obj['_tuple'])
+			return tuple(unjsonify(o, tfm=tfm) for o in obj['_tuple'])
 		if len(obj) == 1 and '_set' in obj:
-			return tset(unjsonify(o) for o in obj['_set'])
-		
-		return tdict({k:unjsonify(v) for k,v in obj.items()})
+			return tset(unjsonify(o, tfm=tfm) for o in obj['_set'])
+		if len(obj) == 2 and '_ndarray' in obj and '_dtype' in obj:
+			return np.array(unjsonify(obj['_ndarray'], tfm=tfm), dtype=obj['_dtype'])
+		return tdict({k: unjsonify(v, tfm=tfm) for k, v in obj.items()})
 	
-	if tfm is not None:
-		return tfm(obj, unjsonify)
-	
+	raise UnknownElementError(obj)
+
+def obj_unjsonify(obj, table=None):
+	obj = unjsonify(obj)
+	if table is not None:
+		obj_cross_ref(obj, table)
 	return obj
+	
+def _fmt_obj(obj, tables):
+	if isinstance(obj, dict):
+		k, v = next(iter(obj.items()))
+		if k in tables and len(obj) == 1:
+			return tables[k][v]
+	obj_cross_ref(obj, tables)
+	return obj
+def obj_cross_ref(obj, tables):
+	if isinstance(obj, dict):
+		for k, v in obj.items():
+			if isinstance(v, tuple):
+				obj[k] = (_fmt_obj(o, tables) for o in v)
+			elif isinstance(v, list):
+				for i in range(len(v)):
+					v[i] = _fmt_obj(v[i],tables)
+			elif isinstance(v, set):
+				cpy = v.copy()
+				v.clear()
+				for x in cpy:
+					v.add(_fmt_obj(x, tables))
+			else:
+				obj[k] = _fmt_obj(v, tables)
+
 
 class RandomGenerator(Savable, Transactionable, random.Random):
 	

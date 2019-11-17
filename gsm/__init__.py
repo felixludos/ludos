@@ -1,6 +1,6 @@
 from humpack import tdict, tlist, tset, tdeque, tstack, theap, containerify, Array
 from humpack import Savable, Transactionable
-from .util import jsonify, unjsonify
+from .util import jsonify, unjsonify, obj_unjsonify
 from .signals import PhaseComplete, SwitchPhase, GameOver
 from .writing import write, writef, RichText
 from .util import RandomGenerator
