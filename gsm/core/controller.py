@@ -367,7 +367,7 @@ class GameController(Named, Transactionable, Savable):
 				
 				msg['players'] = self.players.pull(player)
 				msg['table'] = self.table.pull(player)
-				msg['phase'] = self.stack[-1].name
+				msg['phase'] = self.stack[0].name
 				
 			msg['log'] = self.log.pull(player)
 			# log = self.log.pull(player)

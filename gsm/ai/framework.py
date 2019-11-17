@@ -18,14 +18,15 @@ class Agent_Interface(Interface):
 	
 	def set_player(self, user, player):
 		super().set_player(user, player)
-		self.agents[user] = get_ai(self.agent_type, game=self.game)(player, **self.agent_kwargs)
+		ai_cls = get_ai(self.agent_type, game=self.game)
+		self.agents[user] = ai_cls(player, **self.agent_kwargs)
 		print('Agent for {} is initialized'.format(user))
 	
 	def ping(self):
 		return 'ping reply from {} agent/s: {}'.format(self.agent_type, ', '.join(self.users))
 	
 	def step(self, user, msg):
-		msg = obj_unjsonify(msg)
+		msg = unjsonify(msg)
 		util.obj_cross_ref(msg, {'_obj':msg.table, '_player':msg.players})
 		for ID, obj in msg.table.items():
 			obj._id = ID
@@ -47,16 +48,16 @@ class Agent_Interface(Interface):
 		me = msg.players[player]
 		msg.opponents = msg.players.copy()
 		del msg.opponents[player] # remove self from players list
-		msg.groups = tlist(msg.options.keys())
+		options = tdict()
+		if 'options' in msg:
+			for name, opts in msg.options.items():
+				options[name] = decode_action_set(opts.actions)
+		msg.options = options
+		# msg.groups = tlist(msg.options.keys())
 		
 		agent.observe(me, **msg)
 		
 		if 'options' in msg:
-			
-			options = tdict()
-			for name, opts in msg.options.items():
-				options[name] = decode_action_set(opts.actions)
-			
 			out['group'], out['action'] = agent.decide(options)
 		
 		return json.dumps(out)
@@ -127,7 +128,7 @@ class ConfigAgent(Agent): # mixin only, this isnt a full agent
 	def load_config(self):
 		config = tdict()
 		
-		for name, path in self.config_files.items():
+		for name, path in self.config_registry.items():
 			config[name] = containerify(yaml.load(open(path, 'r')))
 			
 		return config

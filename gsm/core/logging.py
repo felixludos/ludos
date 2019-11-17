@@ -1,6 +1,7 @@
 
 from humpack import tset, tdict, tlist
 from .object import GameObject
+from .player import GamePlayer
 from ..writing import RichWriter, LogWriter, write, writef
 from ..mixins import Named, Typed, Savable, Transactionable, Pullable
 # from ..util import Player
@@ -94,9 +95,10 @@ class GameLogger(Savable, Transactionable, Pullable):
 		self.update.abort()
 	
 	def __getitem__(self, item):
-		if isinstance(item, (tuple,list,set)):
-			self.targets = set(item)
-		self.targets = {item}
+		if isinstance(item, (tuple, list, set)):
+			self.targets = list(item)
+		else:
+			self.targets = [item]
 		return self
 	
 	def zindent(self):  # reset indent
@@ -118,8 +120,10 @@ class GameLogger(Savable, Transactionable, Pullable):
 		return len(self.log)
 		
 	def _add_line(self, line):
-		self.log.append((self.targets, line))
-		self.update.append((self.targets, line))
+		if self.targets is not None and len(self.targets):
+			line['targets'] = self.targets
+		self.log.append(line)
+		self.update.append(line)
 		self.targets = None
 		
 	def write(self, *objs, end=None, indent_level=None):
@@ -143,10 +147,10 @@ class GameLogger(Savable, Transactionable, Pullable):
 		
 	def filter_log(self, log, player=None, god_mode=False):
 		update = []
-		for targets, line in log:
+		for line in log:
 			if god_mode \
-					or targets is None \
-					or (player is not None and player in targets):
+					or 'targets' not in line \
+					or (player is not None and player in line['targets']):
 				update.append(line)
 		
 		return update

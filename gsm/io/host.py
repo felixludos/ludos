@@ -91,6 +91,9 @@ class Host(object):
 		
 		interface_type = interface
 		
+		if interface_type == 'agent':
+			settings['game'] = self.game
+		
 		interface = get_trans(trans)(*args, **settings)
 		
 		for user in users:

@@ -42,6 +42,9 @@ def _format_log(lines):
 			txt = '-*- ' * line['level'] + txt
 		if 'debug' in line:
 			txt = '*DEBUG: ' + txt
+		
+		if 'targets' in line:
+			txt = '({}): '.format(', '.join(t['_player'] for t in line['targets'])) + txt
 		log.append(txt)
 		
 	return ''.join(log)

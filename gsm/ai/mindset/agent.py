@@ -58,8 +58,9 @@ class Mindset_Agent(RandomAgent):
 				mindset.observe(self.mind, me=me, phase=phase, **status)
 		
 		if phase in self._tactics:
-			for tactic in self._tactics[phase].values():
-				tactic.observe(self.mind, me, **status)
+			for tactics in self._tactics[phase].values():
+				for tactic in tactics:
+					tactic.observe(self.mind, me, **status)
 		
 	
 	def think(self, me, **status):
@@ -68,8 +69,8 @@ class Mindset_Agent(RandomAgent):
 	
 	def _decide(self, options):
 		
-		mindsets = self._mindsets[self.phase]
-		tactics = None if self.phase is None else self._tactics[self.phase]
+		mindsets = self._mindsets[self.phase] if self.phase in self._mindsets else []
+		tactics = self._tactics[self.phase] if self.phase in self._tactics else None
 		
 		groups = list(options.keys())
 		
@@ -82,7 +83,7 @@ class Mindset_Agent(RandomAgent):
 		group = self.gen.choices(groups, weights=wts, k=1)[0] if self.stochastic else groups[wts.argmax()]
 		
 		if tactics is None or group not in tactics:
-			action = self.gen.choice(options[group])
+			action = self.gen.choice(list(options[group]))
 		
 		elif len(tactics[group]) > 1:
 			tvals = [tactic.priority(self.mind, options[group]) for tactic in tactics]
