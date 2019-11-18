@@ -5,7 +5,7 @@ from scipy.special import softmax
 from ...mixins import Named, Typed
 from ... import tlist, tdict, tset, theap, Transactionable, Savable
 from .. import RandomAgent
-from .mind import Idea, StopThinking
+from .mind import Idea, StopThinking, DontAskMe
 
 class Mind(tdict):
 	def __init__(self, *args, **kwargs):
@@ -82,20 +82,24 @@ class Mindset_Agent(RandomAgent):
 		
 		group = self.gen.choices(groups, weights=wts, k=1)[0] if self.stochastic else groups[wts.argmax()]
 		
-		if tactics is None or group not in tactics:
-			action = self.gen.choice(list(options[group]))
+		action = None
+		if tactics is not None and group in tactics:
+			if len(tactics[group]) > 1:
+				tvals = [tactic.priority(self.mind, options[group]) for tactic in tactics]
+				twts = softmax(tvals)
+				tactic = self.gen.choices(tactics, weights=twts, k=1)[0] if self.stochastic else tactics[twts.argmax()]
+			else:
+				tactic = tactics[group][0]
+			try:
+				action = tactic.decide(self.mind, options[group])
+			except DontAskMe:
+				pass
 		
-		elif len(tactics[group]) > 1:
-			tvals = [tactic.priority(self.mind, options[group]) for tactic in tactics]
-			twts = softmax(tvals)
-			tactic = self.gen.choices(tactics, weights=twts, k=1)[0] if self.stochastic else tactics[twts.argmax()]
-			action = tactic.decide(self.mind, options[group])
+		if action is None:
+			action = self.package_action(self.gen.choice(list(options[group])))
+			print('Choosing random action: {}'.format(action))
 		
-		else:
-			tactic = self._tactics[self.phase][group]
-			action = tactic.decide(self.mind, options[group])
-		
-		return group, self.package_action(action)
+		return group, action
 		
 
 

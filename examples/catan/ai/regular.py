@@ -1,11 +1,14 @@
 import sys, os
 import numpy as np
 
+from scipy.special import softmax
+
 from ..main import MY_PATH
 
 import gsm
 from gsm import tdict, tlist, tset
 from gsm import ai
+from gsm.viz import _package_action
 
 from .ops import compute_missing
 
@@ -29,10 +32,10 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 		# self.register_tactic(Regular.main_build_road('main', 'build-city', self.gen))
 		
 		# robber: loc, target
-		self.register_tactic(Regular.robber_loc('robber', 'loc', self.gen))
+		self.register_tactic(Regular.robber_loc('robber', 'loc', self.gen if self.stochastic else None))
 		
 		# setup: loc-road, loc-settlement
-		
+		self.register_tactic(Regular.setup_settlement('setup', 'loc-settlement', self.gen if self.stochastic else None))
 		
 		# register config files
 		self.register_config('rules', os.path.join(MY_PATH, 'config/rules.yaml'))
@@ -41,6 +44,7 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 		
 		config = self.load_config()
 		self.mind.costs = config.rules.building_costs
+		self.mind.res_idx = {r:i for i,r in enumerate(config.rules.res_names)}
 	
 	def think(self, me, players, table, **status):
 		
@@ -53,7 +57,69 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 	class setup(ai.mindset.Random_Mindset):
 		pass
 	class setup_settlement(ai.mindset.Random_Tactic):
-		pass
+		def get_sites(self, options, table):
+			sites = np.array([tdict(ID=a[0].ID) for a in options['loc-settlement']])
+			for site in sites:
+				c = table[site['ID']]
+				site.nums = tlist(n.num for n in c.fields if n is not None and 'num' in n)
+				site.ress = tlist(n.res for n in c.fields if n is not None and 'res' in n)
+				site.val = sum(6 - abs(n - 7) for n in site.nums)
+				if 'port' in c:
+					site.port = c.port
+			return sites
+		
+		def get_nums(self, site):
+			nums = np.zeros(11, dtype=int)
+			for n in site.nums:
+				nums[n - 2] += 1
+			return nums
+		
+		def get_res(self, ress, res_idx):
+			res = np.zeros(5)
+			for r in ress:
+				res[res_idx[r]] += 1
+			return res
+		
+		def observe(self, mind, me, options, table, **status):
+			
+			if 'first' not in self:
+			
+				sites = self.get_sites(options, table)
+				vals = np.array([site.val for site in sites])
+				top = np.argsort(-vals)[:5]
+				wts = softmax(vals[top])
+			
+				idx = top[0] if self.gen is None else self.gen.choices(top, weights=wts)[0]
+				
+				first = sites[idx]
+				self.first = first
+				return
+			
+			sites = self.get_sites(options, table)
+			
+			nums = self.get_nums(self.first)
+			alln = np.stack([self.get_nums(site) for site in sites])
+			priority = 6 - np.abs(np.arange(11) - 5)
+			values = priority / (nums / 3 + 1)
+			
+			dnum = (alln * values).sum(-1)
+			n_wts = softmax(dnum)
+			
+			count = self.get_res(self.first.ress, mind.res_idx)
+			allr = np.stack([self.get_res(site.ress, mind.res_idx) for site in sites])
+			rval = (count + allr).clip(0, 1).sum(-1)
+			r_wts = softmax(rval)
+			
+			wts = n_wts * r_wts
+			wts = wts / wts.sum()
+		
+			idx = self.gen.choices(np.arange(len(wts)), weights=wts)[0] if self.stochastic else wts.argmax()
+			
+			self.second = sites[idx]
+		
+		def decide(self, mind, actions):
+			pick = self.second if 'second' in self else self.first
+			return [pick.ID]
 
 	class main(ai.mindset.Random_Mindset):
 		def observe(self, mind, me, **status):

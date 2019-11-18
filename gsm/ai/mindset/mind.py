@@ -18,6 +18,9 @@ class Tactic(Typed, Named, tdict):
 
 class StopThinking(Exception):
 	pass
+class DontAskMe(Exception):
+	pass
+
 
 class Mindset(Typed, tdict): # high level goal
 	
