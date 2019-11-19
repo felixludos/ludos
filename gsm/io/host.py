@@ -5,7 +5,7 @@ import yaml
 import json
 from collections import OrderedDict
 from ..mixins import Named
-from ..signals import InvalidValueError, RegistryCollisionError, NoActiveGameError, UnknownGameError, LoadConsistencyError, UnknownInterfaceError, UnknownPlayerError, UnknownUserError
+from ..signals import WrappedException, InvalidValueError, RegistryCollisionError, NoActiveGameError, UnknownGameError, LoadConsistencyError, UnknownInterfaceError, UnknownPlayerError, UnknownUserError
 from .registry import _game_registry, get_trans
 from .transmit import send_http
 
@@ -286,11 +286,12 @@ class Host(object):
 							recheck = True
 						
 						if 'error' in msg:
-							print(msg)
-							print('*** ERROR: {} ***'.format(msg['error']['type']))
-							print(msg['error']['msg'])
-							print('****************************')
-							assert False
+							raise WrappedException(msg['error']['type'], msg['error']['msg'])
+							# print(msg)
+							# print('*** ERROR: {} ***'.format(msg['error']['type']))
+							# print(msg['error']['msg'])
+							# print('****************************')
+							# assert False
 							
 						break
 			first = False

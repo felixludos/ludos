@@ -89,7 +89,7 @@ class LoadConsistencyError(Exception):
 	pass
 
 class WrappedException(Exception):
-	def __init__(self, etype, emsg, where):
+	def __init__(self, etype, emsg, where=None):
 		super().__init__('')
 		self.etype = etype
 		self.emsg = emsg
