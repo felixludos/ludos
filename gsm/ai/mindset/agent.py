@@ -48,19 +48,20 @@ class Mindset_Agent(RandomAgent):
 			self._tactics[phase][group] = tlist()
 		self._tactics[phase][group].append(tactic)
 	
-	def _observe(self, me, phase, **status):
+	def _observe(self, me, phase, options, **status):
 		
 		self.phase = phase
-		self.think(me, phase=phase, **status)
+		self.think(me, phase=phase, options=options, **status)
 		
 		if phase in self._mindsets:
 			for mindset in self._mindsets[phase]:
-				mindset.observe(self.mind, me=me, phase=phase, **status)
+				mindset.observe(self.mind, me=me, phase=phase, options=options, **status)
 		
 		if phase in self._tactics:
-			for tactics in self._tactics[phase].values():
-				for tactic in tactics:
-					tactic.observe(self.mind, me, **status)
+			for group, tactics in self._tactics[phase].items():
+				if group in options:
+					for tactic in tactics:
+						tactic.observe(self.mind, me, options=options, **status)
 		
 	
 	def think(self, me, **status):

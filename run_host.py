@@ -36,12 +36,16 @@ def _ex_wrap(cmd, *args, **kwargs):
 	try:
 		return cmd(*args, **kwargs)
 	except Exception as e:
-		msg = {
-			'error': {
-				'type': e.__class__.__name__,
-				'msg': ''.join(traceback.format_exception(*sys.exc_info())),
-			},
-		}
+		if isinstance(e, gsm.signals.WrappedException):
+			msg = {'error':{'type':e.etype.__name__, 'msg':e.emsg}}
+		else:
+		
+			msg = {
+				'error': {
+					'type': e.__class__.__name__,
+					'msg': ''.join(traceback.format_exception(*sys.exc_info())),
+				},
+			}
 		return _fmt_output(msg)
 
 # Meta Host

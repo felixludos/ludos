@@ -88,6 +88,31 @@ class UnknownInterfaceError(Exception):
 class LoadConsistencyError(Exception):
 	pass
 
+class WrappedException(Exception):
+	def __init__(self, etype, emsg, where):
+		super().__init__('')
+		self.etype = etype
+		self.emsg = emsg
+		self.where = where
+
+class ExceptionWrapper(object):
+	r"""Wraps an exception plus traceback to communicate across threads"""
+	def __init__(self, interface=None):
+		# It is important that we don't store exc_info, see
+		# NOTE [ Python Traceback Reference Cycle Problem ]
+		exc_info = sys.exc_info()
+		self.exc_type = exc_info[0]
+		self.exc_msg = "".join(traceback.format_exception(*exc_info))
+		self.where = interface
+
+	def reraise(self):
+		r"""Reraises the wrapped exception in the current thread"""
+		# Format a message such as: "Caught ValueError in DataLoader worker
+		# process 2. Original Traceback:", followed by the traceback.
+		# msg = "Caught {} {}.\nOriginal {}".format(
+		# 	self.exc_type.__name__, self.where, self.exc_msg)
+		raise WrappedException(self.exc_type, self.exc_msg, self.where)
+
 # action errors
 		
 class InvalidActionError(Exception):

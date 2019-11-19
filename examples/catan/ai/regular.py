@@ -77,7 +77,8 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 		def get_res(self, ress, res_idx):
 			res = np.zeros(5)
 			for r in ress:
-				res[res_idx[r]] += 1
+				if r in res_idx:
+					res[res_idx[r]] += 1
 			return res
 		
 		def observe(self, mind, me, options, table, **status):
@@ -113,7 +114,7 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 			wts = n_wts * r_wts
 			wts = wts / wts.sum()
 		
-			idx = self.gen.choices(np.arange(len(wts)), weights=wts)[0] if self.stochastic else wts.argmax()
+			idx = wts.argmax() if self.gen is None else self.gen.choices(np.arange(len(wts)), weights=wts)[0]
 			
 			self.second = sites[idx]
 		
