@@ -279,6 +279,7 @@ class Host(object):
 							return recheck
 						elif 'key' in msg: # TODO: enable spectator/advisor handling
 							msg = self.ctrl.step(player, group=msg['group'], action=msg['action'], key=msg['key'])
+							msg = json.loads(msg)
 							recheck = True
 						elif 'action' in msg:
 							self.give_advice(user, group=msg['group'], action=msg['action'])
@@ -291,8 +292,6 @@ class Host(object):
 							print('****************************')
 							assert False
 							
-						else:
-							no_passive = True
 						break
 			first = False
 		

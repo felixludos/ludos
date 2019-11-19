@@ -210,7 +210,7 @@ class GameActions(Savable, Pullable): # created and returned in phases
 		options = {}
 		for name, group in self._options.items():
 			opt = {'actions': format_actions(group.actions)}
-			if 'desc' in opt:
+			if 'desc' in group:
 				opt['desc'] = group.desc
 			options[name] = opt
 		
@@ -259,7 +259,7 @@ class FixedAction(ActionElement):
 		return {'val':self.val}
 	
 	def evaluate(self, q):
-		if q == self.val:
+		if q == str(self.val):
 			return self.val
 		raise ActionMismatch
 	

@@ -120,6 +120,7 @@ class GameLogger(Savable, Transactionable, Pullable):
 		return len(self.log)
 		
 	def _add_line(self, line):
+		targets = self.targets
 		if self.targets is not None and len(self.targets):
 			line['targets'] = self.targets
 		self.log.append(line)

@@ -17,11 +17,14 @@ class RobberPhase(GamePhase):
 					self.choices[player].append(res)
 					gain_res(res, C.state.bank, player, -1)
 					C.log[player].writef('1 of your {} is stolen.', res)
+					self.debt[player] -= 1
 					
-					if self.debt[player] <= 1:
+					if self.debt[player] < 1:
 						del self.debt[player]
 						C.log.writef('{} loses: {}', player, ', '.join(self.choices[player]))
 						del self.choices[player]
+						
+					action = None
 				
 			else:
 			
@@ -35,8 +38,8 @@ class RobberPhase(GamePhase):
 						self.debt[player] = player.num_res // 2
 						self.choices[player] = tlist()
 				
-				if len(self.debt):
-					return
+			if len(self.debt):
+				return
 		else:
 			self.debt = tdict()
 		

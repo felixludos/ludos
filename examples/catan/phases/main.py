@@ -76,7 +76,7 @@ class MainPhase(TurnPhase):
 		# trade
 		if obj == 'offer' or obj == 'demand':
 			C.log[self.player].write('You start a trade')
-			C.log[self.player].iindent()
+			C.log.iindent()
 			raise SwitchPhase('trade', send_action=True, stack=True,
 			                  player=self.player,
 			                  bank_trades=bank_trade_options(self.player, C.state.bank_trading)
@@ -153,7 +153,7 @@ class MainPhase(TurnPhase):
 				msg = ' (gaining 1 victory point)'
 				self.player.vps += 1
 			
-			C.log[self.player.name].writef('You got a {}{}', card, msg)
+			C.log[self.player].writef('You got a {}{}', card, msg)
 			
 			pay_cost(self.player, C.state.costs.devcard, C.state.bank)
 		else:

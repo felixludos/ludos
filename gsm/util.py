@@ -66,7 +66,7 @@ def obj_unjsonify(obj, table=None):
 	return obj
 	
 def _fmt_obj(obj, tables):
-	if isinstance(obj, dict):
+	if isinstance(obj, dict) and len(obj):
 		k, v = next(iter(obj.items()))
 		if k in tables and len(obj) == 1:
 			return tables[k][v]

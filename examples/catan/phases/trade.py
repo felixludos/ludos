@@ -29,14 +29,14 @@ class TradePhase(GamePhase):
 		
 		if obj == 'cancel':
 			C.log[self.player].write('You cancel the trade')
-			C.log[self.player].dindent()
+			C.log.dindent()
 			raise PhaseComplete
 		
 		if self.partners is not None:
 			execute_trade(self.offer, self.demand, C.state.bank,
 			              from_player=self.player, to_player=obj,
 			              log=C.log)
-			C.log[self.player].dindent()
+			C.log.dindent()
 			raise PhaseComplete
 		
 		if obj == 'accept' or obj == 'reject':
@@ -55,22 +55,23 @@ class TradePhase(GamePhase):
 			
 			if len(self.partners) == 0:
 				C.log[self.player].write('No players accepted the trade')
-				C.log[self.player].dindent()
+				C.log.dindent()
 				raise PhaseComplete
 			return
 		
 		if self.maritime is not None:
-			res, = rest
 			if obj == 'offer':
-				self.offer[res] = self.martime[res]
-				self.maritime_msg = self.martime[res], res
+				num, res = rest
+				self.offer[res] = num
+				self.maritime_msg = num, res
 			else:
+				res = obj
 				self.demand[res] = 1
 				
 				execute_trade(self.offer, self.demand, C.state.bank,
 				              from_player=self.player, to_player=None,
 				              log=C.log)
-				C.log[self.player].dindent()
+				C.log.dindent()
 				raise PhaseComplete
 				
 		else: # domestic trade
@@ -81,10 +82,10 @@ class TradePhase(GamePhase):
 				demand_res = sum(([res] * num for res, num in self.demand.items()), [])
 				for p in self.responses:
 					C.log[p].writef('{} offers a trade:', self.player)
-					C.log[p].iindent()
+					C.log.iindent()
 					C.log[p].writef('Paying: {}', ', '.join(offer_res) if len(offer_res) else '-nothing-')
 					C.log[p].writef('Receiving: {}', ', '.join(demand_res) if len(demand_res) else '-nothing-')
-					C.log[p].dindent()
+					C.log.dindent()
 			else:
 				C.log[player].writef('You {} a {}', obj, rest[0])
 				self[obj][rest[0]] += 1
@@ -93,7 +94,7 @@ class TradePhase(GamePhase):
 		
 		if self.maritime is not None:
 			
-			out = GameActions('What resource would you like for {} {}'.format(self.maritime_msg))
+			out = GameActions('What resource would you like for {} {}'.format(*self.maritime_msg))
 			
 			with out('cancel', desc='Cancel trade'):
 				out.add('cancel')

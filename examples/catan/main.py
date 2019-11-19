@@ -191,6 +191,12 @@ class Catan(gsm.GameController):
 			
 			self.state.rolls.push(7)
 		
+		if code == 'gain8':
+			self.log.write('White gains 8 resources')
+			
+			for res in self.players['White'].resources.keys():
+				gain_res(res, self.state.bank, self.players['White'], 3, log=self.log)
+		
 		self.log.dindent()
 
 
