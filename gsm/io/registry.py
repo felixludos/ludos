@@ -36,7 +36,7 @@ def available_ai(name, game=None):
 	return _ai_registry[name]
 def get_ai(name=None, game=None):
 	assert name is not None or game is not None, 'nothing selected'
-	if game is not None:
+	if game is not None and game in _game_ai_registry:
 		if name is None:
 			if game not in _game_ai_registry:
 				raise InvalidValueError(game)
