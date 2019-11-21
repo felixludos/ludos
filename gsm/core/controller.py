@@ -23,10 +23,10 @@ class GameController(Named, Transactionable, Savable):
 		
 		# meta values (neither for dev nor user) (not including soft registries - they dont change)
 		new._tmembers = {'state', 'log', 'table', 'stack', 'players', 'end_info', '_advice', 'active_players',
-		                 'keys', 'RNG', '_key_rng', '_images', '_advisor_images', 'config'}
+		                 'keys', 'RNG', '_key_rng', '_images', '_advisor_images', 'config', 'player_names'}
 		return new
 	
-	def __init__(self, name=None, debug=False, info_path=None,
+	def __init__(self, name=None, debug=False, info_path=None, player_names=[],
 	             manager=None, stack=None, table=None, log=None,
 	             **settings):
 		if name is None:
@@ -55,6 +55,7 @@ class GameController(Named, Transactionable, Savable):
 		self._in_progress = False # flag for registration to end
 		self._in_transaction = False # flag for transactionable
 		self.DEBUG = debug # flag for dev to use as needed
+		self.player_names = tlist(player_names)
 		
 		self.keys = tdict() # a one time permission to call step() (with a valid action)
 		self.RNG = RandomGenerator()

@@ -16,7 +16,7 @@ MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
 class Catan(gsm.GameController):
 	
-	def __init__(self, debug=False, num_players=3,
+	def __init__(self, player_names, debug=False,
 	             shuffle_order=False):
 		
 		# create player manager
@@ -34,7 +34,7 @@ class Catan(gsm.GameController):
 		                 log=log,
 		                 info_path=os.path.join(MY_PATH, 'info.yaml'),
 		                 # settings
-		                 shuffle_order=shuffle_order, num_players=num_players)
+		                 shuffle_order=shuffle_order, player_names=player_names)
 		
 		# register config files
 		self.register_config('rules', os.path.join(MY_PATH, 'config/rules.yaml'))
@@ -63,8 +63,10 @@ class Catan(gsm.GameController):
 	
 	def _pre_setup(self, config, info=None):
 		# register players
-		names = info.player_names[:config.settings.num_players]
-		for name in names:
+		assert len(self.player_names) in {3,4}, 'Not the right number of players: {}'.format(self.player_names)
+		for name in self.player_names:
+			if name not in info.player_names:
+				raise gsm.signals.InvalidPlayerError(name)
 			self.register_player(name, num_res=0, color=name)
 	
 	def _set_phase_stack(self, config):

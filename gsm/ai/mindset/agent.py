@@ -48,7 +48,7 @@ class Mindset_Agent(RandomAgent):
 			self._tactics[phase][group] = tlist()
 		self._tactics[phase][group].append(tactic)
 	
-	def _observe(self, me, phase, options, **status):
+	def _observe(self, me, phase, options=None, **status):
 		
 		self.phase = phase
 		self.think(me, phase=phase, options=options, **status)

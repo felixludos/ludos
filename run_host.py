@@ -99,6 +99,15 @@ def _setting(key, value):
 @app.route('/del/setting/<key>')
 def _del_setting(key):
 	return _ex_wrap(H.del_setting, key)
+
+@app.route('/clear/settings')
+def _clear_settings():
+	return _ex_wrap(H.clear_settings)
+
+@app.route('/settings', methods=['POST'])  # post data contains settings to be added (!)
+def _update_settings():
+	settings = request.get_json(force=True)
+	return _ex_wrap(H.update_settings, settings)
 	
 
 # Managing clients

@@ -10,11 +10,12 @@ from .registry import _game_registry, get_trans
 from .transmit import send_http
 
 class Host(object):
-	def __init__(self, address, debug=False, **settings):
+	def __init__(self, address, debug=False, auto_num_players=True, **settings):
 		super().__init__()
 		
 		self._in_progress = False
 		self.debug = debug
+		self.auto_num_players = auto_num_players
 		self.game = None
 		self.ctrl_cls = None
 		self.ctrl = None
@@ -149,7 +150,8 @@ class Host(object):
 		
 		player = next(iter(self.players.keys()))
 		
-		self.ctrl = self.ctrl_cls(debug=self.debug, **self.settings)
+		self.ctrl = self.ctrl_cls(debug=self.debug, player_names= list(self.players.keys()),
+		                          **self.settings)
 		self.ctrl.reset(player, seed=seed)
 		
 		
@@ -171,6 +173,12 @@ class Host(object):
 	def del_setting(self, key):
 		del self.settings[key]
 		return 'Del {}'.format(key)
+	def clear_settings(self):
+		self.settings.clear()
+		return 'Settings have been cleared'
+	def update_settings(self, settings):
+		self.settings.update(settings)
+		return 'Settings now contains {} tuple'.format(len(self.settings))
 	
 	def get_active_players(self):
 		return self.ctrl.get_active_players()
@@ -271,7 +279,9 @@ class Host(object):
 						status = json.loads(status)
 						
 						if 'options' in status:
-							msg = json.loads(self.interfaces[user].step(user, status))
+							msg = self.interfaces[user].step(user, status)
+							if msg is not None:
+								msg = json.loads(msg)
 						else:
 							msg = None
 						
@@ -309,15 +319,17 @@ class Host(object):
 	def get_status(self, user):
 		if self.ctrl is None:
 			raise NoActiveGameError
-		if user in self.spectators:
-			return self.ctrl.get_spectator_status()
+		if user in self.roles:
+			player = self.roles[user]
+			return self.ctrl.get_status(player)
 		if user in self.advisors:
 			player = self.advisors[user]
 			return self.ctrl.get_advisor_status(player)
-		if user not in self.roles:
-			raise UnknownUserError
-		player = self.roles[user]
-		return self.ctrl.get_status(player)
+		if user in self.spectators:
+			return self.ctrl.get_spectator_status()
+		
+		raise UnknownUserError
+		
 	
 	def get_player(self, user):
 		if user not in self.users:

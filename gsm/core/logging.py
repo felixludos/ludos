@@ -18,7 +18,7 @@ class GameLogger(Savable, Transactionable, Pullable):
 	def __init__(self, indent_level=None, debug=False, end='\n'):
 		
 		self.log = tlist()
-		self.update = tlist()
+		self.update = None
 		
 		self.debug = debug
 		self.indent_level = indent_level
@@ -31,6 +31,7 @@ class GameLogger(Savable, Transactionable, Pullable):
 	def reset(self, players):
 		self.players = tlist(players)
 		self.clear()
+		self.update = tdict({player:tlist() for player in self.players})
 	
 	def __save__(self):
 		pack = self.__class__._pack_obj
@@ -124,7 +125,8 @@ class GameLogger(Savable, Transactionable, Pullable):
 		if self.targets is not None and len(self.targets):
 			line['targets'] = self.targets
 		self.log.append(line)
-		self.update.append(line)
+		for update in self.update.values():
+			update.append(line)
 		self.targets = None
 		
 	def write(self, *objs, end=None, indent_level=None):
@@ -160,8 +162,11 @@ class GameLogger(Savable, Transactionable, Pullable):
 		return self.filter_log(self.log, player=player, god_mode=god_mode)
 		
 	def pull(self, player=None, god_mode=False):
-		update = self.filter_log(self.update, player=player, god_mode=god_mode)
-		self.update.clear()
+		if player is None:
+			return self.filter_log(self.log, player=player, god_mode=god_mode)
+		
+		update = self.filter_log(self.update[player], player=player, god_mode=god_mode)
+		self.update[player].clear()
 		return update
 
 
