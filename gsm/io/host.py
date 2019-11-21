@@ -327,9 +327,7 @@ class Host(object):
 			return self.ctrl.get_advisor_status(player)
 		if user in self.spectators:
 			return self.ctrl.get_spectator_status()
-		
 		raise UnknownUserError
-		
 	
 	def get_player(self, user):
 		if user not in self.users:
