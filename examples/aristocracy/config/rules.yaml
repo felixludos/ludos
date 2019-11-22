@@ -1,0 +1,51 @@
+
+victory_condition:
+  - palace: 2
+    estate: 0
+    farm: 0
+  - palace: 1
+    estate: 2
+    farm: 0
+  - palace: 1
+    estate: 0
+    farm: 3
+
+counts:
+  palace: 6
+  estate: 5
+  farm: 4
+
+victory_points:
+  palace: 3
+  estate: 2
+  farm: 1
+
+starting: 2
+
+hand_size:
+  max: 7
+  starting: 7
+
+discard_market: 4
+
+num_royals:
+  king: 8
+  queen: 8
+  jack: 8
+
+num_numbers: 8
+
+values:
+  king: 10
+  queen: 10
+  jack: 10
+  10: 10
+  9: 9
+  8: 8
+  7: 7
+  6: 6
+  5: 5
+  4: 4
+  3: 3
+  2: 2
+  1: 1

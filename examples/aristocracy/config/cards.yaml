@@ -1,0 +1,67 @@
+
+king:
+  name: King
+  short_name: K
+  value: 10
+
+queen:
+  name: Queen
+  short_name: Q
+  value: 10
+
+jack:
+  name: Jack
+  short_name: J
+  value: 10
+
+10:
+  name: 10
+  short_name: 10
+  value: 10
+
+9:
+  name: 9
+  short_name: 9
+  value: 9
+
+8:
+  name: 8
+  short_name: 8
+  value: 8
+
+7:
+  name: 7
+  short_name: 7
+  value: 7
+
+6:
+  name: 6
+  short_name: 6
+  value: 6
+
+5:
+  name: 5
+  short_name: 5
+  value: 5
+
+4:
+  name: 4
+  short_name: 4
+  value: 4
+
+3:
+  name: 3
+  short_name: 3
+  value: 3
+
+2:
+  name: 2
+  short_name: 2
+  value: 2
+
+1:
+  name: 1
+  short_name: 1
+  value: 1
+
+
