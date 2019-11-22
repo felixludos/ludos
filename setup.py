@@ -6,7 +6,7 @@ setup(name='gsm',
       url='https://github.com/fleeb24/gsm',
       author='Felix Leeb',
       author_email='fleeb@tuebingen.mpg.edu',
-      license='MIT',
+      license='GPL3',
       packages=['gsm'],
       install_requires=[
             'pyyaml',

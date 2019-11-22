@@ -7,7 +7,7 @@ from gsm.common.world import grid
 from gsm.common import TurnPhaseStack
 
 from .ops import build_catan_map, gain_res
-from .phases import KingPhase, QueenPhase, JackPhase
+from .phases import *
 from .objects import Card, DiscardPile, DrawPile
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -46,7 +46,10 @@ class Aristocracy(gsm.GameController):
 		self.register_phase(name='queen', cls=QueenPhase)
 		self.register_phase(name='jack', cls=JackPhase)
 		
-		
+		self.register_phase(name='auction', cls=AuctionPhase)
+		self.register_phase(name='ball', cls=BallPhase)
+		self.register_phase(name='market', cls=MarketPhase)
+		self.register_phase(name='tax', cls=TaxPhase)
 		
 		
 	def _pre_setup(self, config, info=None):

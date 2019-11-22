@@ -11,7 +11,7 @@ MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
 class TicTacToe(gsm.GameController):
 	
-	def __init__(self, debug=False):
+	def __init__(self, player_names=['Player1', 'Player2'], debug=False):
 		
 		# create player manager
 		manager = gsm.GameManager(open={'symbol'},
@@ -26,8 +26,9 @@ class TicTacToe(gsm.GameController):
 		self.register_config('basic', os.path.join(MY_PATH,'config/basics.yaml'))
 		
 		# register players
-		self.register_player('Player1', val=1)
-		self.register_player('Player2', val=-1)
+		assert len(player_names) == 2, 'Not the right number of players'
+		self.register_player(player_names[0], val=1)
+		self.register_player(player_names[1], val=-1)
 		
 		# register game object types
 		self.register_obj_type(obj_cls=Tick)
@@ -41,14 +42,16 @@ class TicTacToe(gsm.GameController):
 		return tlist(['tic'])
 	
 	def _select_player(self):
-		return self.players['Player1']
+		return next(iter(self.players))
 	
 	def _init_game(self, config):
 		
 		# update player props
 		
-		self.players['Player1'].symbol = config.basic.characters.p1
-		self.players['Player2'].symbol = config.basic.characters.p2
+		p1, p2 = self.players
+		
+		p1.symbol = config.basic.characters.p1
+		p2.symbol = config.basic.characters.p2
 		
 		# init state
 		
