@@ -10,7 +10,7 @@ from gsm import tdict, tlist, tset
 from gsm import ai
 from gsm.viz import _package_action
 
-from .ops import compute_missing
+from .ops import compute_missing, count_vp
 
 # Phases
 
@@ -43,16 +43,19 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 		self.register_config('map', os.path.join(MY_PATH, 'config/map.yaml'))
 		
 		config = self.load_config()
-		self.mind.costs = config.rules.building_costs
+		# self.mind.costs = config.rules.building_costs
+		self.mind.rules = config.rules
 		self.mind.res_idx = {r:i for i,r in enumerate(config.rules.res_names)}
 	
-	def think(self, me, players, table, **status):
+	def think(self, me, table, opponents, **status):
 		
 		# me.resources
 		# me.vps
 		# me.buildings.road
 		
-		pass
+		for player in opponents:
+			player.vps = count_vp(player.buildings, self.mind.rules.victory_points)
+		
 
 	class setup(ai.mindset.Random_Mindset):
 		pass
@@ -148,31 +151,30 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 			raise NotImplementedError  # returns array of floats of corresponding priorities of each group
 		
 	class robber_loc(ai.mindset.Random_Tactic):
-		def observe(self, mind, me, options, table, **status):
+		def observe(self, mind, me, options, table, opponents, **status):
 			hexs = tlist(table[a.ID] for a, in options['loc'])
 			
 			remaining = tlist()
 			for h in hexs:
-				for c in h.corners:
-					if 'building' in c and c.building.player.name != 'White' and c.building.player.num_res > 0:
-						remaining.append(h)
-						break
+				if 'num' in h:
+					for c in h.corners:
+						if 'building' in c and c.building.player.name != me.name and c.building.player.num_res > 0:
+							info = tdict()
+							info.val = 6 - abs(h.num - 7)
+							info.res = h.res
+							info.ID = h._id
+							info.vp = c.building.player.vps
+							remaining.append(info)
 			
-			picks = tlist()
-			for h in remaining:
-				info = tdict()
-				info.val = 5 - abs(h.num - 7)
-				info.res = h.res
-				info.ID = h._id
-				picks.append(info)
-			
-			
-			
-			print(picks.keys())
-			
+			self.remaining = remaining
 			
 		def decide(self, mind, actions):
-			raise NotImplementedError
+			cruelty = 3  # as this increases, vps make less of a difference, and its just about the numbers
+			wts = softmax([p.vp/cruelty + p.val for p in self.remaining])
+			
+			pick = self.remaining[wts.argmax()].ID if self.gen is None else self.gen.choices(self.remaining, weights=wts)[0].ID
+			
+			return [pick]
 			
 ai.register_ai('regular', Regular, game='catan')
 

@@ -20,7 +20,7 @@ class Catan(gsm.GameController):
 	             shuffle_order=False):
 		
 		# create player manager
-		manager = gsm.GameManager(open={'num_res', 'color', 'devcards',
+		manager = gsm.GameManager(open={'num_res', 'color', 'devcards', 'buildings',
 		                                'reserve', 'ports', 'past_devcards'},
 		                          )
 		

@@ -48,6 +48,7 @@ class Agent_Interface(Interface):
 		me = msg.players[player]
 		msg.opponents = msg.players.copy()
 		del msg.opponents[player] # remove self from players list
+		msg.opponents = tlist(msg.opponents.values())
 		options = tdict()
 		if 'options' in msg:
 			for name, opts in msg.options.items():
