@@ -71,6 +71,9 @@ class RobberPhase(GamePhase):
 			else:
 				return
 		
+		elif 'target' not in self:
+			self.target, = action
+			
 		if 'target' in self:
 			
 			self.stolen = None
