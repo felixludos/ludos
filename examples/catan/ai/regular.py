@@ -56,9 +56,7 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 		for player in opponents:
 			player.vps = count_vp(player.buildings, self.mind.rules.victory_points)
 		
-
-	class setup(ai.mindset.Random_Mindset):
-		pass
+	
 	class setup_settlement(ai.mindset.Random_Tactic):
 		def get_sites(self, options, table):
 			sites = np.array([tdict(ID=a[0].ID) for a in options['loc-settlement']])
@@ -120,6 +118,9 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 			idx = wts.argmax() if self.gen is None else self.gen.choices(np.arange(len(wts)), weights=wts)[0]
 			
 			self.second = sites[idx]
+			
+			# process the two choices
+			
 		
 		def decide(self, mind, actions):
 			pick = self.second if 'second' in self else self.first

@@ -151,9 +151,11 @@ def check_building_options(player, costs):
 			elif c.building.player == player:
 				if c.building.get_type() == 'settlement':
 					locs.city.add(c.building)
-				for e in c.edges:
-					if e is not None and 'building' not in e:
-						locs.road.add(e)
+			else:
+				continue
+			for e in c.edges:
+				if e is not None and 'building' not in e:
+					locs.road.add(e)
 	
 	options = tdict()
 	for bld, opts in locs.items():
