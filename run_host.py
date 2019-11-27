@@ -37,7 +37,7 @@ def _ex_wrap(cmd, *args, **kwargs):
 		return cmd(*args, **kwargs)
 	except Exception as e:
 		if isinstance(e, gsm.signals.WrappedException):
-			msg = {'error':{'type':e.etype.__name__, 'msg':e.emsg}}
+			msg = {'error':{'type':str(e.etype), 'msg':e.emsg}}
 		else:
 		
 			msg = {

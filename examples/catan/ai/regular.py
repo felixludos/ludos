@@ -120,6 +120,13 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 			self.second = sites[idx]
 			
 			# process the two choices
+			production = {r:0 for r in mind.res_idx.keys()}
+			for r, n in zip(self.first.ress, self.first.nums):
+				production[r] += 6 - abs(n - 7)
+			for r, n in zip(self.second.ress, self.second.nums):
+				production[r] += 6 - abs(n - 7)
+				
+			mind.production = production
 			
 		
 		def decide(self, mind, actions):
@@ -130,7 +137,25 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 		def observe(self, mind, me, **status):
 			pass
 		def prioritize(self, mind, groups):
-			raise NotImplementedError  # returns array of floats of corresponding priorities of each group
+			
+			vals = []
+			for group in groups:
+				if 'trade' in group:
+					vals.append(-2) # discourage trades for now
+				elif 'city' in group:
+					vals.append(10)
+				elif 'settlement' in group:
+					vals.append(6)
+				elif 'road' in group:
+					vals.append(3)
+				elif 'play' in group:
+					vals.append(2)
+				elif 'cancel' in group or 'pass' in group:
+					vals.append(1)
+				else:
+					vals.append(0)
+			
+			return vals  # returns array of floats of corresponding priorities of each group
 	
 	class main_build_road(ai.mindset.Random_Tactic):
 		def observe(self, mind, me, **status):
