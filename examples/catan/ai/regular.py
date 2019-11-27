@@ -26,7 +26,7 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 		super().__init__(*args, **kwargs)
 		
 		# main: pre, cancel, dev-res, pass, build-road, build-settlement, build-city, buy, maritime-trade, domestic-trade, play
-		
+		self.register_mindset(Regular.main('main', self.gen if self.stochastic else None))
 		# self.register_tactic(Regular.main_build_road('main', 'build-road', self.gen))
 		# self.register_tactic(Regular.main_build_road('main', 'build-settlement', self.gen))
 		# self.register_tactic(Regular.main_build_road('main', 'build-city', self.gen))
@@ -143,11 +143,13 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 				if 'trade' in group:
 					vals.append(-2) # discourage trades for now
 				elif 'city' in group:
-					vals.append(10)
+					vals.append(7)
 				elif 'settlement' in group:
 					vals.append(6)
 				elif 'road' in group:
 					vals.append(3)
+				elif 'buy' in group:
+					vals.append(2)
 				elif 'play' in group:
 					vals.append(2)
 				elif 'cancel' in group or 'pass' in group:
