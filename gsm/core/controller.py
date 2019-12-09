@@ -202,8 +202,8 @@ class GameController(Named, Transactionable, Savable):
 		self.active_players = tdict()
 		
 		self.state = GameState()
-		self.log.reset(tset(self.players.names()))
-		self.table.reset(tset(self.players.names()))
+		self.log.reset(tset(self.players.names())) # TODO: maybe this shouldnt just be the names
+		self.table.reset(tset(self.players))
 		self.stack.reset(self._set_phase_stack(self.config))
 		
 		self._init_game(self.config) # builds maps/objects

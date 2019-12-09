@@ -25,7 +25,7 @@ class Card(GameObject):
 
 class Deck(SafeGenerator):
 	
-	def __init__(self, cards, seed, default, top_face_up=None,
+	def __init__(self, seed, default, cards=[], top_face_up=None,
 	             **info):
 		super().__init__(seed=seed, objs=tdeque(cards), default=default, **info)
 		

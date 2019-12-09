@@ -26,7 +26,11 @@ hand_size:
   max: 7
   starting: 7
 
+market_cards: 2
+
 discard_market: 4
+
+royal_phases: ['king', 'queen', 'jack']
 
 num_royals:
   king: 8
@@ -35,17 +39,17 @@ num_royals:
 
 num_numbers: 8
 
-values:
-  king: 10
-  queen: 10
-  jack: 10
-  10: 10
-  9: 9
-  8: 8
-  7: 7
-  6: 6
-  5: 5
-  4: 4
-  3: 3
-  2: 2
-  1: 1
+#values:
+#  king: 10
+#  queen: 10
+#  jack: 10
+#  10: 10
+#  9: 9
+#  8: 8
+#  7: 7
+#  6: 6
+#  5: 5
+#  4: 4
+#  3: 3
+#  2: 2
+#  1: 1

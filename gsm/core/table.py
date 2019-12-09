@@ -119,7 +119,8 @@ class GameTable(Transactionable, Savable, Pullable):
 	def remove(self, obj):
 		if obj in self.table:
 			del self.table[obj]
-		del self.table[obj._id]
+		elif obj._id in self.table:
+			del self.table[obj._id]
 	
 	def pull(self, player=None): # returns jsonified obj
 		table = {}

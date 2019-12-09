@@ -8,7 +8,7 @@ from gsm.common import TurnPhaseStack
 
 from .ops import build_catan_map, gain_res
 from .phases import *
-from .objects import Card, DiscardPile, DrawPile
+from .objects import Card, DiscardPile, DrawPile, Building
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -16,10 +16,10 @@ MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
 class Aristocracy(gsm.GameController):
 	
-	def __init__(self, player_names, debug=False):
+	def __init__(self, player_names, debug=False, force_order=False):
 		
 		# create player manager
-		manager = gsm.GameManager(open={'name', 'hand'})
+		manager = gsm.GameManager(open={'name', 'hand', 'buildings'})
 		
 		stack = TurnPhaseStack()
 		
@@ -29,7 +29,10 @@ class Aristocracy(gsm.GameController):
 		                 manager=manager,
 		                 stack=stack,
 		                 log=log,
-		                 info_path=os.path.join(MY_PATH, 'info.yaml'),)
+		                 info_path=os.path.join(MY_PATH, 'info.yaml'),
+		                 player_names=player_names,
+		                 force_order=force_order,
+		                 )
 		
 		# register config files
 		self.register_config('rules', os.path.join(MY_PATH, 'config/rules.yaml'))
@@ -50,86 +53,54 @@ class Aristocracy(gsm.GameController):
 		self.register_phase(name='ball', cls=BallPhase)
 		self.register_phase(name='market', cls=MarketPhase)
 		self.register_phase(name='tax', cls=TaxPhase)
+		self.register_phase(name='claim', cls=ClaimPhase)
 		
 		
 	def _pre_setup(self, config, info=None):
 		# register players
-		assert len(self.player_names) in {3,4}, 'Not the right number of players: {}'.format(self.player_names)
+		assert 2 <= len(self.player_names) <= 5, 'Not the right number of players: {}'.format(len(self.player_names))
 		for name in self.player_names:
 			if name not in info.player_names:
 				raise gsm.signals.InvalidPlayerError(name)
-			self.register_player(name, num_res=0, color=name)
+			self.register_player(name)
+	
+		# register buildings
+		for name in config.rules.counts:
+			self.register_obj_type(name=name, obj_cls=Building)
 	
 	def _set_phase_stack(self, config):
 		self.stack.set_player_order(tlist(self.players))
-		return tlist([self.create_phase('setup', player_order=tlist(self.players))])
+		return tlist([self.create_phase('king')])
 	
 	def _init_game(self, config):
 		
-		res_names = config.rules.res_names
-		
-		# update player props
-		for player in self.players.values():
-			player.reserve = tdict(config.rules.building_limits)
-			player.buildings = tdict(road=tset(), settlement=tset(), city=tset())
-			player.resources = tdict({res:0 for res in res_names})
-			player.devcards = tset()
-			player.past_devcards = tset()
-			player.vps = 0
-			player.ports = tset()
-			
-		self.state.costs = config.rules.building_costs
-		
-		bank = tdict()
-		for res in res_names:
-			bank[res] = config.rules.num_res
-		self.state.bank = bank
-		
-		self.state.rewards = config.rules.victory_points
-		self.state.production = config.rules.resource_pays
-		self.state.reqs = config.rules.reqs
-		self.state.victory_condition = config.rules.victory_condition
-		self.state.hand_limit = config.rules.hand_limit
-		# init map
-		G = grid.make_hexgrid(config.map.map, table=self.table,
-		                      enable_corners=True, enable_edges=True,
-		                      
-		                      field_obj_type='hex', grid_obj_type='board')
-		
-		build_catan_map(G, config.map.fields, config.map.ports, config.rules.numbers, self.RNG)
-		self.state.world = G
-		
-		# robber and numbers
-		numbers = tdict()
-		loc = None
-		for f in G.fields:
-			if f.res == 'desert':
-				loc = f
-			else:
-				if f.num not in numbers:
-					numbers[f.num] = tset()
-				numbers[f.num].add(f)
-		assert loc is not None, 'couldnt find the desert'
-		self.state.robber = self.table.create('robber', loc=loc)
-		self.state.desert = loc
-		self.state.numbers = numbers
-		loc.robber = self.state.robber
-		
-		# setup dev card deck
 		cards = tlist()
 		
-		for name, info in config.dev.items():
-			cards.extend([tdict(name=name, desc=info.desc)]*info.num)
+		num = config.rules.num_numbers
+		for n, c in config.cards.items():
+			if n in config.rules.num_royals:
+				cards.extend([c]*config.rules.num_royals[n])
+			else:
+				cards.extend([c]*num)
 		
-		self.state.dev_deck = self.table.create(obj_type='devdeck', cards=cards,
-		                                        seed=self.RNG.getrandbits(64),
-		                                        default='devcard')
-		self.state.dev_deck.shuffle()
+		self.state.discard_pile = self.table.create('discard_pile', top_face_up=config.rules.discard_market,
+		                                            seed=self.RNG.getrandbits(32), default='card')
 		
-		self.state.bank_trading = config.rules.bank_trading
-		self.state.msgs = config.msgs
+		self.state.deck = self.table.create('draw_pile', discard_pile=self.state.discard_pile,
+		                                    cards=cards, seed=self.RNG.getrandbits(32), default='card')
+		self.state.deck.shuffle()
 		
-		self.state.rolls = tstack()
+		self.state.royal_phases = config.rules.royal_phases
+		
+		for i, player in enumerate(self.players):
+			player.hand = tlist(self.state.deck.draw(config.rules.hand_size.starting))
+			player.buildings = tdict({bld:tlist() for bld in config.rules.counts})
+			player.vps = 0
+			player.hand_limit = config.rules.hand_size.max
+			player.coins = 3
+			player.order = i + 1
+			if i == 0:
+				self.state.herald = player
 		
 	def _end_game(self):
 		
@@ -139,6 +110,8 @@ class Aristocracy(gsm.GameController):
 		out.vps = vps
 		
 		mx = max(vps.values())
+		
+		# TODO: break ties with money and hand card values
 		
 		winners = tlist()
 		for name, V in vps.items():
@@ -161,36 +134,8 @@ class Aristocracy(gsm.GameController):
 				gain_res('wheat', self.state.bank, player, 1, log=self.log)
 				gain_res('ore', self.state.bank, player, 1, log=self.log)
 				gain_res('sheep', self.state.bank, player, 1, log=self.log)
-
-		if code == 'road':
-			for player in self.players:
-				gain_res('wood', self.state.bank, player, 1, log=self.log)
-				gain_res('brick', self.state.bank, player, 1, log=self.log)
-				
-		if code == 'settlement':
-			for player in self.players:
-				gain_res('wood', self.state.bank, player, 1, log=self.log)
-				gain_res('brick', self.state.bank, player, 1, log=self.log)
-				gain_res('wheat', self.state.bank, player, 1, log=self.log)
-				gain_res('sheep', self.state.bank, player, 1, log=self.log)
-				
-		if code == 'city':
-			for player in self.players:
-				gain_res('wheat', self.state.bank, player, 2, log=self.log)
-				gain_res('ore', self.state.bank, player, 3, log=self.log)
-		
-		if code == 'next7' and 'rolls' in self.state:
-			self.log.write('The next roll will be a 7')
-			
-			self.state.rolls.push(7)
-		
-		if code == 'gain8':
-			self.log.write('White gains 8 resources')
-			
-			for res in self.players['White'].resources.keys():
-				gain_res(res, self.state.bank, self.players['White'], 3, log=self.log)
 		
 		self.log.dindent()
 
 
-gsm.register_game(Catan, os.path.join(MY_PATH, 'info.yaml'))
+gsm.register_game(Aristocracy, os.path.join(MY_PATH, 'info.yaml'))

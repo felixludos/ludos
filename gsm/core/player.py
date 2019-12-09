@@ -15,6 +15,7 @@ class GameManager(Transactionable, Savable, Pullable):
 		
 		self.player_cls = cls
 		self.players = tdict()
+		self.players_list = tlist()
 		self.req = tset(req)
 		self.open = tset(open)
 		self.open.add('name')
@@ -24,6 +25,7 @@ class GameManager(Transactionable, Savable, Pullable):
 	def register(self, name, **props):
 		
 		self.players[name] = self.player_cls(name, **props)
+		self.players_list.append(self.players[name])
 		self.verify(name)
 		
 	def verify(self, name=None):
@@ -55,6 +57,7 @@ class GameManager(Transactionable, Savable, Pullable):
 		unpack = self.__class__._unpack_obj
 		
 		self.players = unpack(data['players'])
+		self.players_list = tlist(self.players.values())
 		self.req = unpack(data['req'])
 		self.open = unpack(data['open'])
 		self.hidden = unpack(data['hidden'])
@@ -70,6 +73,7 @@ class GameManager(Transactionable, Savable, Pullable):
 			
 		self._in_transaction = True
 		self.players.begin()
+		self.players_list.begin()
 		self.req.begin()
 		self.hidden.begin()
 		self.open.begin()
@@ -83,6 +87,7 @@ class GameManager(Transactionable, Savable, Pullable):
 
 		self._in_transaction = False
 		self.players.commit()
+		self.players_list.commit()
 		self.hidden.commit()
 		self.req.commit()
 		self.open.commit()
@@ -93,6 +98,7 @@ class GameManager(Transactionable, Savable, Pullable):
 		
 		self._in_transaction = False
 		self.players.abort()
+		self.players_list.abort()
 		self.hidden.abort()
 		self.req.abort()
 		self.open.abort()
@@ -109,13 +115,15 @@ class GameManager(Transactionable, Savable, Pullable):
 		return players
 	
 	def __getitem__(self, item):
-		return self.players[item]
+		if item in self.players:
+			return self.players[item]
+		return self.players_list[item]
 	
 	def __contains__(self, item):
 		return item in self.players
 	
 	def __iter__(self):
-		return iter(self.players.values())
+		return iter(self.players_list)
 	def names(self):
 		return self.players.keys()
 	
