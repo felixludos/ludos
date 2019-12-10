@@ -40,3 +40,17 @@ class Building(GameObject):
 	def visit(self):
 		raise NotImplementedError
 
+
+class Market(GameObject):
+	
+	def clear(self):
+		self.neutral.clear()
+	
+	def reset(self, num):
+		
+		cards = self._deck.draw(num)
+		
+		self._log.write('The neutral market is: {}'.format(', '.join(['{}'] * num)), *cards)
+		
+		self.clear()
+		self.neutral.update(cards)

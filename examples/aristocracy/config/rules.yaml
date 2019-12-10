@@ -20,13 +20,16 @@ victory_points:
   estate: 2
   farm: 1
 
-starting: 2
-
 hand_size:
   max: 7
   starting: 7
 
-market_cards: 2
+draw_cards: 1
+
+neutral_market:
+  king: 2
+  queen: 2
+  jack: 3
 
 discard_market: 4
 

@@ -8,7 +8,7 @@ from gsm.common import TurnPhaseStack
 
 from .ops import build_catan_map, gain_res
 from .phases import *
-from .objects import Card, DiscardPile, DrawPile, Building
+from .objects import Card, DiscardPile, DrawPile, Building, Market
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -43,6 +43,7 @@ class Aristocracy(gsm.GameController):
 		self.register_obj_type(name='card', obj_cls=Card)
 		self.register_obj_type(name='discard_pile', obj_cls=DiscardPile)
 		self.register_obj_type(name='draw_pile', obj_cls=DrawPile,)
+		self.register_obj_type(name='market', obj_cls=Market)
 		
 		# register possible phases
 		self.register_phase(name='king', cls=KingPhase)
@@ -83,17 +84,20 @@ class Aristocracy(gsm.GameController):
 			else:
 				cards.extend([c]*num)
 		
-		self.state.discard_pile = self.table.create('discard_pile', top_face_up=config.rules.discard_market,
+		self.state.discard_pile = self.create_object('discard_pile', top_face_up=config.rules.discard_market,
 		                                            seed=self.RNG.getrandbits(32), default='card')
 		
-		self.state.deck = self.table.create('draw_pile', discard_pile=self.state.discard_pile,
+		self.state.deck = self.create_object('draw_pile', discard_pile=self.state.discard_pile,
 		                                    cards=cards, seed=self.RNG.getrandbits(32), default='card')
 		self.state.deck.shuffle()
+		
+		self.state.market = self.create_object('market', neutral=tset(),
+		                                       _log=self.log, _deck=self.state.deck)
 		
 		self.state.royal_phases = config.rules.royal_phases
 		
 		for i, player in enumerate(self.players):
-			player.hand = tlist(self.state.deck.draw(config.rules.hand_size.starting))
+			player.hand = tset(self.state.deck.draw(config.rules.hand_size.starting))
 			player.buildings = tdict({bld:tlist() for bld in config.rules.counts})
 			player.vps = 0
 			player.hand_limit = config.rules.hand_size.max
@@ -129,11 +133,11 @@ class Aristocracy(gsm.GameController):
 		self.log.writef('Cheat code activated: {}', code)
 		self.log.iindent()
 		
-		if code == 'devcard':
-			for player in self.players:
-				gain_res('wheat', self.state.bank, player, 1, log=self.log)
-				gain_res('ore', self.state.bank, player, 1, log=self.log)
-				gain_res('sheep', self.state.bank, player, 1, log=self.log)
+		# if code == 'devcard':
+		# 	for player in self.players:
+		# 		gain_res('wheat', self.state.bank, player, 1, log=self.log)
+		# 		gain_res('ore', self.state.bank, player, 1, log=self.log)
+		# 		gain_res('sheep', self.state.bank, player, 1, log=self.log)
 		
 		self.log.dindent()
 

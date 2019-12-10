@@ -4,7 +4,7 @@ from gsm import GameOver, GamePhase, GameActions, GameObject
 from gsm import tset, tdict, tlist
 from gsm import PhaseComplete, SwitchPhase
 
-from ..ops import satisfies_vic_req
+from ..ops import satisfies_vic_req, get_next_market
 
 class RoyalPhase(GamePhase):
 	
@@ -18,16 +18,41 @@ class RoyalPhase(GamePhase):
 			self.sel = tdict({p:tset() for p in C.players})
 			self.active = tset(C.players)
 			
+			# create neutral market
+			num = C.config.rules.neutral_market[self.name]
+			if num > 0:
+				cards = C.state.deck.draw(num)
+				
+			# draw cards
+			num = C.config.rules.draw_cards
+			if num > 0:
+				C.log.write('Everybody draws {} card{}'.format(num, 's' if num > 1 else ''))
+				for p in C.players:
+					cards = C.state.deck.draw(num, player=player)
+					C.log[p].writef('You draw: {}'.format(', '.join(['{}']*num)), *cards)
+					p.hand.add(cards)
+			
 			self.pre(C)
 		
 		if action is not None:
 			obj, = action
 			
 			if 'ready' == obj:
-				self.active.remove(self.active)
+				self.active.remove(player)
 				if len(self.active) == 0:
 					self.market_complete = True
-					raise SwitchPhase('market')
+					
+					nxt = get_next_market(self.sel)
+					if nxt is not None:
+						for p, cards in self.sel:
+							for card in cards:
+								p.hand.remove(card)
+							p.market = cards
+						
+						raise SwitchPhase('market', player=nxt, market=self.sel)
+					else:
+						C.log.write('No one goes to the market')
+						
 			elif obj in self.sel[player]:
 				C.log[player].iindent()
 				C.log[player].writef('You unselect {}', obj)
@@ -44,6 +69,7 @@ class RoyalPhase(GamePhase):
 			self.post(C)
 			
 		if 'post_complete' in self:
+			C.state.market.clear()
 			if len(C.stack) == 0:
 				C.stack.extend(C.state.royal_phases)
 				C.log.zindent()
