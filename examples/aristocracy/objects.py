@@ -5,8 +5,10 @@ from gsm.common.elements import Card as CardBase
 from gsm.common.elements import Deck
 
 class Card(Named, CardBase):
-	pass
-
+	
+	def isroyal(self):
+		return '_royal' in self
+	
 class DiscardPile(Deck):
 	def __init__(self, seed, default, top_face_up):
 		super().__init__(cards=tlist(), seed=seed, default=default,

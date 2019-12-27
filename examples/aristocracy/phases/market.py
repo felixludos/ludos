@@ -44,9 +44,36 @@ class MarketPhase(TurnPhase):
 	
 	def encode(self, C):
 		
-		out = GameActions('You have {} actions left'.format(len(self.market[self.player])))
-		
-		
+		# complete trade
+		if 'trade' in self:
+			out = GameActions('Choose second card to exchange')
+			
+			with out('cancel', 'Cancel trade'):
+				out.add('cancel')
+				
+			with out('trade', 'Second card to exchange'):
+				cards = tset()
+				if self.trade not in C.state.market:
+					cards.update(C.state.market)
+				for p in C.players:
+					if self.trade not in p.market:
+						cards.update(p.market)
+				out.add(cards)
+				
+		else:
+			
+			out = GameActions('You have {} actions left'.format(len(self.market[self.player])))
+			
+			# trade
+			
+			
+			# pickup
+			
+			# play royal
+			
+			# royal action
+			
+			# exchange building
 		
 		return tdict({self.player: out})
 

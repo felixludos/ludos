@@ -3,16 +3,19 @@ king:
   name: King
   short_name: K
   value: 10
+  _royal: True
 
 queen:
   name: Queen
   short_name: Q
   value: 10
+  _royal: True
 
 jack:
   name: Jack
   short_name: J
   value: 10
+  _royal: True
 
 10:
   name: 10

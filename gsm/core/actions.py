@@ -88,6 +88,11 @@ class GameActions(Savable, Pullable): # created and returned in phases
 		if isinstance(status, str):
 			status = write(status)
 		self.status = status
+		
+		# if txt is not None:
+		# 	status = writef(txt, *objs, end=end, indent_level=indent_level, **kwobjs)
+		# else:
+		# 	status = None
 	
 	def in_transaction(self):
 		return self._current is not None

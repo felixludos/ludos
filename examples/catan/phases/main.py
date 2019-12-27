@@ -122,7 +122,7 @@ class MainPhase(TurnPhase):
 			if obj.name == 'Victory Point':
 				raise Exception('Shouldnt have played a Victory point card')
 			elif obj.name == 'Knight':
-				raise SwitchPhase('robber', send_action=True, stack=True,
+				raise SwitchPhase('robber', send_action=False, stack=True,
 				                  knight=obj, player=self.player)
 			elif obj.name == 'Monopoly':
 				res, = rest

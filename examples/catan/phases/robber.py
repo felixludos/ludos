@@ -55,6 +55,10 @@ class RobberPhase(GamePhase):
 			loc, = action
 			self.loc = loc
 			
+			if loc == 'cancel':
+				C.log[player].write('Cancel knight')
+				raise PhaseComplete
+			
 			prev = C.state.robber.loc
 			del prev.robber
 			loc.robber = C.state.robber
@@ -73,6 +77,10 @@ class RobberPhase(GamePhase):
 		
 		elif 'target' not in self:
 			self.target, = action
+			
+			if self.target == 'cancel':
+				C.log[player].write('Cancel knight')
+				raise PhaseComplete
 			
 		if 'target' in self:
 			
