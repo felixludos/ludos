@@ -6,43 +6,60 @@ from ..ops import gain_res, play_dev, steal_options
 
 class RobberPhase(GamePhase):
 	
+	def enforcing_hand_limit(self, C, player, action):
+		if 'knight' in self \
+				or ('debt' in self and len(self.debt) == 0):
+			return False
+		
+		if 'debt' not in self:
+			
+			lim = C.state.hand_limit
+			
+			self.debt = tdict()
+			self.choices = tdict()
+			
+			for player in C.players:
+				if player.num_res > lim:
+					self.debt[player] = player.num_res // 2
+					self.choices[player] = tlist()
+					
+		else:
+			res, = action
+			
+			self.choices[player].append(res)
+			gain_res(res, C.state.bank, player, -1)
+			C.log[player].writef('1 of your {} is stolen.', res)
+			self.debt[player] -= 1
+			
+			if self.debt[player] < 1:
+				del self.debt[player]
+				C.log.writef('{} loses: {}', player, ', '.join(self.choices[player]))
+				del self.choices[player]
+		
+		return len(self.debt) > 0
+		
+	def specifying_location(self, C, player, action):
+		if 'loc' in self:
+			return False
+		
+		
+		raise NotImplementedError
+	
+	def check_cancel(self, C, player, action):
+		
+		raise NotImplementedError
+		
+	
 	def execute(self, C, player=None, action=None):
 		
-		if 'knight' not in self:  # enforce hand limit
-			if 'debt' in self: # debts have been tabulated
-				if len(self.debt): # there are still outstanding debts
-				
-					res, = action
-					
-					self.choices[player].append(res)
-					gain_res(res, C.state.bank, player, -1)
-					C.log[player].writef('1 of your {} is stolen.', res)
-					self.debt[player] -= 1
-					
-					if self.debt[player] < 1:
-						del self.debt[player]
-						C.log.writef('{} loses: {}', player, ', '.join(self.choices[player]))
-						del self.choices[player]
-						
-					action = None
-				
-			else:
-			
-				lim = C.state.hand_limit
-				
-				self.debt = tdict()
-				self.choices = tdict()
-				
-				for player in C.players:
-					if player.num_res > lim:
-						self.debt[player] = player.num_res // 2
-						self.choices[player] = tlist()
-				
-			if len(self.debt):
-				return
-		else:
-			self.debt = tdict()
+		if self.enforcing_hand_limit(C, player, action):
+			return
 		
+		self.check_cancel(C, player, action)
+		
+		self.specifying_location(C, player, action)
+		
+		self.specifying_player(C, player, action)
 		
 		if 'loc' not in self:
 			
