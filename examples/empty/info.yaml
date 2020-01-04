@@ -1,0 +1,10 @@
+
+name: Example
+long_name: Empty Game Example
+short_name: exm
+
+num_players: [2, 4]
+player_names: [Player1, Player2, Player3, Player4]
+
+
+

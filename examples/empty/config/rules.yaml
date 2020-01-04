@@ -1,0 +1,4 @@
+
+example_config:
+  option: 'testing'
+  12: 'again'

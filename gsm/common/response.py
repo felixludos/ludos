@@ -14,7 +14,6 @@ class ResponsePhase(GamePhase):
 		                 caller=caller, options=options, kwargs=kwargs)
 	
 	def execute(self, C, player=None, action=None):
-		
 		if action is None:
 			return
 		
