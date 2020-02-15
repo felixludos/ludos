@@ -3,7 +3,7 @@ import numpy as np
 from scipy.special import softmax
 
 from ...mixins import Named, Typed
-from ... import tlist, tdict, tset, theap, Transactionable, Savable
+from ... import tlist, tdict, tset, theap, Transactionable, Packable
 from .. import RandomAgent
 from .mind import Idea, StopThinking, DontAskMe
 

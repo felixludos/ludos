@@ -1,5 +1,6 @@
-from humpack import tdict, tlist, tset, tdeque, tstack, theap, containerify, Array
-from humpack import Savable, Transactionable
+from humpack import tdict, tlist, tset, tdeque, tstack, theap, containerify
+from humpack.wrappers import Array
+from humpack import Packable, Transactionable
 from .util import jsonify, unjsonify, obj_unjsonify
 from .signals import PhaseComplete, SwitchPhase, GameOver
 from .writing import write, writef, RichText
@@ -10,4 +11,8 @@ from . import common
 from . import ai
 from . import io
 from .core import GamePhase, GameStack, GamePlayer, GameActions, GameObject, GameTable, GameState, GameLogger, GameObjectGenerator, GameController, GameManager, SafeGenerator
+
+from ._lib_info import version as __version__
+from ._lib_info import author as __author__
+
 

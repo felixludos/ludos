@@ -2,14 +2,14 @@
 from string import Formatter
 
 from humpack import tset, tdict, tlist
-from .mixins import Typed, Savable, Transactionable, Pullable, Writable
+from .mixins import Typed, Packable, Transactionable, Pullable, Writable
 from .signals import FormatException
-from .util import _primitives
+from .util import primitive
 
 FMT = Formatter()
 
 def _process_obj(obj):
-	if isinstance(obj, _primitives):
+	if isinstance(obj, primitive):
 		return obj
 	info = {}
 	if isinstance(obj, Writable):
@@ -68,7 +68,7 @@ def writef(txt, *objs, end=None, indent_level=None, **kwobjs):
 		
 	return write(*line, end=end, indent_level=indent_level)
 
-class RichWriter(Savable, Transactionable, Pullable):
+class RichWriter(Packable, Transactionable, Pullable):
 	
 	def __init__(self, indent_level=None, debug=False, end='\n'):
 		super().__init__()
@@ -139,7 +139,7 @@ class RichWriter(Savable, Transactionable, Pullable):
 	def extend(self, line):
 		self.text.append(line)
 	
-	def __save__(self):
+	def __pack__(self):
 		pack = self.__class__._pack_obj
 		
 		data = {}
@@ -153,7 +153,7 @@ class RichWriter(Savable, Transactionable, Pullable):
 		
 		return data
 
-	def __load__(self, data):
+	def __unpack__(self, data):
 		unpack = self.__class__._unpack_obj
 		
 		self.text = unpack(data['text'])
@@ -239,13 +239,13 @@ class LogWriter(RichWriter):
 		super().clear()
 		self.log.clear()
 		
-	def __save__(self):
-		data = super().__save__()
+	def __pack__(self):
+		data = super().__pack__()
 		data['log'] = self.__class__._pack_obj(self.log)
 		return data
 	
-	def __load__(self, data):
-		super().__load__(data)
+	def __unpack__(self, data):
+		super().__unpack__(data)
 		self.log = self.__class__._unpack_obj(data['log'])
 		
 # the dev can write instance of RichText, but all written objects are stored as simple objects (dict, list, primitives)
@@ -253,7 +253,7 @@ class LogWriter(RichWriter):
 # 	pass
 
 
-class RichText(Typed, Writable, Savable):
+class RichText(Typed, Writable, Packable):
 	
 	def __init__(self, msg, obj_type='Regular', **info):
 		super().__init__(obj_type)
@@ -269,7 +269,7 @@ class RichText(Typed, Writable, Savable):
 	def get_text_info(self): # dev can provide frontend with format instructions, this is added to the info for each line in the log using this LogFormat
 		return self.info # by default no additional info is sent
 	
-	def __save__(self):
+	def __pack__(self):
 		pack = self.__class__._pack_obj
 		
 		return {
@@ -277,7 +277,7 @@ class RichText(Typed, Writable, Savable):
 			'info' :pack(self.info),
 		}
 	
-	def __load__(self, data):
+	def __unpack__(self, data):
 		unpack = self.__class__._unpack_obj
 		self.__init__(unpack(data['val']), **unpack(data['info']))
 	

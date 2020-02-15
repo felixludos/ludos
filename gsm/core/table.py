@@ -1,12 +1,12 @@
 
-from ..mixins import Transactionable, Savable, Pullable
+from ..mixins import Transactionable, Packable, Pullable
 from humpack import tset, tdict, tlist
 from ..signals import MissingTypeError, MissingValueError, MissingObjectError, ObjectIDCollisionError
 from .object import GameObject
 
 from .. import util
 
-class GameTable(Transactionable, Savable, Pullable):
+class GameTable(Transactionable, Packable, Pullable):
 	
 	# TODO: maybe use singleton to allow access to table instance for anything that has access to the class GameTable
 	# _instance = None
@@ -130,7 +130,7 @@ class GameTable(Transactionable, Savable, Pullable):
 			
 		return table
 	
-	def __save__(self):
+	def __pack__(self):
 		
 		pack = self.__class__._pack_obj
 		
@@ -144,7 +144,7 @@ class GameTable(Transactionable, Savable, Pullable):
 		
 		return data
 	
-	def __load__(self, data):
+	def __unpack__(self, data):
 		
 		unpack = self.__class__._unpack_obj
 		

@@ -1,14 +1,13 @@
 from setuptools import setup
+from gsm import _lib_info as info
 
-setup(name='gsm',
-      version='0.7',
-      description='AI-centric framework for turn-based games',
-      url='https://github.com/fleeb24/gsm',
-      author='Felix Leeb',
-      author_email='fleeb@tuebingen.mpg.edu',
-      license='GPL3',
-      packages=['gsm'],
-      install_requires=[
-            'pyyaml',
-      ],
+setup(name=info.name,
+      version=info.version,
+      description=info.description,
+      url=info.url,
+      author=info.author,
+      author_email=info.author_email,
+      license=info.license,
+      packages=info.packages,
+      install_requires=info.install_requires,
       zip_safe=False)

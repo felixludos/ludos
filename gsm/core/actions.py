@@ -3,7 +3,7 @@ from itertools import product, chain
 from humpack import tset, tdict, tlist
 from .object import GameObject
 from .player import GamePlayer
-from ..mixins import Typed, Named, Transactionable, Savable, Pullable, Hashable
+from ..mixins import Typed, Named, Transactionable, Packable, Pullable, Hashable
 from ..signals import ActionMismatch, UnknownActionElement, InvalidActionError
 from ..writing import write, writef
 from ..util import jsonify
@@ -72,7 +72,7 @@ def format_actions(raw): # format action sets to be sent to frontend (mostly enc
 
 
 
-class GameActions(Savable, Pullable): # created and returned in phases
+class GameActions(Packable, Pullable): # created and returned in phases
 	
 	def __init__(self, status=None):
 		super().__init__()
@@ -157,7 +157,7 @@ class GameActions(Savable, Pullable): # created and returned in phases
 			raise Exception('Call begin() to start new action group')
 		self._current.add(items)
 	
-	def __save__(self):
+	def __pack__(self):
 		pack = self.__class__._pack_obj
 		
 		data = {}
@@ -171,7 +171,7 @@ class GameActions(Savable, Pullable): # created and returned in phases
 		
 		return data
 	
-	def __load__(self, data):
+	def __unpack__(self, data):
 		unpack = self.__class__._unpack_obj
 		
 		self._current = unpack(data['_current'])
@@ -240,7 +240,7 @@ class ActionTuple(Typed, tuple):
 	def __init__(self, group, tpl):
 		super().__init__(group)
 
-class ActionElement(Typed, Transactionable, Savable, Hashable):
+class ActionElement(Typed, Transactionable, Packable, Hashable):
 	
 	def encode(self):
 		raise NotImplementedError
@@ -254,10 +254,10 @@ class FixedAction(ActionElement):
 		super().__init__('fixed')
 		self.val = val
 
-	def __save__(self):
+	def __pack__(self):
 		return self.val
 
-	def __load__(self, data):
+	def __unpack__(self, data):
 		self.__init__(data)
 
 	def encode(self):
@@ -280,10 +280,10 @@ class ObjectAction(ActionElement):
 		super().__init__('obj')
 		self.obj = obj
 		
-	def __save__(self):
+	def __pack__(self):
 		return {'obj': self.__class__._pack_obj(self.obj)}
 	
-	def __load__(self, data):
+	def __unpack__(self, data):
 		ObjectAction.__init__(self, self.__class__._unpack_obj(data['obj']))
 		
 	def encode(self):
@@ -299,10 +299,10 @@ class PlayerAction(ActionElement):
 		super().__init__('player')
 		self.player = player
 		
-	def __save__(self):
+	def __pack__(self):
 		return {'player': self.__class__._pack_obj(self.player)}
 	
-	def __load__(self, data):
+	def __unpack__(self, data):
 		PlayerAction.__init__(self, self.__class__._unpack_obj(data['player']))
 		
 	def encode(self):
@@ -318,11 +318,11 @@ class TextAction(ActionElement): # allows player to enter arbitrary text as acti
 	def __init__(self):
 		super().__init__('text')
 		
-	def __save__(self):
+	def __pack__(self):
 		pack = self.__class__._pack_obj
 		raise NotImplementedError
 		
-	def __load__(self, data):
+	def __unpack__(self, data):
 		unpack = self.__class__._unpack_obj
 		raise NotImplementedError
 	
@@ -338,11 +338,11 @@ class NumberAction(ActionElement): # allows player to choose from a number (floa
 	def __init__(self):
 		super().__init__('number')
 	
-	def __save__(self):
+	def __pack__(self):
 		pack = self.__class__._pack_obj
 		raise NotImplementedError
 	
-	def __load__(self, data):
+	def __unpack__(self, data):
 		unpack = self.__class__._unpack_obj
 		raise NotImplementedError
 	

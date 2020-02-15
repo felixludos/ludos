@@ -1,5 +1,5 @@
 
-import sys
+import sys, os
 import json
 import random
 import traceback
@@ -7,16 +7,28 @@ import inspect
 import yaml
 
 from humpack import tset, tdict, tlist, containerify
+from humpack import pack_member, unpack_member, json_pack, json_unpack
 from .logging import GameLogger
 from .state import GameState
 from .table import GameTable
 from .player import GameManager
 from .phase import GameStack
-from ..mixins import Named, Transactionable, Savable
+from ..mixins import Named, Transactionable, Packable
 from ..signals import PhaseComplete, SwitchPhase, GameOver, InvalidPlayerError, NoActiveGameError, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
 from ..util import RandomGenerator, jsonify
 
-class GameController(Named, Transactionable, Savable):
+class GameController(Named, Transactionable, Packable):
+	
+	def __init_subclass__(cls, info_path=None, **kwargs):
+		
+		game_path = os.path.dirname(inspect.getfile(cls))
+		
+		if info_path is None:
+			
+			
+		
+			pass
+		
 	
 	def __new__(cls, *args, **kwargs):
 		new = super().__new__(cls)
@@ -109,45 +121,43 @@ class GameController(Named, Transactionable, Savable):
 				obj.abort()
 		
 	
-	def __save__(self):
-		pack = self.__class__._pack_obj
+	def __pack__(self):
 		
 		data = {}
 		
 		# registries
-		data['config_files'] = pack(self.config_files)
+		data['config_files'] = pack_member(self.config_files)
 		
-		# tmembers - arbitrary Savable instances
+		# tmembers - arbitrary Packable instances
 		for mem in self._tmembers:
-			data[mem] = pack(self.__dict__[mem])
+			data[mem] = pack_member(self.__dict__[mem])
 		
-		data['name'] = pack(self.name)
-		data['_in_progress'] = pack(self._in_progress)
-		data['_in_transaction'] = pack(self._in_transaction)
-		data['_pre_setup_complete'] = pack(self._pre_setup_complete)
-		data['_spec_image'] = pack(self._spec_image)
-		data['debug'] = pack(self.DEBUG)
-		data['active_players'] = pack(self.active_players)
+		data['name'] = pack_member(self.name)
+		data['_in_progress'] = pack_member(self._in_progress)
+		data['_in_transaction'] = pack_member(self._in_transaction)
+		data['_pre_setup_complete'] = pack_member(self._pre_setup_complete)
+		data['_spec_image'] = pack_member(self._spec_image)
+		data['debug'] = pack_member(self.DEBUG)
+		data['active_players'] = pack_member(self.active_players)
 		
 		return data
 	
-	def __load__(self, data):
-		unpack = self.__class__._unpack_obj
+	def __unpack__(self, data):
 		
 		# load registries
-		self.config_files = unpack(data['config_files'])
+		self.config_files = unpack_member(data['config_files'])
 		
 		# unpack tmembers
 		for mem in self._tmembers:
-			self.__dict__[mem] = unpack(data[mem])
+			self.__dict__[mem] = unpack_member(data[mem])
 			
-		self.name = unpack(data['name'])
-		self._in_transaction = unpack(data['_in_transaction'])
-		self._in_progress = unpack(data['_in_progress'])
-		self._pre_setup_complete = unpack(data['_pre_setup_complete'])
-		self._spec_image = unpack(data['_spec_image'])
-		self.DEBUG = unpack(data['debug'])
-		self.active_players = unpack(data['active_players'])
+		self.name = unpack_member(data['name'])
+		self._in_transaction = unpack_member(data['_in_transaction'])
+		self._in_progress = unpack_member(data['_in_progress'])
+		self._pre_setup_complete = unpack_member(data['_pre_setup_complete'])
+		self._spec_image = unpack_member(data['_spec_image'])
+		self.DEBUG = unpack_member(data['debug'])
+		self.active_players = unpack_member(data['active_players'])
 	
 	
 	
@@ -457,13 +467,14 @@ class GameController(Named, Transactionable, Savable):
 		raise NotImplementedError # TODO: by default it should return contents of a config file
 	
 	def save(self):  # returns string
-		data = str(Savable.pack(self))
+		data = json_pack(self)
+		# data = str(Packable.pack(self))
 		# print('key: {}'.format(self.RNG.random())) # testing
 		return data
 	
 	def load(self, data):
 		
-		obj = Savable.unpack(eval(data))
+		obj = json_unpack(data)
 		
 		# load registries
 		self.config_files = obj.config_files
@@ -476,8 +487,6 @@ class GameController(Named, Transactionable, Savable):
 		self._in_transaction = obj._in_transaction
 		self._in_progress = obj._in_progress
 		self.DEBUG = obj.DEBUG
-		
-		# print('key: {}'.format(self.RNG.random())) # testing
 	
 	
 	

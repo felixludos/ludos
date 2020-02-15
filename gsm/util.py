@@ -1,20 +1,31 @@
 import yaml
 import numpy as np
 import random
+import logging
 from humpack import tdict, tset, tlist
 
-from .mixins import Named, Typed, Jsonable, Savable, Transactionable, _primitives
+from .mixins import Named, Typed, Jsonable, Packable, Transactionable, primitive
 from .signals import UnknownElementError, InvalidKeyError
+
+def get_status_recorder(name, )
 
 
 def jsonify(obj, tfm=None):
+	'''
+	Convert from a nested python data structure (containing dict, set, list, tuples, humpack objects etc.)
+	to a json conpatible object (only dicts, lists, and primitives).
+	
+	:param obj: Input data structure to be jsonified
+	:param tfm: Custom transform function to jsonify special data structures (use with caution)
+	:return: obj that can be transformed to json string using json.dump
+	'''
 	if tfm is not None:
 		try:
 			return tfm(obj, jsonify)
 		except UnknownElementError:
 			pass
 	
-	if isinstance(obj, _primitives):
+	if isinstance(obj, primitive):
 		return obj
 	
 	if isinstance(obj, Jsonable):
@@ -39,12 +50,19 @@ def jsonify(obj, tfm=None):
 
 
 def unjsonify(obj, tfm=None):
+	'''
+		Convert from a json readable python data structure (containing dict, list, tuples, humpack objects etc.)
+		to a json conpatible object (only dicts, lists, and primitives).
+
+		:param obj: Input data structure to be unjsonified
+		:param tfm: Custom transform function to unjsonify certain data structures (use with caution)
+	'''
 	if tfm is not None:
 		try:
 			return tfm(obj, unjsonify)
 		except UnknownElementError:
 			pass
-	if isinstance(obj, _primitives):
+	if isinstance(obj, primitive):
 		return obj
 	if isinstance(obj, list):
 		return tlist([unjsonify(o, tfm=tfm) for o in obj])
@@ -60,6 +78,12 @@ def unjsonify(obj, tfm=None):
 	raise UnknownElementError(obj)
 
 def obj_unjsonify(obj, table=None):
+	'''
+	
+	:param obj: data to be 
+	:param table:
+	:return:
+	'''
 	obj = unjsonify(obj)
 	if table is not None:
 		obj_cross_ref(obj, table)
@@ -89,7 +113,7 @@ def obj_cross_ref(obj, tables):
 				obj[k] = _fmt_obj(v, tables)
 
 
-class RandomGenerator(Savable, Transactionable, random.Random):
+class RandomGenerator(Packable, Transactionable, random.Random):
 	
 	def __init__(self, seed=None):
 		super().__init__()
@@ -103,7 +127,7 @@ class RandomGenerator(Savable, Transactionable, random.Random):
 		copy._shadow = self._shadow
 		return copy
 	
-	def __save__(self):
+	def __pack__(self):
 		pack = self.__class__._pack_obj
 		
 		data = {}
@@ -114,7 +138,7 @@ class RandomGenerator(Savable, Transactionable, random.Random):
 		
 		return data
 	
-	def __load__(self, data):
+	def __unpack__(self, data):
 		unpack = self.__class__._unpack_obj
 		
 		self._shadow = None
@@ -169,7 +193,7 @@ class RandomGenerator(Savable, Transactionable, random.Random):
 
 
 
-# class Empty(Savable, Transactionable):
+# class Empty(Packable, Transactionable):
 #
 # 	def __save(self):
 # 		raise NotImplementedError

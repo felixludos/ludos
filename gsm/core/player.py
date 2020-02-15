@@ -1,10 +1,10 @@
 
 from humpack import tset, tdict, tlist
-from ..mixins import Named, Typed, Jsonable, Transactionable, Savable, Pullable, Writable
+from ..mixins import Named, Typed, Jsonable, Transactionable, Packable, Pullable, Writable
 from ..signals import MissingValueError
 from ..util import jsonify
 
-class GameManager(Transactionable, Savable, Pullable):
+class GameManager(Transactionable, Packable, Pullable):
 	
 	def __init__(self, cls=None, req=[], open=[], hidden=[]):
 		
@@ -39,7 +39,7 @@ class GameManager(Transactionable, Savable, Pullable):
 					raise MissingValueError(p.get_type(), req, *self.req)
 		
 		
-	def __save__(self):
+	def __pack__(self):
 		pack = self.__class__._pack_obj
 		
 		data = {}
@@ -53,7 +53,7 @@ class GameManager(Transactionable, Savable, Pullable):
 		
 		return data
 	
-	def __load__(self, data):
+	def __unpack__(self, data):
 		unpack = self.__class__._unpack_obj
 		
 		self.players = unpack(data['players'])

@@ -2,9 +2,9 @@
 import numpy as np
 from itertools import chain
 from ..signals import InvalidInitializationError, MissingValueError, UnknownElementError
-from ..mixins import Named, Typed, Jsonable, Writable, Transactionable, Savable, Pullable, Hashable
+from ..mixins import Named, Typed, Jsonable, Writable, Transactionable, Packable, Pullable, Hashable
 from humpack import tset, tdict, tlist, tdeque
-from ..util import _primitives, RandomGenerator, jsonify
+from ..util import primitive, RandomGenerator, jsonify
 
 # TODO: fix so it works with cross referencing
 
@@ -38,10 +38,10 @@ class GameObject(Typed, Writable, Jsonable, Pullable, tdict):
 			if req not in self:
 				raise MissingValueError(self.get_type(), req, *self._req)
 		
-	def __save__(self):
+	def __pack__(self):
 		pack = self.__class__._pack_obj
 		
-		data = super().__save__()
+		data = super().__pack__()
 		data['_id'] = pack(self._id)
 		data['_table'] = pack(self._table)
 		data['_open'] = pack(self._open)
@@ -49,7 +49,7 @@ class GameObject(Typed, Writable, Jsonable, Pullable, tdict):
 		
 		return data
 	
-	def __load__(self, data):
+	def __unpack__(self, data):
 		unpack = self.__class__._unpack_obj
 		
 		self._id = unpack(data['_id'])
@@ -63,7 +63,7 @@ class GameObject(Typed, Writable, Jsonable, Pullable, tdict):
 		del data['_req']
 		del data['_open']
 		
-		super().__load__(data)
+		super().__unpack__(data)
 	
 		# self._verify() # TODO: maybe verify req when loading
 	

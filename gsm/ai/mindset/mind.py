@@ -2,7 +2,7 @@
 import numpy as np
 
 from ...mixins import Named, Typed
-from ... import tlist, tdict, tset, theap, Transactionable, Savable
+from ... import tlist, tdict, tset, theap, Transactionable, Packable
 from .. import RandomAgent
 
 class Tactic(Typed, Named, tdict):

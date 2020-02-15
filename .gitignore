@@ -2,3 +2,5 @@
 gsm.egg-info/
 gsm/__pycharm__/
 .ipynb_checkpoints/
+extra/
+logs/

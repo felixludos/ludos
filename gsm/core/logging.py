@@ -3,7 +3,7 @@ from humpack import tset, tdict, tlist
 from .object import GameObject
 from .player import GamePlayer
 from ..writing import RichWriter, LogWriter, write, writef
-from ..mixins import Named, Typed, Savable, Transactionable, Pullable
+from ..mixins import Named, Typed, Packable, Transactionable, Pullable
 # from ..util import Player
 from string import Formatter
 
@@ -14,7 +14,7 @@ log formatting:
 - structure - print to different levels (increment or reset)
 '''
 
-class GameLogger(Savable, Transactionable, Pullable):
+class GameLogger(Packable, Transactionable, Pullable):
 	def __init__(self, indent_level=None, debug=False, end='\n'):
 		
 		self.log = tlist()
@@ -33,7 +33,7 @@ class GameLogger(Savable, Transactionable, Pullable):
 		self.clear()
 		self.update = tdict({player:tlist() for player in self.players})
 	
-	def __save__(self):
+	def __pack__(self):
 		pack = self.__class__._pack_obj
 		data = {
 			'debug': pack(self.debug),
@@ -47,7 +47,7 @@ class GameLogger(Savable, Transactionable, Pullable):
 		}
 		return data
 	
-	def __load__(self, data):
+	def __unpack__(self, data):
 		unpack = self.__class__._unpack_obj
 		
 		self.debug = unpack(data['debug'])
@@ -178,13 +178,13 @@ class OldGameLogger(LogWriter):
 		
 		super().reset()
 		
-	def __save__(self):
-		data = super().__save__()
+	def __pack__(self):
+		data = super().__pack__()
 		data['writers'] =  self.__class__._pack_obj(self.writers)
 		return data
 	
-	def __load__(self, data):
-		super().__load__(data)
+	def __unpack__(self, data):
+		super().__unpack__(data)
 		self.writers = self.__class__._unpack_obj(data['writers'])
 	
 	def begin(self):

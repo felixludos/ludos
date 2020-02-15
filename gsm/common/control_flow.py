@@ -11,9 +11,9 @@ class TurnPhaseStack(GameStack): # tracks turn counter, inc when creating a Turn
 		self.counter = None
 		self.turn_phases = tset()
 		
-	def __save__(self):
+	def __pack__(self):
 		pack = self.__class__._pack_obj
-		data = super().__save__()
+		data = super().__pack__()
 		
 		data['players'] = pack(self.players)
 		data['counter'] = pack(self.counter)
@@ -21,7 +21,7 @@ class TurnPhaseStack(GameStack): # tracks turn counter, inc when creating a Turn
 		
 		return data
 		
-	def __load__(self, data):
+	def __unpack__(self, data):
 		unpack = self.__class__._unpack_obj
 		
 		TurnPhaseStack.__init__(self)
@@ -30,7 +30,7 @@ class TurnPhaseStack(GameStack): # tracks turn counter, inc when creating a Turn
 		self.counter = unpack(data['counter'])
 		self.turn_phases = unpack(data['turn_phases'])
 		
-		super().__load__(data)
+		super().__unpack__(data)
 		
 	def register(self, cls, name=None, **props):
 		if name is None:

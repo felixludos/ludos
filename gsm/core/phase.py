@@ -1,8 +1,8 @@
-from ..mixins import Named, Transactionable, Savable
+from ..mixins import Named, Transactionable, Packable
 from humpack import tset, tdict, tlist, tstack
 from ..signals import PhaseComplete
 
-class GameStack(Transactionable, Savable):
+class GameStack(Transactionable, Packable):
 	def __init__(self):
 		super().__init__()
 		
@@ -36,7 +36,7 @@ class GameStack(Transactionable, Savable):
 		self._stack.abort()
 		self._phases.abort()
 		
-	def __save__(self):
+	def __pack__(self):
 		pack = self.__class__._pack_obj
 		
 		data = {}
@@ -47,7 +47,7 @@ class GameStack(Transactionable, Savable):
 		
 		return data
 	
-	def __load__(self, data):
+	def __unpack__(self, data):
 		unpack = self.__class__._unpack_obj
 		
 		GameStack.__init__(self)
