@@ -15,20 +15,18 @@ from .player import GameManager
 from .phase import GameStack
 from ..mixins import Named, Transactionable, Packable
 from ..signals import PhaseComplete, SwitchPhase, GameOver, InvalidPlayerError, NoActiveGameError, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
-from ..util import RandomGenerator, jsonify
+from ..util import RandomGenerator, jsonify, get_printer
+
+from ..io import register_game
+
+prt = get_printer(__name__)
 
 class GameController(Named, Transactionable, Packable):
 	
-	def __init_subclass__(cls, info_path=None, **kwargs):
+	def __init_subclass__(cls, **kwargs):
+		super().__init_subclass__(**kwargs)
 		
-		game_path = os.path.dirname(inspect.getfile(cls))
-		
-		if info_path is None:
-			
-			
-		
-			pass
-		
+		cls.__home__ = os.path.dirname(inspect.getfile(cls))
 	
 	def __new__(cls, *args, **kwargs):
 		new = super().__new__(cls)

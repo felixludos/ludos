@@ -4,11 +4,25 @@ from itertools import chain
 from ..signals import InvalidInitializationError, MissingValueError, UnknownElementError
 from ..mixins import Named, Typed, Jsonable, Writable, Transactionable, Packable, Pullable, Hashable
 from humpack import tset, tdict, tlist, tdeque
-from ..util import primitive, RandomGenerator, jsonify
+from ..util import primitive, RandomGenerator, jsonify, get_printer
+from ..io.registry import register_object
 
 # TODO: fix so it works with cross referencing
 
+prt = get_printer(__name__)
+
 class GameObject(Typed, Writable, Jsonable, Pullable, tdict):
+	
+	def __init_subclass__(cls, game=None, open=None, req=None, **kwargs):
+		
+		if 'obj_type' not in kwargs:
+			prt.warning('No obj_type provided for {}'.format(cls.__name__))
+			kwargs['obj_type'] = cls.__name__
+		
+		super().__init_subclass__(**kwargs)
+		
+		if game is not None:
+			register_object(game=game, open=open, req=req)(cls)
 	
 	def __new__(cls, *args, **kwargs):
 		self = super().__new__(cls)
@@ -21,14 +35,15 @@ class GameObject(Typed, Writable, Jsonable, Pullable, tdict):
 		
 		return self
 	
-	def __init__(self, obj_type, visible, **props):
+	def __init__(self, visible, obj_type=None, **props):
 		
 		if self._id is None:
 			InvalidInitializationError()
 		
-		super().__init__(obj_type, **props) # all GameObjects are basically just tdicts with a obj_type and visible attrs and they can use a table to signal track changes
+		super().__init__(**props) # all GameObjects are basically just tdicts with a obj_type and visible attrs and they can use a table to signal track changes
 		
 		self.visible = visible
+		self.obj_type = self.get_type() if obj_type is None else obj_type # set in class declaration for subclasses
 		# self._verify()
 		
 	def _verify(self):

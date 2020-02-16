@@ -28,24 +28,25 @@ class Named(object):
 
 class Typed(object):
 	'''
-	This specifies a type (in the form of a string) saved to "obj_type", which must be passed in to __init__
+	This specifies a type (in the form of a string) saved to "obj_type", which must be passed in in class declaration
+	All instances of a type should have the same obj_type
 	'''
-	def __init__(self, obj_type, *args, **kwargs):
-		'''
-		
-		:param obj_type: Should be string-like type (for example from a registry)
-		:param args: Positional arguments passed on to super()
-		:param kwargs: Keyword arguments passed on to super()
-		'''
-		super().__init__(*args, **kwargs)
-		self.obj_type = obj_type
 	
-	def get_type(self):
+	def __init_subclass__(cls, obj_type=None, **kwargs):
+		
+		super().__init_subclass__(**kwargs)
+		
+		if obj_type is None:
+			obj_type = cls.__name__
+		cls.obj_type = obj_type
+	
+	@classmethod
+	def get_type(cls):
 		'''
 		Queries the obj_type (not related to type(self))
 		:return: obj_type
 		'''
-		return self.obj_type
+		return cls.obj_type
 
 class Jsonable(object):
 	'''

@@ -1,11 +1,137 @@
+import os
 import yaml
+
+from ..util import get_printer
 from ..signals import RegistryCollisionError, InvalidValueError
 
+prt = get_printer(__name__)
 
 _game_registry = {}
-def register_game(cls, path):
-	info = yaml.load(open(path, 'r'))
-	_game_registry[info['short_name']] = cls, info
+def register_game(cls, name=None, path=None, info=None):
+	if name is None:
+		name = cls.__name__
+	
+	if info is None and path is not None:
+		info = yaml.load(open(path, 'r'))
+	elif info is None:
+		info = {'short_name':name}
+	elif 'short_name' not in info:
+		prt.warning('No short_name for game {} found, defaulting to {}'.format(name, name))
+		info['short_name'] = name
+	
+	info['cls'] = cls
+	
+	name = info['short_name']
+	if name in _game_registry:
+		prt.warning('{} is already registered, updating info'.format(name))
+		_game_registry[name].update(info)
+	else:
+		prt.debug('Registering game: {}'.format(name))
+		_game_registry[info['short_name']] = info
+
+def Game(name=None, info_path=None):
+	
+	def _reg_game(cls):
+		nonlocal name, info_path
+		
+		if name is None:
+			name = cls.__name__
+		cls.name = name
+		
+		game_path = cls.__home__
+		
+		if info_path is None:
+			info_path = os.path.join(game_path, 'info.yaml')
+		elif not os.path.isfile(info_path):
+			info_path = os.path.join(game_path, info_path)
+		
+		if os.path.isfile(info_path):
+			info = yaml.load(open(info_path, 'r'))
+			cls.__dict__.update(info)
+		else:
+			info = {}
+			prt.error('Game info for {} not found.'.format(cls.name))
+		
+		# register game
+		register_game(cls, info=info)
+		
+		return cls
+	
+	return _reg_game
+
+def register_object(game, open=None, req=None):
+	
+	def _reg_obj(cls=None, name=None):
+		nonlocal game, open, req
+		
+		assert cls is not None or name is not None, 'no name or class provided'
+		
+		if cls is not None:
+			name = cls.get_type()
+		
+		if game not in _game_registry:
+			prt.warning('Registering the GameObject {} for a game before registering the game {}'.format(name, game))
+			_game_registry[game] = {}
+			
+		info = _game_registry[game]
+		
+		if 'objects' not in info:
+			info['objects'] = {}
+			
+		objs = info['objects']
+		
+		if name in objs:
+			prt.info('{} already registered, so updating entry'.format(name))
+		else:
+			objs[name] = {}
+		
+		obj = objs[name]
+		
+		obj['name'] = name
+		obj['open'] = open
+		obj['req'] = req
+		
+		if cls is not None:
+			obj['cls'] = cls
+			
+		return cls
+			
+	return _reg_obj
+	
+def register_simple_object(game, obj_type, open=None, req=None):
+	register_object(game, open, req)(name=obj_type)
+
+def register_phase(game):
+	
+	def _reg_phase(cls):
+		nonlocal game
+		
+		name = cls.name
+		
+		if game not in _game_registry:
+			prt.warning('Registering the GamePhase {} for a game before registering the game {}'.format(name, game))
+			_game_registry[game] = {}
+			
+		info = _game_registry[game]
+		
+		if 'phases' not in info:
+			info['phases'] = {}
+		
+		phases = info['phases']
+		
+		if name in phases:
+			prt.info('{} already registered, so updating entry'.format(name))
+		else:
+			phases[name] = {}
+		
+		phase = phases[name]
+		
+		phase['name'] = name
+		phase['cls'] = cls
+		
+		return cls
+		
+	return _reg_phase
 
 
 _interface_registry = {}

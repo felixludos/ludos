@@ -1,6 +1,7 @@
 from ..mixins import Named, Transactionable, Packable
 from humpack import tset, tdict, tlist, tstack
 from ..signals import PhaseComplete
+from ..io.registry import register_phase
 
 class GameStack(Transactionable, Packable):
 	def __init__(self):
@@ -106,6 +107,17 @@ class GameStack(Transactionable, Packable):
 
 
 class GamePhase(Named, tdict):
+	
+	def __init_subclass__(cls, name=None, game=None, **kwargs):
+		super().__init_subclass__(**kwargs)
+		
+		if name is None:
+			name = cls.__name__
+		
+		cls.name = name
+		
+		if game is not None:
+			register_phase(game)(cls)
 	
 	def __init__(self, name=None, **info):
 		if name is None:
