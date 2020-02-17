@@ -1,0 +1,45 @@
+
+
+
+#map: # seam "1" is above the top O
+#  - "  W Y O  "
+#  - " B S B O "
+#  - "O S W Y S"
+#  - " D B Y W "
+#  - "  Y W S  "
+
+map: # seam "1" is above the top A
+  - "  X X A  "
+  - " X X X X "
+  - "X X X X X"
+  - " X X X X "
+  - "  X X X  "
+
+fields:
+  wheat: 4
+  sheep: 4
+  wood: 4
+  brick: 3
+  ore: 3
+  desert: 1
+
+ports: # starting from corner at seam "1" as 0, going clockwise
+  2: 3to1
+  3: 3to1
+  5: 3to1
+  6: 3to1
+  8: brick
+  9: brick
+  12: wood
+  13: wood
+  15: 3to1
+  16: 3to1
+  18: wheat
+  19: wheat
+  22: ore
+  23: ore
+  25: 3to1
+  26: 3to1
+  28: sheep
+  29: sheep
+  

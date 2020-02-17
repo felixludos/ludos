@@ -1,0 +1,10 @@
+
+name: Catan_Old
+long_name: The Settlers of Catan (Old)
+short_name: catan-old
+
+num_players: [3, 4]
+player_names: [White, Red, Blue, Orange]
+
+
+

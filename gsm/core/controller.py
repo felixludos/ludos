@@ -16,6 +16,7 @@ from .phase import GameStack
 from ..mixins import Named, Transactionable, Packable
 from ..signals import PhaseComplete, SwitchPhase, GameOver, InvalidPlayerError, NoActiveGameError, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
 from ..util import RandomGenerator, jsonify, get_printer
+from ..io.registry import Game
 
 from ..io import register_game
 
@@ -23,10 +24,40 @@ prt = get_printer(__name__)
 
 class GameController(Named, Transactionable, Packable):
 	
-	def __init_subclass__(cls, **kwargs):
+	def __init_subclass__(cls, register=False, name=None, info_path=None, **kwargs):
 		super().__init_subclass__(**kwargs)
 		
 		cls.__home__ = os.path.dirname(inspect.getfile(cls))
+		cls.config_files = tdict()
+		
+		config_dir = os.path.join(cls.__home__, 'config')
+		
+		if os.path.isdir(config_dir):
+			prt.info(f'Config dir found for {cls.__name__} at {config_dir}')
+			
+			for fname in os.listdir(config_dir):
+				name = '.'.join(fname.split('.')[:-1])
+				path = os.path.join(config_dir, fname)
+				cls.register_config(name, path)
+			
+		if register:
+			Game(name=name, info_path=info_path)(cls)
+			
+	@classmethod
+	def register_config(cls, name, path):
+		if name in cls.config_files:
+			prt.warning(f'Config file with name {name} is already registered in {cls.__name__}')
+			
+		cls.config_files[name] = path
+	
+	@classmethod
+	def load_configs(cls):
+		config = tdict()
+		
+		for name, path in cls.config_files.items():
+			config[name] = containerify(yaml.load(open(path, 'r')))
+		
+		return config
 	
 	def __new__(cls, *args, **kwargs):
 		new = super().__new__(cls)
@@ -76,7 +107,8 @@ class GameController(Named, Transactionable, Packable):
 		
 		self.state = None
 		self.active_players = None
-		self.config = tdict(settings=tdict(settings))
+		self.settings = containerify(settings)
+		self.config = None
 		self.end_info = None
 		
 		# Game components
@@ -163,20 +195,6 @@ class GameController(Named, Transactionable, Packable):
 	# Registration
 	######################
 	
-	def register_config(self, name, path):
-		if self._in_progress:
-			raise ClosedRegistryError
-		# if name in self.config_files:
-		# 	raise RegistryCollisionError(name)
-		self.config_files[name] = path
-	def register_obj_type(self, obj_cls=None, name=None, req=[], open=[]):
-		if self._in_progress:
-			raise ClosedRegistryError
-		self.table.register_obj_type(obj_cls=obj_cls, name=name, req=req, open=open)
-	def register_phase(self, cls, name=None, **props):
-		if self._in_progress:
-			raise ClosedRegistryError
-		self.stack.register(cls, name=name, **props)
 	def register_player(self, name, **props):
 		if self._in_progress:
 			raise ClosedRegistryError
@@ -187,6 +205,8 @@ class GameController(Named, Transactionable, Packable):
 	######################
 		
 	def _reset(self, player, seed=None):
+		
+		# reset all components
 		
 		if seed is None:
 			seed = random.getrandbits(64)
@@ -209,14 +229,24 @@ class GameController(Named, Transactionable, Packable):
 		self.end_info = None
 		self.active_players = tdict()
 		
+		
+		# add players
+		
+		
+		
+		# init components
+		
 		self.state = GameState()
-		self.log.reset(tset(self.players.names())) # TODO: maybe this shouldnt just be the names
+		self.log.reset(tset(self.players.names()))  # TODO: maybe this shouldnt just be the names
 		self.table.reset(tset(self.players))
 		self.stack.reset(self._set_phase_stack(self.config))
 		
-		self._init_game(self.config) # builds maps/objects
+		# init game
 		
+		self._init_game(self.config)  # builds maps/objects
 		self._in_progress = True
+		
+		# execute first player
 		
 		return self._step(player)
 	
@@ -316,11 +346,11 @@ class GameController(Named, Transactionable, Packable):
 	def _end_game(self): # return info to be sent at the end of the game
 		raise NotImplementedError
 	
-	def _select_player(self):
+	def _add_players(self, config, settings):
 		raise NotImplementedError
 		
 	# must be implemented to define initial phase sequence
-	def _set_phase_stack(self, config):
+	def _set_phase_stack(self, config, settings):
 		raise NotImplementedError
 	
 	######################
@@ -338,14 +368,6 @@ class GameController(Named, Transactionable, Packable):
 	
 	def _pre_setup(self, config, info=None):
 		pass
-	
-	def _load_config(self):
-		config = tdict()
-		
-		for name, path in self.config_files.items():
-			config[name] = containerify(yaml.load(open(path, 'r')))
-		
-		return config
 	
 	def _gen_key(self, player=None):
 		key = hex(self._key_rng.getrandbits(64))[2:]

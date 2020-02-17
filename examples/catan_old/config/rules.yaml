@@ -1,0 +1,60 @@
+
+victory_condition: 10
+
+hand_limit: 7
+
+res_names: ['wood', 'brick', 'sheep', 'ore', 'wheat']
+
+numbers:
+  hi: [6, 6, 8, 8]
+  reg: [2, 3, 3, 4, 4, 5, 5, 9, 9, 10, 10, 11, 11, 12]
+
+resource_pays:
+  settlement: 1
+  city: 2
+
+victory_points:
+  road: 0
+  settlement: 1
+  city: 2
+
+  longest_road: 2
+
+  largest_army: 2
+
+reqs:
+  longest_road: 5
+  largest_army: 3
+
+num_res: 19
+
+building_costs:
+  road:
+    wood: 1
+    brick: 1
+  settlement:
+    wood: 1
+    brick: 1
+    sheep: 1
+    wheat: 1
+  city:
+    ore: 3
+    wheat: 2
+  devcard:
+    ore: 1
+    sheep: 1
+    wheat: 1
+
+building_limits:
+  road: 15
+  settlement: 5
+  city: 4
+
+bank_trading:
+  default: 4
+  3to1: 3
+  wood: 2
+  wheat: 2
+  brick: 2
+  ore: 2
+  sheep: 2

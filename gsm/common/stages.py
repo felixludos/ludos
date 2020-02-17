@@ -37,6 +37,7 @@ class StagePhase(GamePhase):
 		cls.stages = tdict()
 		cls.entry_stage = None
 		cls.decisions = tdict()
+		cls.decision_action_groups = tdict()
 		
 	@classmethod
 	def get_stage(cls, name):
@@ -154,14 +155,14 @@ def Entry_Stage(name=None):
 	return _reg
 
 
-def Decision(name=None):
+def Decision(name=None, action_groups=None):
 	class _reg(object):
 		def __init__(self, fn):
 			self.fn = fn
 		
 		def __set_name__(self, phase, fn_name):
 			
-			nonlocal name
+			nonlocal name, action_groups
 			
 			if name is None:
 				name = fn_name
@@ -170,6 +171,13 @@ def Decision(name=None):
 				prt.warning(f'A stage called {name} was already registered in phase {phase.name}')
 			
 			phase.decisions[name] = self.fn
+			
+			if action_groups is not None:
+				if name not in phase.decision_action_groups:
+					phase.decision_action_groups[name] = tset()
+				phase.decision_action_groups[name].update(action_groups)
+			else:
+				prt.info(f'No action groups provided for decision {name} in {phase.name}')
 			
 			setattr(phase, fn_name, self.fn)
 	
