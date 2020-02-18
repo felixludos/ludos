@@ -1,13 +1,14 @@
 
 import numpy as np
 from gsm import GameOver, GamePhase, GameActions, GameObject
-from gsm.common import TurnPhase, StagePhase
-from gsm import tset, tdict, tlist
+from gsm.common import TurnPhase
+from gsm.common import stages as stg
+from gsm import tset, tdict, tlist, assert_
 from gsm import SwitchPhase, PhaseComplete
 
 from ..ops import build, unbuild, play_dev, pay_cost, can_buy, roll_dice, check_victory, get_knight, gain_res, check_building_options, bank_trade_options
 
-class MainPhase(TurnPhase, StagePhase):
+class MainPhase(TurnPhase, stg.StagePhase):
 	
 	def __init__(self, player, **other):
 		super().__init__(player=player, **other)
@@ -18,8 +19,75 @@ class MainPhase(TurnPhase, StagePhase):
 		self.card_info = None # for processing multi decision devcards
 		
 		self.bought_devcards = tset()
+	
+	@stg.Stage('roll')
+	def roll(self, C, player, action=None):
 		
-		self.pre_check = 'check'
+		if action is not None:
+			
+			cmd, = action
+			
+			if cmd != 'continue':
+				self.pre_check = 'played' # can't play another dev card this turn
+				raise SwitchPhase('robber', stack=True,
+				                  player=self.player, knight=cmd)
+		
+		
+		elif 'pre_check' not in self:
+			self.pre_check = 'done'
+			knight = get_knight(self.player.devcards)
+			if knight is not None: # knight available
+				raise stg.Decide('pre-knight', knight=knight)
+		
+		self.roll = roll_dice(C.RNG)
+		if len(C.state.rolls):
+			self.roll = C.state.rolls.pop()
+		
+		C.log.zindent() # TODO: delay telling other players (info leak, pre-knight)
+		C.log.writef('{} rolled: {}.', self.player, self.roll)
+		C.log.iindent()
+		
+		if self.roll == 7:
+			self.set_current_stage('main') # when coming back, go straight to main stage
+			raise SwitchPhase('robber', send_action=False, stack=True,
+			                  player=self.player)
+		
+		hexes = C.state.numbers[self.roll]
+		for hex in hexes:
+			if hex != C.state.robber.loc:
+				for c in hex.corners:
+					if 'building' in c and c.building.obj_type in C.state.production:
+						gain = C.state.production[c.building.obj_type]
+						gain_res(hex.res, C.state.bank, c.building.player, gain, C.log)
+		
+		raise stg.Switch('main')
+	
+	@stg.Decision('pre-knight', ['continue', 'knight'])
+	def get_preroll(self, C, knight):
+		
+		out = GameActions('You can play your knight before rolling')
+		
+		with out('continue', 'Continue with your turn'):
+			out.add('continue')
+			
+		with out('knight', 'Play your knight'):
+			out.add(knight)
+		
+		return tdict({self.player: out})
+	
+	@stg.Stage('main')
+	def main_turn(self, C, player, action=None):
+		if action is None:
+			raise stg.Decide('main')
+		
+		raise NotImplementedError
+		
+	@stg.Decision('main')
+	def get_main_turn(self, C):
+		
+		out = GameActions('You rolled: {}. Take your turn.'.format(self.roll))
+		
+		pass
 	
 	def execute(self, C, player=None, action=None):
 		
