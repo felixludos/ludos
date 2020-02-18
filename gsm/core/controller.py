@@ -207,47 +207,31 @@ class GameController(Named, Transactionable, Packable):
 	def _reset(self, player, seed=None):
 		
 		# reset all components
-		
 		if seed is None:
 			seed = random.getrandbits(64)
-		
 		self.seed = seed
 
 		self._key_rng = RandomGenerator(self.seed)
 		self.RNG = RandomGenerator(self.seed)
 		
-		self.config.update(self._load_config())
-		
-		if self._pre_setup_complete is not None:
-			info = None
-			try:
-				info = containerify(yaml.load(open(self._pre_setup_complete, 'r')))
-			except:
-				pass
-			self._pre_setup(self.config, info)
-		
 		self.end_info = None
 		self.active_players = tdict()
 		
-		
-		# add players
-		
-		
+		# add players, prep phase stack
+		self._add_players(self.config, self.settings)
+		phases = self._set_phase_stack(self.config, self.settings)
 		
 		# init components
-		
 		self.state = GameState()
-		self.log.reset(tset(self.players.names()))  # TODO: maybe this shouldnt just be the names
+		self.log.reset(tset(self.players))  # TODO: maybe this shouldnt just be the names
 		self.table.reset(tset(self.players))
-		self.stack.reset(self._set_phase_stack(self.config))
+		self.stack.reset(phases)
 		
 		# init game
-		
-		self._init_game(self.config)  # builds maps/objects
+		self._init_game(self.config, self.settings)  # builds maps/objects
 		self._in_progress = True
 		
 		# execute first player
-		
 		return self._step(player)
 	
 	def _step(self, player, group=None, action=None, key=None):  # returns python objs (but json readable)
@@ -339,18 +323,18 @@ class GameController(Named, Transactionable, Packable):
 	# Must be Overridden
 	######################
 	
+	def _add_players(self, config, settings):
+		raise NotImplementedError
+	
+	# must be implemented to define initial phase sequence
+	def _set_phase_stack(self, config, settings):
+		raise NotImplementedError
+	
 	# This function is implemented by dev to initialize the gamestate, and define player order
-	def _init_game(self, config):
+	def _init_game(self, config, settings):
 		raise NotImplementedError
 	
 	def _end_game(self): # return info to be sent at the end of the game
-		raise NotImplementedError
-	
-	def _add_players(self, config, settings):
-		raise NotImplementedError
-		
-	# must be implemented to define initial phase sequence
-	def _set_phase_stack(self, config, settings):
 		raise NotImplementedError
 	
 	######################
@@ -365,9 +349,6 @@ class GameController(Named, Transactionable, Packable):
 		self._advisor_images.clear()
 		self._advice.clear()
 		self._spec_image = None
-	
-	def _pre_setup(self, config, info=None):
-		pass
 	
 	def _gen_key(self, player=None):
 		key = hex(self._key_rng.getrandbits(64))[2:]

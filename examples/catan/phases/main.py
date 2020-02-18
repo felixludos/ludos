@@ -1,13 +1,13 @@
 
 import numpy as np
 from gsm import GameOver, GamePhase, GameActions, GameObject
-from gsm.common import TurnPhase
+from gsm.common import TurnPhase, StagePhase
 from gsm import tset, tdict, tlist
 from gsm import SwitchPhase, PhaseComplete
 
 from ..ops import build, unbuild, play_dev, pay_cost, can_buy, roll_dice, check_victory, get_knight, gain_res, check_building_options, bank_trade_options
 
-class MainPhase(TurnPhase):
+class MainPhase(TurnPhase, StagePhase):
 	
 	def __init__(self, player, **other):
 		super().__init__(player=player, **other)

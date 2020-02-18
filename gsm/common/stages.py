@@ -57,7 +57,7 @@ class StagePhase(GamePhase):
 			raise NoEntryStageException(cls)
 		return cls.entry_stage
 		
-	def __init__(self, *args, current_stage_policy='entry', **kwargs):
+	def __init__(self, *args, current_stage_policy='latest', **kwargs):
 		super().__init__(*args, **kwargs)
 		
 		assert current_stage_policy in {'entry', 'latest'}, f'unknown current stage policy: {current_stage_policy}'
@@ -70,8 +70,6 @@ class StagePhase(GamePhase):
 		self.current_stage = self.get_stage(name)
 		
 	def execute(self, C, player=None, action=None):
-		
-		
 		stage = self.get_stage(self.current_stage)
 		self.decision_info = None
 		
@@ -83,6 +81,8 @@ class StagePhase(GamePhase):
 			except Switch as s:
 				stage = self.get_stage(s.name)
 				stage_info = s.info
+				if not s.send_action:
+					action = None
 				if self.current_stage_policy == 'latest':
 					self.current_stage = s.name
 			except Decide as d:

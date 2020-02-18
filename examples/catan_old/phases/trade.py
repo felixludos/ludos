@@ -1,3 +1,4 @@
+
 import numpy as np
 from gsm import GamePhase, GameActions, PhaseComplete
 from gsm import tset, tdict, tlist
@@ -11,8 +12,8 @@ class TradePhase(GamePhase):
 		super().__init__(**info)
 		
 		self.player = player
-		self.demand = tdict({res:0 for res in player.resources.keys()})
-		self.offer = tdict({res:0 for res in player.resources.keys()})
+		self.demand = tdict({res :0 for res in player.resources.keys()})
+		self.offer = tdict({res :0 for res in player.resources.keys()})
 		
 		self.maritime = bank_trades
 		self.maritime_msg = None
@@ -73,12 +74,12 @@ class TradePhase(GamePhase):
 				              log=C.log)
 				C.log.dindent()
 				raise PhaseComplete
-				
+		
 		else: # domestic trade
 			if obj == 'send':
 				C.log[player].write('Asking other players for response.')
-				self.responses = tdict({p:None for p in C.players if p != self.player})
-				offer_res = sum(([res]*num for res,num in self.offer.items()),[])
+				self.responses = tdict({p :None for p in C.players if p != self.player})
+				offer_res = sum(([res ] *num for res ,num in self.offer.items()) ,[])
 				demand_res = sum(([res] * num for res, num in self.demand.items()), [])
 				for p in self.responses:
 					C.log[p].writef('{} offers a trade:', self.player)
@@ -102,7 +103,7 @@ class TradePhase(GamePhase):
 			with out('maritime-trade', desc='Select the resource to receive'):
 				out.add(tset(self.demand.keys()))
 			
-			return tdict({self.player:out})
+			return tdict({self.player :out})
 		
 		if self.partners is not None:
 			
@@ -110,11 +111,11 @@ class TradePhase(GamePhase):
 			
 			with out('cancel', desc='Cancel trade'):
 				out.add('cancel')
-				
+			
 			with out('domestic-confirm', desc='Select player to confirm trade'):
 				out.add(self.partners)
-				
-			return tdict({self.player:out})
+			
+			return tdict({self.player :out})
 		
 		if self.responses is not None:
 			outs = tdict()
@@ -134,7 +135,7 @@ class TradePhase(GamePhase):
 		
 		with out('cancel', desc='Cancel trade'):
 			out.add('cancel')
-			
+		
 		with out('send', desc='Send trade offer to opponents'):
 			out.add('send')
 		
@@ -142,6 +143,5 @@ class TradePhase(GamePhase):
 			out.add('demand', tset(res for res in self.player.resources))
 			if self.player.num_res:
 				out.add('offer', tset(res for res, num in self.player.resources.items() if num > 0))
-
-		return tdict({self.player:out})
 		
+		return tdict({self.player :out})

@@ -11,6 +11,14 @@ class UnknownElementError(Exception):
 	def __init__(self, obj):
 		super().__init__('Cannot un/jsonify {}: {}'.format(type(obj), obj))
 
+class GameError(Exception):
+	'''
+	Any in-game error, usually thrown when some game pre-condition is violated, suggesting that
+	there is a bug in the game logic.
+	'''
+	pass
+
+
 # Control flow Exceptions
 
 class GameOver(Exception):
