@@ -14,7 +14,7 @@ MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 
-class Catan(gsm.GameController):
+class Catan(gsm.GameController, register=True):
 	
 	def __init__(self, player_names, debug=False,
 	             shuffle_order=False):
@@ -200,6 +200,3 @@ class Catan(gsm.GameController):
 				gain_res(res, self.state.bank, self.players['White'], 3, log=self.log)
 		
 		self.log.dindent()
-
-
-gsm.register_game(Catan, os.path.join(MY_PATH, 'info.yaml'))

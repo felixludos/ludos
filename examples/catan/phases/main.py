@@ -8,9 +8,9 @@ from gsm import SwitchPhase, PhaseComplete
 
 from ..ops import build, unbuild, play_dev, pay_cost, can_buy, roll_dice, check_victory, get_knight, gain_res, check_building_options, bank_trade_options
 
-class MainPhase(TurnPhase, stg.StagePhase):
+class MainPhase(TurnPhase, stg.StagePhase, game='catan'):
 	
-	def __init__(self, player, **other):
+	def __init__(self, player, **other): # TODO: make sure only one dev card can be played, and not the ones bought
 		super().__init__(player=player, **other)
 		
 		self.roll = None
@@ -29,21 +29,27 @@ class MainPhase(TurnPhase, stg.StagePhase):
 			
 			if cmd != 'continue':
 				self.pre_check = 'played' # can't play another dev card this turn
+				self.devcard = cmd
 				raise SwitchPhase('robber', stack=True,
 				                  player=self.player, knight=cmd)
 		
 		
 		elif 'pre_check' not in self:
 			self.pre_check = 'done'
-			knight = get_knight(self.player.devcards)
-			if knight is not None: # knight available
-				raise stg.Decide('pre-knight', knight=knight)
+			self.devcard = get_knight(self.player.devcards)
+			if self.devcard is not None: # knight available
+				raise stg.Decide('pre-knight', knight=self.devcard)
+		
+		if self.devcard is not None: # coming back from playing a knight
+			if self.devcard in self.player.devcards: # check if knight was actually played
+				self.devcard = None
 		
 		self.roll = roll_dice(C.RNG)
 		if len(C.state.rolls):
 			self.roll = C.state.rolls.pop()
 		
-		C.log.zindent() # TODO: delay telling other players (info leak, pre-knight)
+		# TODO: delay telling other players (info leak, pre-knight)
+		C.log.zindent()
 		C.log.writef('{} rolled: {}.', self.player, self.roll)
 		C.log.iindent()
 		
@@ -71,7 +77,7 @@ class MainPhase(TurnPhase, stg.StagePhase):
 			out.add('continue')
 			
 		with out('knight', 'Play your knight'):
-			out.add(knight)
+			out.add(knight)  # TODO: maybe allow user to pick which knight to use
 		
 		return tdict({self.player: out})
 	
@@ -80,68 +86,11 @@ class MainPhase(TurnPhase, stg.StagePhase):
 		if action is None:
 			raise stg.Decide('main')
 		
-		raise NotImplementedError
-		
-	@stg.Decision('main')
-	def get_main_turn(self, C):
-		
-		out = GameActions('You rolled: {}. Take your turn.'.format(self.roll))
-		
-		pass
-	
-	def execute(self, C, player=None, action=None):
-		
-		if action is None:
-			if self.pre_check == 'check':
-				self.pre_check = get_knight(self.player.devcards) \
-					if len(self.player.devcards) else None
-			else: # coming back from robber or trade phase
-				return
-		elif action[0] == 'continue':
-			self.pre_check = None
-
-		if self.roll is None and self.pre_check is None:
-			
-			self.roll = roll_dice(C.RNG)
-			if len(C.state.rolls):
-				self.roll = C.state.rolls.pop()
-			
-			C.log.zindent()
-			C.log.writef('{} rolled: {}.', self.player, self.roll)
-			C.log.iindent()
-			
-			if self.roll == 7:
-				C.stack.push('main')
-				raise SwitchPhase('robber', send_action=False, stack=False,
-				                  player=self.player)
-		
-			hexes = C.state.numbers[self.roll]
-			for hex in hexes:
-				if hex != C.state.robber.loc:
-					for c in hex.corners:
-						if 'building' in c and c.building.obj_type in C.state.production:
-							gain = C.state.production[c.building.obj_type]
-							gain_res(hex.res, C.state.bank, c.building.player, gain, C.log)
-		
-			return
-		
 		obj, *rest = action
 		
 		if obj == 'pass':
 			raise SwitchPhase('main', stack=False)
 		
-		if obj == 'cancel':
-			if self.devcard is not None:
-				if self.devcard.name == 'Road Building':
-					unbuild(C, self.card_info.building)
-			self.devcard = None
-			self.card_info = None
-			return
-		
-		if obj == 'continue':
-			return
-		
-		# trade
 		if obj == 'offer' or obj == 'demand':
 			C.log[self.player].write('You start a trade')
 			C.log.iindent()
@@ -150,42 +99,17 @@ class MainPhase(TurnPhase, stg.StagePhase):
 			                  bank_trades=bank_trade_options(self.player, C.state.bank_trading)
 			                        if 'maritime' in action.get_type() else None)
 		
-		if self.devcard is not None:
-			if self.devcard.name == 'Road Building':
-				if self.card_info is None:
-					bld = build(C, 'road', self.player, obj)
-					self.card_info = bld
-				else:
-					bld = build(C, 'road', self.player, obj)
-					play_dev(self.player, self.devcard)
-					C.log.writef('{} plays {}, and builds: {} and {}',
-					             self.player, self.devcard, self.card_info, bld)
-					self.devcard = None
-					self.card_info = None
-			elif self.devcard.name == 'Year of Plenty':
-				res, = obj
-				gain_res(self.card_info, C.state.bank, self.player, 1, log=C.log)
-				gain_res(res, C.state.bank, player, 1, log=C.log)
-				play_dev(self.player, self.devcard)
-				C.log.writef('{} plays {}, and receives: {} and {}',
-				             self.player, self.devcard, self.card_info, res)
-				self.card_info = None
-				self.devcard = None
-			else:
-				raise Exception('unknown dev card: {} {}'.format(self.devcard, self.devcard.name))
-		
-		
 		obj_type = obj.get_type()
 		
 		if 'build' in action.get_type():
-			if obj_type == 'settlement':
+			if obj_type == 'settlement': # replace this settlement
 				unbuild(C, obj, silent=False)
 				bld = build(C, 'city', self.player, obj.loc)
 			else:
-				bld = build(C, 'settlement' if obj_type=='Corner' else 'road', self.player, obj)
+				bld = build(C, 'settlement' if obj_type == 'Corner' else 'road', self.player, obj)
 			
 			pay_cost(self.player, C.state.costs[bld.get_type()], C.state.bank)
-			
+		
 		elif obj_type == 'devcard':
 			if obj.name == 'Victory Point':
 				raise Exception('Shouldnt have played a Victory point card')
@@ -200,16 +124,18 @@ class MainPhase(TurnPhase, stg.StagePhase):
 						C.log.writef('{} receives {} {} from {}', self.player, opp.resources[res], res, opp)
 				C.log.writef('{} plays {}, claiming all {}', self.player, obj, res)
 				play_dev(self.player, obj)
+				self.devcard = obj
 			
 			elif obj.name == 'Year of Plenty':
 				res, = rest
 				self.devcard = obj
-				self.card_info = res
+				raise stg.Switch('year-plenty', res=res)
 			elif obj.name == 'Road Building':
 				self.devcard = obj
+				raise stg.Switch('road-building')
 			else:
 				raise Exception('unknown card: {} {}'.format(obj, obj.name))
-				
+		
 		elif obj_type == 'devdeck':
 			card = C.state.dev_deck.draw()
 			self.player.devcards.add(card)
@@ -226,82 +152,129 @@ class MainPhase(TurnPhase, stg.StagePhase):
 			pay_cost(self.player, C.state.costs.devcard, C.state.bank)
 		else:
 			raise Exception('Unknown obj {}: {}'.format(type(obj), obj))
-
+		
 		if check_victory(C):
 			raise GameOver
-
-	def encode(self, C):
+		
+		raise stg.Decide('main')
+		
+	@stg.Decision('main', ['pass', 'build-settlement', 'build-road', 'build-city', 'buy',
+	                       'maritime-trade', 'domestic-trade', 'play'])
+	def get_main_turn(self, C):
 		
 		out = GameActions('You rolled: {}. Take your turn.'.format(self.roll))
 		
-		if self.pre_check is not None:
-			with out(name='pre'):
-				if self.pre_check is not None:
-					out.add(self.pre_check)
-					self.pre_check = None
-					out.set_status('Before rolling, you can play your knight or continue')
-				else: # to avoid side info leak from lack of decision when having dev cards
-					out.set_status('Confirm your turn beginning')
-				
-				out.add('continue')
-				
-				return tdict({self.player:out})
+		with out('pass', 'End your turn'):
+			out.add('pass')
 		
-		if self.devcard is not None:
-			with out('cancel', desc='Undo playing dev card'):
-				out.add('cancel')
+		options = check_building_options(self.player, C.state.costs)
+		for bldname, opts in options.items():
+			with out('build-{}'.format(bldname), C.state.msgs.build[bldname]):
+				out.add(opts)
+		
+		if len(C.state.dev_deck) and can_buy(self.player, C.state.costs.devcard):
+			with out('buy', desc='Buy a development card'):
+				out.add(C.state.dev_deck)
+		
+		with out('maritime-trade', desc='Maritime Trade (with the bank)'):
+			options = bank_trade_options(self.player, C.state.bank_trading)
+			if len(options):
+				out.add('offer', tset((num, res) for res, num in options.items()))
+		
+		with out('domestic-trade', desc='Domestic Trade (with players)'):
+			out.add('demand', tset(res for res in self.player.resources))
+			if self.player.num_res:
+				out.add('offer', tset(res for res, num in self.player.resources.items() if num > 0))
+		
+		with out('play', desc='Play a development card'):
+			if len(self.player.devcards) and self.devcard is None:
+				res = tset(self.player.resources.keys())
+				for card in self.player.devcards:
+					if card in self.bought_devcards:
+						pass
+					elif card.name == 'Monopoly':
+						out.add(card, res)
+					elif card.name == 'Year of Plenty':
+						out.add(card, res)
+					elif card.name == 'Victory Point':
+						pass
+					else:
+						out.add(card)
+		
+		return tdict({self.player: out})
+	
+	@stg.Stage('road-building')
+	def set_road_building(self, C, player, action=None):
+		if action is not None:
+			loc, = action
 			
-			if self.devcard.name == 'Road Building':
-				options = check_building_options(self.player, C.state.costs)
-				with out('dev-road', C.state.msgs.build.road):
-					out.add(options.road)
-			elif self.devcard.name == 'Year of Plenty':
-				with out('dev-res', desc='Select a second resource'):
-					out.add(tset(self.player.resources.keys()))
+			if loc == 'cancel':
+				if self.card_info is not None:
+					unbuild(C, self.card_info.building)
+				self.card_info = None
+				self.devcard = None
+				raise stg.Switch('main')
+			
+			if self.card_info is None:
+				bld = build(C, 'road', self.player, loc)
+				self.card_info = bld
+			else:
+				bld = build(C, 'road', self.player, loc)
+				play_dev(self.player, self.devcard)
+				C.log.writef('{} plays {}, and builds: {} and {}',
+				             self.player, self.devcard, self.card_info, bld)
+				self.card_info = None
+				raise stg.Switch('main')
+				
+		raise stg.Decide('road-building')
+	
+	@stg.Decision('road-building', ['cancel', 'dev-road'])
+	def get_road_building(self, C):
+		
+		out = GameActions('You activated Road Building, and can now build a second road')
+		
+		with out('cancel', desc='Undo playing dev card'):
+			out.add('cancel')
+		
+		options = check_building_options(self.player, C.state.costs)
+		with out('dev-road', C.state.msgs.build.road):
+			out.add(options.road)
+		
+		return tdict({self.player: out})
+	
+	
+	@stg.Stage('year-plenty')
+	def set_year_of_plenty(self, C, player, action=None, res=None):
+		if action is None:
+			self.card_info = res
+			raise stg.Decide('year-plenty')
+		
+		res, = action
+		
+		if res != 'cancel':
+			gain_res(self.card_info, C.state.bank, self.player, 1, log=C.log)
+			gain_res(res, C.state.bank, player, 1, log=C.log)
+			C.log.writef('{} plays {}, and receives: {} and {}',
+			             self.player, self.devcard, self.card_info, res)
+			
+			play_dev(self.player, self.devcard)
 		else:
-			# end turn
-			with out(name='pass', desc='End your turn'):
-				out.add('pass')
+			self.devcard = None
 			
-			# building
-			options = check_building_options(self.player, C.state.costs)
-			for bldname, opts in options.items():
-				with out('build-{}'.format(bldname), C.state.msgs.build[bldname]):
-					out.add(opts)
-			
-			# buy dev card
-			if len(C.state.dev_deck) and can_buy(self.player, C.state.costs.devcard):
-				with out('buy', desc='Buy a development card'):
-					out.add(C.state.dev_deck)
-			
-			# trading
-			with out('maritime-trade', desc='Maritime Trade (with the bank)'):
-				options = bank_trade_options(self.player, C.state.bank_trading)
-				if len(options):
-					out.add('offer', tset((num, res) for res,num in options.items()))
-			
-			with out('domestic-trade', desc='Domestic Trade (with players)'):
-				out.add('demand', tset(res for res in self.player.resources))
-				if self.player.num_res:
-					out.add('offer', tset(res for res, num in self.player.resources.items() if num > 0))
-			
-			# play dev card
-			with out('play', desc='Play a development card'):
-				if len(self.player.devcards):
-					res = tset(self.player.resources.keys())
-					for card in self.player.devcards:
-						if card in self.bought_devcards:
-							pass
-						elif card.name == 'Monopoly':
-							out.add(card, res)
-						elif card.name == 'Year of Plenty':
-							out.add(card, res)
-						elif card.name == 'Victory Point':
-							pass
-						else:
-							out.add(card)
-					
+		self.card_info = None
+		raise stg.Switch('main')
+	
+	@stg.Decision('year-plenty', ['cancel', 'pick'])
+	def get_year_of_plenty(self, C):
 		
-		return tdict({self.player:out})
+		out = GameActions('You activated Year of Plenty, choose a second resource to collect')
+		
+		with out('cancel', desc='Undo playing dev card'):
+			out.add('cancel')
+		
+		with out('dev-res', desc='Select a second resource'):
+			out.add(tset(self.player.resources.keys()))
+		
+		return tdict({self.player: out})
 
-
+	
