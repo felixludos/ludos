@@ -34,10 +34,19 @@ class StagePhase(GamePhase):
 		
 		super().__init_subclass__(**kwargs)
 		
-		cls.stages = tdict()
-		cls.entry_stage = None
-		cls.decisions = tdict()
-		cls.decision_action_groups = tdict()
+		cls._stage_registry = StagePhase._stage_registry
+		cls._entry_stage_name = StagePhase._entry_stage_name
+		cls._decision_registry = StagePhase._decision_registry
+		cls._decision_action_groups = StagePhase._decision_action_groups
+		
+		StagePhase._clear_stages()
+		
+	@classmethod
+	def _clear_stages(cls):
+		cls._stage_registry = tdict()
+		cls._entry_stage_name = None
+		cls._decision_registry = tdict()
+		cls._decision_action_groups = tdict()
 		
 	@classmethod
 	def get_stage(cls, name):
@@ -103,6 +112,8 @@ class StagePhase(GamePhase):
 		self.decision_info = None
 		return out
 	
+StagePhase._clear_stages() # prepare registries
+
 def Stage(name=None):
 
 	class _reg(object):
@@ -117,10 +128,10 @@ def Stage(name=None):
 			if name is None:
 				name = fn_name
 			
-			if name in phase.stages:
+			if name in phase._stage_registry:
 				prt.warning(f'A stage called {name} was already registered in phase {phase.name}')
 				
-			phase.stages[name] = self.fn
+			phase._stage_registry[name] = self.fn
 			
 			setattr(phase, fn_name, self.fn)
 
@@ -133,25 +144,24 @@ def Entry_Stage(name=None):
 			self.fn = fn
 		
 		def __set_name__(self, phase, fn_name):
-			
 			nonlocal name
 			
 			# register stage
 			if name is None:
 				name = fn_name
 			
-			if name in phase.stages:
+			if name in phase._stage_registry:
 				prt.warning(f'A stage called {name} was already registered in phase {phase.name}')
 			
-			phase.stages[name] = self.fn
+			phase._stage_registry[name] = self.fn
 			
-			if phase.entry_stage is not None:
+			if phase._entry_stage_name is not None:
 				prt.warning(f'{phase.name} already has an entry stage, now setting to {name}')
-				
-			phase.entry_stage = name
+			
+			phase._entry_stage_name = name
 			
 			setattr(phase, fn_name, self.fn)
-	
+			
 	return _reg
 
 
@@ -167,15 +177,15 @@ def Decision(name=None, action_groups=None):
 			if name is None:
 				name = fn_name
 			
-			if name in phase.stages:
-				prt.warning(f'A stage called {name} was already registered in phase {phase.name}')
+			if name in phase._decision_registry:
+				prt.warning(f'A decision called {name} was already registered in phase {phase.name}')
 			
-			phase.decisions[name] = self.fn
+			phase._decision_registry[name] = self.fn
 			
 			if action_groups is not None:
-				if name not in phase.decision_action_groups:
-					phase.decision_action_groups[name] = tset()
-				phase.decision_action_groups[name].update(action_groups)
+				if name not in phase._decision_action_groups:
+					phase._decision_action_groups[name] = tset()
+				phase._decision_action_groups[name].update(action_groups)
 			else:
 				prt.info(f'No action groups provided for decision {name} in {phase.name}')
 			

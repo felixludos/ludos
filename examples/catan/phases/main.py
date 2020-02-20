@@ -81,10 +81,16 @@ class MainPhase(TurnPhase, stg.StagePhase, game='catan'):
 		
 		return tdict({self.player: out})
 	
+	def null_op(self, x=1): # TESTING
+		if False:
+			raise PhaseComplete
+	
 	@stg.Stage('main')
 	def main_turn(self, C, player, action=None):
 		if action is None:
 			raise stg.Decide('main')
+		
+		self.null_op(2) # TESTING
 		
 		obj, *rest = action
 		

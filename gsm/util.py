@@ -21,7 +21,7 @@ log_levels = {
 _global_settings = { # primarily for logging
 	'level': 'debug',
 	'logfile': os.path.join(os.path.dirname(LIB_PATH), 'logs', 'test.log'),
-	'format': '%(levelname)s:%(name)s:',
+	'format': '%(levelname)s:%(name)s: %(msg)s',
 	'stream': True,
 }
 

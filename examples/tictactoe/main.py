@@ -77,4 +77,4 @@ class TicTacToe(gsm.GameController):
 			
 		raise Exception('No player with val: {}'.format(val))
 	
-gsm.register_game(TicTacToe, os.path.join(MY_PATH, 'info.yaml'))
+gsm.register_game(TicTacToe, path=os.path.join(MY_PATH, 'info.yaml'))

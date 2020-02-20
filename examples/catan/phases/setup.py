@@ -7,6 +7,17 @@ from gsm.common import StagePhase, Entry_Stage, Stage, Decision, Decide, Switch
 
 from ..ops import build, gain_res
 
+class class_decorator:
+	def __init__(self, fn):
+		self.fn = fn
+
+	def __set_name__(self, owner, name):
+		# do something with "owner" (i.e. the class)
+		print(f"decorating {self.fn} and using {owner}")
+
+		# then replace ourself with the original method
+		setattr(owner, name, self.fn)
+
 class SetupPhase(StagePhase, game='catan'):
 	
 	def __init__(self, player_order, real_estate):
@@ -89,7 +100,7 @@ class SetupPhase(StagePhase, game='catan'):
 		out = GameActions('Choose a location to place a road')
 		with out('loc-road', 'Available Locations'):
 			out.add(tset(e for e in self.settled.edges
-			             if e is not None and 'building' not in e), )
+						 if e is not None and 'building' not in e), )
 		
 		return tdict({self.active: out})
 		

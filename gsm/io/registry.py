@@ -47,7 +47,7 @@ def Game(name=None, info_path=None):
 		
 		if os.path.isfile(info_path):
 			info = yaml.load(open(info_path, 'r'))
-			cls.__dict__.update(info)
+			cls.info = info
 		else:
 			info = {}
 			prt.error('Game info for {} not found.'.format(cls.name))

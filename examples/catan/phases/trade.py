@@ -8,7 +8,7 @@ from gsm.common import stages as stg
 from ..ops import trade_available, execute_trade
 
 
-class TradePhase(stg.StagePhase):
+class TradePhase(stg.StagePhase, game='catan'):
 	
 	def __init__(self, player, bank_trades=None, **info):
 		super().__init__(**info)
