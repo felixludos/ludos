@@ -35,7 +35,7 @@ class StagePhase(GamePhase):
 		super().__init_subclass__(**kwargs)
 		
 		cls._stage_registry = StagePhase._stage_registry
-		cls._entry_stage_name = StagePhase._entry_stage_name
+		# cls._entry_stage_name = StagePhase._entry_stage_name
 		cls._decision_registry = StagePhase._decision_registry
 		cls._decision_action_groups = StagePhase._decision_action_groups
 		

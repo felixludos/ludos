@@ -5,7 +5,7 @@ from gsm import tset, tdict, tlist
 
 from ..ops import gain_res, play_dev, steal_options
 
-class RobberPhase(StagePhase, game='catan'):
+class RobberPhase(StagePhase, name='robber', game='catan'):
 	
 	def __init__(self, player, **kwargs): # requires the player that should move the robber
 		super().__init__(current_stage_policy='latest', player=player, **kwargs)

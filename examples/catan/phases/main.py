@@ -8,7 +8,7 @@ from gsm import SwitchPhase, PhaseComplete
 
 from ..ops import build, unbuild, play_dev, pay_cost, can_buy, roll_dice, check_victory, get_knight, gain_res, check_building_options, bank_trade_options
 
-class MainPhase(TurnPhase, stg.StagePhase, game='catan'):
+class MainPhase(TurnPhase, stg.StagePhase, name='main', game='catan'):
 	
 	def __init__(self, player, **other): # TODO: make sure only one dev card can be played, and not the ones bought
 		super().__init__(player=player, **other)
@@ -20,7 +20,7 @@ class MainPhase(TurnPhase, stg.StagePhase, game='catan'):
 		
 		self.bought_devcards = tset()
 	
-	@stg.Stage('roll')
+	@stg.Entry_Stage('roll')
 	def roll(self, C, player, action=None):
 		
 		if action is not None:
@@ -81,16 +81,16 @@ class MainPhase(TurnPhase, stg.StagePhase, game='catan'):
 		
 		return tdict({self.player: out})
 	
-	def null_op(self, x=1): # TESTING
-		if False:
-			raise PhaseComplete
+	# def null_op(self, x=1): # TESTING
+	# 	if False:
+	# 		raise PhaseComplete
 	
 	@stg.Stage('main')
 	def main_turn(self, C, player, action=None):
 		if action is None:
 			raise stg.Decide('main')
 		
-		self.null_op(2) # TESTING
+		# self.null_op(2) # TESTING
 		
 		obj, *rest = action
 		

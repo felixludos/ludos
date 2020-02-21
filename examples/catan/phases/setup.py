@@ -18,7 +18,7 @@ class class_decorator:
 		# then replace ourself with the original method
 		setattr(owner, name, self.fn)
 
-class SetupPhase(StagePhase, game='catan'):
+class SetupPhase(StagePhase, name='setup', game='catan'):
 	
 	def __init__(self, player_order, real_estate):
 		super().__init__()
