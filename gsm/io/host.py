@@ -5,7 +5,7 @@ import yaml
 import json
 from collections import OrderedDict
 from ..mixins import Named
-from ..signals import WrappedException, InvalidValueError, RegistryCollisionError, NoActiveGameError, UnknownGameError, UnknownInterfaceError, UnknownPlayerError, UnknownUserError
+from ..errors import WrappedException, InvalidValueError, RegistryCollisionError, NoActiveGameError, UnknownGameError, UnknownInterfaceError, UnknownPlayerError, UnknownUserError
 from .registry import _game_registry, get_trans
 from .transmit import send_http
 

@@ -5,7 +5,8 @@ from .. import tdict, tlist, tset
 from ..mixins import Named
 from ..core import GamePhase
 from ..util import get_printer
-from ..signals import PhaseComplete
+from ..signals import PhaseComplete, Signal
+from ..errors import GameError
 
 prt = get_printer(__name__)
 
@@ -17,13 +18,13 @@ class NotFoundException(Exception):
 	def __init__(self, type, name, loc):
 		super().__init__(f'{type} {name} was not found in {loc}')
 
-class Switch(Exception):
+class Switch(Signal):
 	def __init__(self, name, send_action=False, **info):
 		self.name = name
 		self.send_action = send_action
 		self.info = info
 
-class Decide(Exception):
+class Decide(Signal):
 	def __init__(self, name, **info):
 		self.name = name
 		self.info = info
@@ -65,13 +66,22 @@ class StagePhase(GamePhase):
 		if cls.entry_stage is None:
 			raise NoEntryStageException(cls)
 		return cls.entry_stage
-		
-	def __init__(self, *args, current_stage_policy='latest', **kwargs):
+	
+	@classmethod
+	def update_current_stage(cls, stage_name, decision_name):
+		cls._entry_stage_name = stage_name
+
+	@classmethod
+	def _get_static_stage_format(cls):
+		return {}
+	
+	@classmethod
+	def _get_static_decision_format(cls):
+		return {}
+
+	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		
-		assert current_stage_policy in {'entry', 'latest'}, f'unknown current stage policy: {current_stage_policy}'
-		
-		self.current_stage_policy = current_stage_policy
 		self.current_stage = self.get_entry_stage()
 		self.decision_info = None
 		
@@ -79,25 +89,25 @@ class StagePhase(GamePhase):
 		self.current_stage = self.get_stage(name)
 		
 	def execute(self, C, player=None, action=None):
-		stage = self.get_stage(self.current_stage)
+		stage_name = self.current_stage
 		self.decision_info = None
 		
 		stage_info = {}
 		
 		while self.decision_info is None:
 			try:
+				stage = self.get_stage(stage_name)
 				stage(C, player=player, action=action, **stage_info)
 			except Switch as s:
-				stage = self.get_stage(s.name)
+				stage_name = s.name
 				stage_info = s.info
 				if not s.send_action:
 					action = None
-				if self.current_stage_policy == 'latest':
-					self.current_stage = s.name
 			except Decide as d:
+				self.update_current_stage(stage_name, d.name)
 				self.decision_info = d.name, d.info
 			else:
-				break
+				raise GameError(f'{stage_name} ended without raising a signal')
 	
 	def encode(self, C):
 		
@@ -113,6 +123,12 @@ class StagePhase(GamePhase):
 		return out
 	
 StagePhase._clear_stages() # prepare registries
+
+class FixedStagePhase(StagePhase):
+	@classmethod
+	def update_current_stage(cls, stage_name, decision_name):
+		pass
+	
 
 def Stage(name=None):
 

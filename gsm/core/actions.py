@@ -4,7 +4,7 @@ from humpack import tset, tdict, tlist
 from .object import GameObject
 from .player import GamePlayer
 from ..mixins import Typed, Named, Transactionable, Packable, Pullable, Hashable
-from ..signals import ActionMismatch, UnknownActionElement, InvalidActionError
+from ..errors import ActionMismatch, UnknownActionElement, InvalidActionError
 from ..writing import write, writef
 from ..util import jsonify
 

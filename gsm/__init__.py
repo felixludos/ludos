@@ -2,7 +2,7 @@ from humpack import tdict, tlist, tset, tdeque, tstack, theap, containerify
 from humpack.wrappers import Array
 from humpack import Packable, Transactionable
 from .util import jsonify, unjsonify, obj_unjsonify
-from .signals import PhaseComplete, SwitchPhase, GameOver
+from .signals import PhaseComplete, SwitchPhase, GameOver, SubPhase
 from .writing import write, writef, RichText
 from .util import RandomGenerator, assert_
 from .io import Host, Interface, Test_Interface, register_game, register_interface, get_interface, send_http

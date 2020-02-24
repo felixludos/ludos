@@ -2,6 +2,7 @@ import sys, os
 import numpy as np
 import gsm
 from gsm import tdict, tlist, tset, tdeque, tstack, containerify
+from gsm.errors import InvalidPlayerError
 from gsm.common.elements import Card, Deck
 from gsm.common.world import grid
 from gsm.common import TurnPhaseStack
@@ -61,18 +62,18 @@ class Catan(gsm.GameController, register=True):
 		self.register_phase(name='trade', cls=TradePhase)
 		self.register_phase(name='robber', cls=RobberPhase)
 	
-	def _pre_setup(self, config, info=None):
+	def _pre_setup(self, config, info=None): # TODO: deprecated!
 		# register players
 		assert len(self.player_names) in {3,4}, 'Not the right number of players: {}'.format(self.player_names)
 		for name in self.player_names:
 			if name not in info.player_names:
-				raise gsm.signals.InvalidPlayerError(name)
+				raise InvalidPlayerError(name)
 			self.register_player(name, num_res=0, color=name)
-	
-	def _set_phase_stack(self, config):
-		self.stack.set_player_order(tlist(self.players))
-		return tlist([self.create_phase('setup', player_order=tlist(self.players))])
-	
+
+	# def _set_phase_stack(self, config):
+	# 	self.stack.set_player_order(tlist(self.players))
+	# 	return tlist([self.create_phase('setup', player_order=tlist(self.players))])
+
 	def _init_game(self, config):
 		
 		res_names = config.rules.res_names

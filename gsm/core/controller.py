@@ -14,7 +14,8 @@ from .table import GameTable
 from .player import GameManager
 from .phase import GameStack
 from ..mixins import Named, Transactionable, Packable
-from ..signals import PhaseComplete, SwitchPhase, GameOver, InvalidPlayerError, NoActiveGameError, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
+from ..signals import _PhaseControl, PhaseComplete, SwitchPhase, GameOver
+from ..errors import InvalidPlayerError, NoActiveGameError, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
 from ..util import RandomGenerator, jsonify, get_printer
 from ..io.registry import Game
 
@@ -272,18 +273,18 @@ class GameController(Named, Transactionable, Packable):
 				except PhaseComplete as intr:
 					if not intr.transfer_action():
 						action = None
-				except SwitchPhase as intr:
+				except _PhaseControl as intr:
 					if intr.stacks():
 						self.stack.push(phase)  # keep current phase around
 					new = intr.get_phase()
 					self.stack.push(new, **intr.get_phase_kwargs())
 					if not intr.transfer_action():
 						action = None
-				else:
+				else: # successfully took a step and generated current action sets
 					self.stack.push(phase)
 					break
 			
-			if not len(self.stack):
+			if not len(self.stack): # ran out of phases, so game must be over. This probably shouldn't happen, instead raise a GameOver signal manually in the phase
 				raise GameOver
 		
 		except GameOver:

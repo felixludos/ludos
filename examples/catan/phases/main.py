@@ -4,7 +4,7 @@ from gsm import GameOver, GamePhase, GameActions, GameObject
 from gsm.common import TurnPhase
 from gsm.common import stages as stg
 from gsm import tset, tdict, tlist, assert_
-from gsm import SwitchPhase, PhaseComplete
+from gsm import SwitchPhase, PhaseComplete, SubPhase
 
 from ..ops import build, unbuild, play_dev, pay_cost, can_buy, roll_dice, check_victory, get_knight, gain_res, check_building_options, bank_trade_options
 
@@ -30,8 +30,7 @@ class MainPhase(TurnPhase, stg.StagePhase, name='main', game='catan'):
 			if cmd != 'continue':
 				self.pre_check = 'played' # can't play another dev card this turn
 				self.devcard = cmd
-				raise SwitchPhase('robber', stack=True,
-				                  player=self.player, knight=cmd)
+				raise SubPhase('robber', player=self.player, knight=cmd)
 		
 		
 		elif 'pre_check' not in self:
@@ -55,8 +54,7 @@ class MainPhase(TurnPhase, stg.StagePhase, name='main', game='catan'):
 		
 		if self.roll == 7:
 			self.set_current_stage('main') # when coming back, go straight to main stage
-			raise SwitchPhase('robber', send_action=False, stack=True,
-			                  player=self.player)
+			raise SubPhase('robber', player=self.player)
 		
 		hexes = C.state.numbers[self.roll]
 		for hex in hexes:
@@ -95,13 +93,12 @@ class MainPhase(TurnPhase, stg.StagePhase, name='main', game='catan'):
 		obj, *rest = action
 		
 		if obj == 'pass':
-			raise SwitchPhase('main', stack=False)
+			raise SwitchPhase('main')
 		
 		if obj == 'offer' or obj == 'demand':
 			C.log[self.player].write('You start a trade')
 			C.log.iindent()
-			raise SwitchPhase('trade', send_action=True, stack=True,
-			                  player=self.player,
+			raise SubPhase('trade', send_action=True, player=self.player,
 			                  bank_trades=bank_trade_options(self.player, C.state.bank_trading)
 			                        if 'maritime' in action.get_type() else None)
 		
@@ -120,8 +117,7 @@ class MainPhase(TurnPhase, stg.StagePhase, name='main', game='catan'):
 			if obj.name == 'Victory Point':
 				raise Exception('Shouldnt have played a Victory point card')
 			elif obj.name == 'Knight':
-				raise SwitchPhase('robber', send_action=False, stack=True,
-				                  knight=obj, player=self.player)
+				raise SubPhase('robber', send_action=False, knight=obj, player=self.player)
 			elif obj.name == 'Monopoly':
 				res, = rest
 				for opp in C.players.values():

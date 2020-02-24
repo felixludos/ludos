@@ -1,7 +1,7 @@
 
 from humpack import tset, tdict, tlist
 from ..mixins import Named, Typed, Jsonable, Transactionable, Packable, Pullable, Writable
-from ..signals import MissingValueError
+from ..errors import MissingValueError
 from ..util import jsonify
 
 class GameManager(Transactionable, Packable, Pullable):

@@ -7,7 +7,7 @@ from queue import Queue, Empty
 import multiprocessing as mp
 from ..mixins import Named
 from .registry import register_trans, get_interface
-from ..signals import ExceptionWrapper
+from ..errors import ExceptionWrapper
 
 from werkzeug.routing import BaseConverter
 

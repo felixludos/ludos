@@ -1,7 +1,7 @@
 
 from ..mixins import Transactionable, Packable, Pullable
 from humpack import tset, tdict, tlist
-from ..signals import MissingTypeError, MissingValueError, MissingObjectError, ObjectIDCollisionError
+from ..errors import MissingTypeError, MissingValueError, MissingObjectError, ObjectIDCollisionError
 from .object import GameObject
 
 from .. import util

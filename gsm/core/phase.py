@@ -108,7 +108,7 @@ class GameStack(Transactionable, Packable):
 
 class GamePhase(Named, tdict):
 	
-	def __init_subclass__(cls, name=None, game=None, **kwargs):
+	def __init_subclass__(cls, name=None, game=None, start=False, **kwargs):
 		super().__init_subclass__(**kwargs)
 		
 		if name is None:
@@ -117,7 +117,7 @@ class GamePhase(Named, tdict):
 		cls.name = name
 		
 		if game is not None:
-			register_phase(game)(cls)
+			register_phase(game, start=start)(cls)
 	
 	def __init__(self, name=None, **info):
 		if name is None:

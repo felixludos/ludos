@@ -2,7 +2,7 @@ import os
 import yaml
 
 from ..util import get_printer
-from ..signals import RegistryCollisionError, InvalidValueError
+from ..errors import RegistryCollisionError, InvalidValueError
 
 prt = get_printer(__name__)
 
@@ -28,6 +28,9 @@ def register_game(cls, name=None, path=None, info=None):
 	else:
 		prt.debug('Registering game: {}'.format(name))
 		_game_registry[info['short_name']] = info
+		
+	# info['start_phase'] = cls._start_phase
+	# assert info['start_phase'] is not None, f'No start phase for {name}'
 
 def Game(name=None, info_path=None):
 	
@@ -101,7 +104,7 @@ def register_object(game, open=None, req=None):
 def register_simple_object(game, obj_type, open=None, req=None):
 	register_object(game, open, req)(name=obj_type)
 
-def register_phase(game):
+def register_phase(game, start=False):
 	
 	def _reg_phase(cls):
 		nonlocal game
@@ -113,6 +116,13 @@ def register_phase(game):
 			_game_registry[game] = {}
 			
 		info = _game_registry[game]
+		
+		if start:
+			if 'start_phase' in info:
+				prt.warning('The start phase {} for {} has already been registered, and is now replaced by {}'.format(
+					info['start_phase'], game, name,
+				))
+			info['start_phase'] = name
 		
 		if 'phases' not in info:
 			info['phases'] = {}
@@ -126,7 +136,6 @@ def register_phase(game):
 		
 		phase = phases[name]
 		
-		phase['name'] = name
 		phase['cls'] = cls
 		
 		return cls

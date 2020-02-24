@@ -1,7 +1,7 @@
 
 import numpy as np
 from itertools import chain
-from ..signals import InvalidInitializationError, MissingValueError, UnknownElementError
+from ..errors import InvalidInitializationError, MissingValueError, UnknownElementError
 from ..mixins import Named, Typed, Jsonable, Writable, Transactionable, Packable, Pullable, Hashable
 from humpack import tset, tdict, tlist, tdeque
 from ..util import primitive, RandomGenerator, jsonify, get_printer

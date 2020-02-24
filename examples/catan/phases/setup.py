@@ -7,18 +7,7 @@ from gsm.common import StagePhase, Entry_Stage, Stage, Decision, Decide, Switch
 
 from ..ops import build, gain_res
 
-class class_decorator:
-	def __init__(self, fn):
-		self.fn = fn
-
-	def __set_name__(self, owner, name):
-		# do something with "owner" (i.e. the class)
-		print(f"decorating {self.fn} and using {owner}")
-
-		# then replace ourself with the original method
-		setattr(owner, name, self.fn)
-
-class SetupPhase(StagePhase, name='setup', game='catan'):
+class SetupPhase(StagePhase, name='setup', game='catan', start=True):
 	
 	def __init__(self, player_order, real_estate):
 		super().__init__()
@@ -33,7 +22,7 @@ class SetupPhase(StagePhase, name='setup', game='catan'):
 		
 		if action is None:
 			self.active = self.player_order.pop()
-			raise Decide('settle')
+			raise Decide('settlement')
 	
 		loc, = action
 		

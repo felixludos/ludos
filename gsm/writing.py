@@ -3,7 +3,7 @@ from string import Formatter
 
 from humpack import tset, tdict, tlist
 from .mixins import Typed, Packable, Transactionable, Pullable, Writable
-from .signals import FormatException
+from .errors import FormatException
 from .util import primitive
 
 FMT = Formatter()

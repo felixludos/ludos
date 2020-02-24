@@ -6,7 +6,7 @@ import logging
 from humpack import tdict, tset, tlist
 
 from .mixins import Named, Typed, Jsonable, Packable, Transactionable, primitive
-from .signals import UnknownElementError, InvalidKeyError, GameError
+from .errors import UnknownElementError, InvalidKeyError, GameError
 
 LIB_PATH = os.path.dirname(__file__)
 
