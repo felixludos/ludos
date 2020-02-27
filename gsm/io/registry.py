@@ -62,82 +62,81 @@ def Game(name=None, info_path=None):
 	
 	return _reg_game
 
-def register_object(game, open=None, req=None):
+def register_object(game, name=None, cls=None, open=None, req=None):
+	assert cls is not None or name is not None, 'no name or class provided'
 	
-	def _reg_obj(cls=None, name=None):
-		nonlocal game, open, req
-		
-		assert cls is not None or name is not None, 'no name or class provided'
-		
-		if cls is not None:
-			name = cls.get_type()
-		
-		if game not in _game_registry:
-			prt.warning('Registering the GameObject {} for a game before registering the game {}'.format(name, game))
-			_game_registry[game] = {}
-			
-		info = _game_registry[game]
-		
-		if 'objects' not in info:
-			info['objects'] = {}
-			
-		objs = info['objects']
-		
-		if name in objs:
-			prt.info('{} already registered, so updating entry'.format(name))
-		else:
-			objs[name] = {}
-		
-		obj = objs[name]
-		
-		obj['name'] = name
-		obj['open'] = open
-		obj['req'] = req
-		
-		if cls is not None:
-			obj['cls'] = cls
-			
+	if cls is not None:
+		name = cls.get_type()
+	
+	if game not in _game_registry:
+		prt.warning('Registering the GameObject {} for a game before registering the game {}'.format(name, game))
+		_game_registry[game] = {}
+	
+	info = _game_registry[game]
+	
+	if 'objects' not in info:
+		info['objects'] = {}
+	
+	objs = info['objects']
+	
+	if name in objs:
+		prt.info('{} already registered, so updating entry'.format(name))
+	else:
+		objs[name] = {}
+	
+	obj = objs[name]
+	
+	obj['name'] = name
+	obj['open'] = open
+	obj['req'] = req
+	
+	if cls is not None:
+		obj['cls'] = cls
+
+def register_object_dec(game, name=None, open=None, req=None):
+	
+	def _reg_obj(cls=None):
+		nonlocal game, name, open, req
+		register_object(game, name=name, cls=cls, open=open, req=req)
 		return cls
 			
 	return _reg_obj
 	
-def register_simple_object(game, obj_type, open=None, req=None):
-	register_object(game, open, req)(name=obj_type)
-
-def register_phase(game, start=False):
+	
+def register_phase(game, cls, name=None, start=False):
+	if game not in _game_registry:
+		prt.warning('Registering the GamePhase {} for a game before registering the game {}'.format(name, game))
+		_game_registry[game] = {}
+	
+	info = _game_registry[game]
+	
+	if start:
+		if 'start_phase' in info:
+			prt.warning('The start phase {} for {} has already been registered, and is now replaced by {}'.format(
+				info['start_phase'], game, name,
+			))
+		info['start_phase'] = name
+	
+	if 'phases' not in info:
+		info['phases'] = {}
+	
+	phases = info['phases']
+	
+	if name in phases:
+		prt.info('{} already registered, so updating entry'.format(name))
+	else:
+		phases[name] = {}
+	
+	phase = phases[name]
+	
+	phase['cls'] = cls
+	
+def register_phase_dec(game, start=False):
 	
 	def _reg_phase(cls):
-		nonlocal game
-		
+		nonlocal game, start
 		name = cls.name
-		
-		if game not in _game_registry:
-			prt.warning('Registering the GamePhase {} for a game before registering the game {}'.format(name, game))
-			_game_registry[game] = {}
-			
-		info = _game_registry[game]
-		
-		if start:
-			if 'start_phase' in info:
-				prt.warning('The start phase {} for {} has already been registered, and is now replaced by {}'.format(
-					info['start_phase'], game, name,
-				))
-			info['start_phase'] = name
-		
-		if 'phases' not in info:
-			info['phases'] = {}
-		
-		phases = info['phases']
-		
-		if name in phases:
-			prt.info('{} already registered, so updating entry'.format(name))
-		else:
-			phases[name] = {}
-		
-		phase = phases[name]
-		
-		phase['cls'] = cls
-		
+		register_phase(game=game, cls=cls, name=name, start=start)
 		return cls
 		
 	return _reg_phase

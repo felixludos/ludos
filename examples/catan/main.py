@@ -3,13 +3,10 @@ import numpy as np
 import gsm
 from gsm import tdict, tlist, tset, tdeque, tstack, containerify
 from gsm.errors import InvalidPlayerError
-from gsm.common.elements import Card, Deck
 from gsm.common.world import grid
 from gsm.common import TurnPhaseStack
 
 from .ops import build_catan_map, gain_res
-from .phases import *
-from .objects import Hex, Board, DevCard
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -17,8 +14,7 @@ MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
 class Catan(gsm.GameController, register=True):
 	
-	def __init__(self, player_names, debug=False,
-	             shuffle_order=False):
+	def __init__(self, player_names, debug=False, shuffle_order=False):
 		
 		# create player manager
 		manager = gsm.GameManager(open={'num_res', 'color', 'devcards', 'buildings',
@@ -37,38 +33,13 @@ class Catan(gsm.GameController, register=True):
 		                 # settings
 		                 shuffle_order=shuffle_order, player_names=player_names)
 		
-		# register config files
-		self.register_config('rules', os.path.join(MY_PATH, 'config/rules.yaml'))
-		self.register_config('dev', os.path.join(MY_PATH,'config/dev_cards.yaml'))
-		self.register_config('map', os.path.join(MY_PATH,'config/map.yaml'))
-		self.register_config('msgs', os.path.join(MY_PATH, 'config/msgs.yaml'))
-		
-		# register game object types
-		self.register_obj_type(name='board', obj_cls=Board)
-		self.register_obj_type(name='hex', obj_cls=Hex)
-		
-		self.register_obj_type(name='devcard', obj_cls=DevCard,
-		                       req={'name', 'desc'},)
-		self.register_obj_type(name='devdeck', obj_cls=Deck)
-		self.register_obj_type(name='robber', open={'loc'})
-		
-		self.register_obj_type(name='road', open={'loc', 'player'})
-		self.register_obj_type(name='settlement', open={'loc', 'player'})
-		self.register_obj_type(name='city', open={'loc', 'player'})
-		
-		# register possible phases
-		self.register_phase(name='setup', cls=SetupPhase)
-		self.register_phase(name='main', cls=MainPhase)
-		self.register_phase(name='trade', cls=TradePhase)
-		self.register_phase(name='robber', cls=RobberPhase)
-	
-	def _pre_setup(self, config, info=None): # TODO: deprecated!
-		# register players
-		assert len(self.player_names) in {3,4}, 'Not the right number of players: {}'.format(self.player_names)
-		for name in self.player_names:
-			if name not in info.player_names:
-				raise InvalidPlayerError(name)
-			self.register_player(name, num_res=0, color=name)
+	# def _pre_setup(self, config, info=None): # TODO: deprecated!
+	# 	# register players
+	# 	assert len(self.player_names) in {3,4}, 'Not the right number of players: {}'.format(self.player_names)
+	# 	for name in self.player_names:
+	# 		if name not in info.player_names:
+	# 			raise InvalidPlayerError(name)
+	# 		self.register_player(name, num_res=0, color=name)
 
 	# def _set_phase_stack(self, config):
 	# 	self.stack.set_player_order(tlist(self.players))

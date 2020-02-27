@@ -1,16 +1,25 @@
-from gsm import GameObject
+from gsm import GameObject, register_object
 from gsm.mixins import Named
 from gsm.common.world import grid
-from gsm.common.elements import Card
+from gsm.common.elements import Card, Deck
 
-class Board(grid.Grid, game='catan'):
-	pass
+# Buildings
+register_object(game='catan', name='road', open={'loc', 'player'})
+register_object(game='catan', name='settlement', open={'loc', 'player'})
+register_object(game='catan', name='city', open={'loc', 'player'})
 
-class Hex(grid.Field, game='catan'):
-	pass
+# Robber
+register_object(game='catan', name='robber', open={'loc'})
 
-class DevCard(Named, Card, game='catan'):
-	pass
+# Dev
+register_object(game='catan', name='devcard', cls=Card, req={'name', 'desc'})
+register_object(game='catan', name='devdeck', cls=Deck)
+
+# Game Board
+register_object(game='catan', name='board', cls=grid.Grid)
+register_object(game='catan', name='hex', cls=grid.Field)
+
+
 
 
 
