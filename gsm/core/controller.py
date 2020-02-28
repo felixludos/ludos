@@ -68,7 +68,7 @@ class GameController(Named, Transactionable, Packable):
 		                 'keys', 'RNG', '_key_rng', '_images', '_advisor_images', 'config', 'player_names'}
 		return new
 	
-	def __init__(self, name=None, debug=False, info_path=None, player_names=[],
+	def __init__(self, name=None, debug=False, player_names=[],
 	             manager=None, stack=None, table=None, log=None,
 	             **settings):
 		if name is None:
@@ -88,12 +88,12 @@ class GameController(Named, Transactionable, Packable):
 		# Registries and managers
 		self.players = manager
 		self.stack = stack
+		self.stack.register(self.info['phases'])
 		self.table = table
 		
 		self.config_files = tdict()
 		
 		# GameState
-		self._pre_setup_complete = info_path # flag for pre setup
 		self._in_progress = False # flag for registration to end
 		self._in_transaction = False # flag for transactionable
 		self.DEBUG = debug # flag for dev to use as needed
@@ -220,13 +220,12 @@ class GameController(Named, Transactionable, Packable):
 		
 		# add players, prep phase stack
 		self._add_players(self.config, self.settings)
-		phases = self._set_phase_stack(self.config, self.settings)
 		
 		# init components
 		self.state = GameState()
 		self.log.reset(tset(self.players))  # TODO: maybe this shouldnt just be the names
 		self.table.reset(tset(self.players))
-		self.stack.reset(phases)
+		self.stack.reset()
 		
 		# init game
 		self._init_game(self.config, self.settings)  # builds maps/objects

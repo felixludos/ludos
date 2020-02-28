@@ -1,15 +1,16 @@
 from ..mixins import Named, Transactionable, Packable
-from humpack import tset, tdict, tlist, tstack
+from humpack import tset, tdict, tlist, tstack, pack_member, unpack_member
 from ..signals import PhaseComplete
 from ..io.registry import register_phase
 
 class GameStack(Transactionable, Packable):
-	def __init__(self):
+	def __init__(self,):
 		super().__init__()
 		
 		self._in_transaction = False
 		self._stack = tstack()
 		self._phases = tdict()
+		self._start_phase = None
 		
 	def begin(self):
 		if self.in_transaction():
@@ -38,40 +39,40 @@ class GameStack(Transactionable, Packable):
 		self._phases.abort()
 		
 	def __pack__(self):
-		pack = self.__class__._pack_obj
 		
 		data = {}
 		
-		data['_stack'] = pack(self._stack)
-		data['_phases'] = pack(self._phases)
-		data['_in_transaction'] = pack(self._in_transaction)
+		data['_stack'] = pack_member(self._stack)
+		data['_phases'] = pack_member(self._phases)
+		data['_in_transaction'] = pack_member(self._in_transaction)
+		data['_start'] = pack_member(self._start_phase)
 		
 		return data
 	
 	def __unpack__(self, data):
-		unpack = self.__class__._unpack_obj
 		
 		GameStack.__init__(self)
 		
-		self._stack = unpack(data['_stack'])
-		self._phases = unpack(data['_phases'])
-		self._in_transaction = unpack(data['_in_transaction'])
+		self._stack = unpack_member(data['_stack'])
+		self._phases = unpack_member(data['_phases'])
+		self._in_transaction = unpack_member(data['_in_transaction'])
+		self._start_phase = unpack_member(data['_start'])
 	
 	# registry
 	
-	def register(self, cls, name=None, **props):
-		if name is None:
-			name = cls.__class__.__name__
-		self._phases[name] = tdict(phase_cls=cls, props=props)
+	def register(self, phases):
+		for name, info in phases.items():
+			self._phases[name] = tdict(info)
 		
 	def create(self, name, **kwargs):
 		
 		cls = self._phases[name].phase_cls
-		props = self._phases[name].props
-		props.update(kwargs)
-		
-		phase = cls(**props)
-		phase.name = name
+		if 'props' in self._phases[name]:
+			props = self._phases[name].props
+			props.update(kwargs)
+			kwargs = props
+			
+		phase = cls(**kwargs)
 		return phase
 		
 	# stack
@@ -79,15 +80,14 @@ class GameStack(Transactionable, Packable):
 	def __len__(self):
 		return len(self._stack)
 	
-	def reset(self, phases=None, **kwargs):
+	def _process_entry(self, phase, **kwargs):
+		if phase in self._phases:
+			phase = self.create(phase, **kwargs)
+		return phase
+	
+	def reset(self):
 		self._stack.clear()
-		if phases is not None:
-			self.extend(phases, **kwargs)
-		
-	def _process_entry(self, item, **kwargs):
-		if item in self._phases:
-			return self.create(item, **kwargs)
-		return item
+		self.push(self._start_phase)
 		
 	def push(self, *items, **kwargs):
 		for item in items:

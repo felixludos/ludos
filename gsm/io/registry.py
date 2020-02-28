@@ -130,6 +130,7 @@ def register_phase(game, cls, name=None, start=False):
 	phase = phases[name]
 	
 	phase['cls'] = cls
+	phase['start'] = start
 	
 def register_phase_dec(game, start=False):
 	

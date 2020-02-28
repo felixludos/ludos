@@ -29,7 +29,6 @@ class Catan(gsm.GameController, register=True):
 		                 manager=manager,
 		                 stack=stack,
 		                 log=log,
-		                 info_path=os.path.join(MY_PATH, 'info.yaml'),
 		                 # settings
 		                 shuffle_order=shuffle_order, player_names=player_names)
 		
