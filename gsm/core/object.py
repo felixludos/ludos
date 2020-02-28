@@ -3,7 +3,7 @@ import numpy as np
 from itertools import chain
 from ..errors import InvalidInitializationError, MissingValueError, UnknownElementError
 from ..mixins import Named, Typed, Jsonable, Writable, Transactionable, Packable, Pullable, Hashable
-from humpack import tset, tdict, tlist, tdeque
+from humpack import tset, tdict, tlist, tdeque, pack_member, unpack_member
 from ..util import primitive, RandomGenerator, jsonify, get_printer
 from ..io.registry import register_object
 
@@ -54,24 +54,22 @@ class GameObject(Typed, Writable, Jsonable, Pullable, tdict):
 				raise MissingValueError(self.get_type(), req, *self._req)
 		
 	def __pack__(self):
-		pack = self.__class__._pack_obj
 		
 		data = super().__pack__()
-		data['_id'] = pack(self._id)
-		data['_table'] = pack(self._table)
-		data['_open'] = pack(self._open)
-		data['_req'] = pack(self._req)
+		data['_id'] = pack_member(self._id)
+		data['_table'] = pack_member(self._table)
+		data['_open'] = pack_member(self._open)
+		data['_req'] = pack_member(self._req)
 		
 		return data
 	
 	def __unpack__(self, data):
-		unpack = self.__class__._unpack_obj
 		
-		self._id = unpack(data['_id'])
-		self._table = unpack(data['_table'])
+		self._id = unpack_member(data['_id'])
+		self._table = unpack_member(data['_table'])
 		
-		self._req = unpack(data['_req'])
-		self._open = unpack(data['_open'])
+		self._req = unpack_member(data['_req'])
+		self._open = unpack_member(data['_open'])
 		
 		del data['_id']
 		del data['_table']

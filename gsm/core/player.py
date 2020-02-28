@@ -1,5 +1,5 @@
 
-from humpack import tset, tdict, tlist
+from humpack import tset, tdict, tlist, pack_member, unpack_member
 from ..mixins import Named, Typed, Jsonable, Transactionable, Packable, Pullable, Writable
 from ..errors import MissingValueError
 from ..util import jsonify
@@ -40,29 +40,27 @@ class GameManager(Transactionable, Packable, Pullable):
 		
 		
 	def __pack__(self):
-		pack = self.__class__._pack_obj
 		
 		data = {}
 		
-		data['players'] = pack(self.players)
-		data['req'] = pack(self.req)
-		data['hidden'] = pack(self.hidden)
-		data['open'] = pack(self.open)
-		data['_in_transaction'] = pack(self._in_transaction)
-		data['player_cls'] = pack(self.player_cls)
+		data['players'] = pack_member(self.players)
+		data['req'] = pack_member(self.req)
+		data['hidden'] = pack_member(self.hidden)
+		data['open'] = pack_member(self.open)
+		data['_in_transaction'] = pack_member(self._in_transaction)
+		data['player_cls'] = pack_member(self.player_cls)
 		
 		return data
 	
 	def __unpack__(self, data):
-		unpack = self.__class__._unpack_obj
 		
-		self.players = unpack(data['players'])
+		self.players = unpack_member(data['players'])
 		self.players_list = tlist(self.players.values())
-		self.req = unpack(data['req'])
-		self.open = unpack(data['open'])
-		self.hidden = unpack(data['hidden'])
-		self._in_transaction = unpack(data['_in_transaction'])
-		self.player_cls = unpack(data['player_cls'])
+		self.req = unpack_member(data['req'])
+		self.open = unpack_member(data['open'])
+		self.hidden = unpack_member(data['hidden'])
+		self._in_transaction = unpack_member(data['_in_transaction'])
+		self.player_cls = unpack_member(data['player_cls'])
 		
 		# self.verify() # TODO: maybe enforce req upon load
 	

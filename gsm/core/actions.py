@@ -1,6 +1,6 @@
 # import json
 from itertools import product, chain
-from humpack import tset, tdict, tlist
+from humpack import tset, tdict, tlist, pack_member, unpack_member
 from .object import GameObject
 from .player import GamePlayer
 from ..mixins import Typed, Named, Transactionable, Packable, Pullable, Hashable
@@ -158,28 +158,26 @@ class GameActions(Packable, Pullable): # created and returned in phases
 		self._current.add(items)
 	
 	def __pack__(self):
-		pack = self.__class__._pack_obj
 		
 		data = {}
 		
-		data['_current'] = pack(self._current)
-		data['_desc'] = pack(self._desc)
-		data['_options'] = pack(self._options)
-		data['status'] = pack(self.status)
-		data['info'] = pack(self.info)
-		data['_name'] = pack(self._name)
+		data['_current'] = pack_member(self._current)
+		data['_desc'] = pack_member(self._desc)
+		data['_options'] = pack_member(self._options)
+		data['status'] = pack_member(self.status)
+		data['info'] = pack_member(self.info)
+		data['_name'] = pack_member(self._name)
 		
 		return data
 	
 	def __unpack__(self, data):
-		unpack = self.__class__._unpack_obj
 		
-		self._current = unpack(data['_current'])
-		self._desc = unpack(data['_desc'])
-		self._options = unpack(data['_options'])
-		self.status = unpack(data['status'])
-		self.info = unpack(data['info'])
-		self._name = unpack(data['_name'])
+		self._current = unpack_member(data['_current'])
+		self._desc = unpack_member(data['_desc'])
+		self._options = unpack_member(data['_options'])
+		self.status = unpack_member(data['status'])
+		self.info = unpack_member(data['info'])
+		self._name = unpack_member(data['_name'])
 	
 	def verify(self, name, action): # action should be a tuple
 		

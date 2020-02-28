@@ -1,5 +1,5 @@
 
-from humpack import tset, tdict, tlist
+from humpack import tset, tdict, tlist, pack_member, unpack_member
 from .object import GameObject
 from .player import GamePlayer
 from ..writing import RichWriter, LogWriter, write, writef
@@ -34,32 +34,30 @@ class GameLogger(Packable, Transactionable, Pullable):
 		self.update = tdict({player:tlist() for player in self.players})
 	
 	def __pack__(self):
-		pack = self.__class__._pack_obj
 		data = {
-			'debug': pack(self.debug),
-			'indent_level': pack(self.indent_level),
-			'end': pack(self.end),
-			'players': pack(self.players),
-			'targets': pack(self.targets),
-			'log': pack(self.log),
-			'update': pack(self.update),
-			'_shadow': pack(self._shadow),
+			'debug': pack_member(self.debug),
+			'indent_level': pack_member(self.indent_level),
+			'end': pack_member(self.end),
+			'players': pack_member(self.players),
+			'targets': pack_member(self.targets),
+			'log': pack_member(self.log),
+			'update': pack_member(self.update),
+			'_shadow': pack_member(self._shadow),
 		}
 		return data
 	
 	def __unpack__(self, data):
-		unpack = self.__class__._unpack_obj
 		
-		self.debug = unpack(data['debug'])
-		self.indent_level = unpack(data['indent_level'])
-		self.end = unpack(data['end'])
+		self.debug = unpack_member(data['debug'])
+		self.indent_level = unpack_member(data['indent_level'])
+		self.end = unpack_member(data['end'])
 		
-		self.players = unpack(data['players'])
-		self.targets = unpack(data['targets'])
+		self.players = unpack_member(data['players'])
+		self.targets = unpack_member(data['targets'])
 		
-		self.update = unpack(data['update'])
-		self.log = unpack(data['log'])
-		self._shadow = unpack(data['_shadow'])
+		self.update = unpack_member(data['update'])
+		self.log = unpack_member(data['log'])
+		self._shadow = unpack_member(data['_shadow'])
 		
 	def begin(self):
 		if self.in_transaction():

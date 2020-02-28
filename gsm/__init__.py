@@ -6,7 +6,7 @@ from .signals import PhaseComplete, SwitchPhase, GameOver, SubPhase
 from .writing import write, writef, RichText
 from .util import RandomGenerator, assert_
 from .io import Host, Interface, Test_Interface, register_game, register_interface, get_interface, send_http
-from .io import register_game, register_ai, register_interface, register_simple_object
+from .io import register_game, register_ai, register_interface, register_object
 from . import viz
 from . import common
 from . import ai

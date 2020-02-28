@@ -1,6 +1,6 @@
 
 from ..mixins import Transactionable, Packable, Pullable
-from humpack import tset, tdict, tlist
+from humpack import tset, tdict, tlist, pack_member, unpack_member
 from ..errors import MissingTypeError, MissingValueError, MissingObjectError, ObjectIDCollisionError
 from .object import GameObject
 
@@ -132,33 +132,29 @@ class GameTable(Transactionable, Packable, Pullable):
 	
 	def __pack__(self):
 		
-		pack = self.__class__._pack_obj
-		
 		data = {}
 		data['ID_counter'] = self.ID_counter
 		data['ID_counter_shadow'] = self.ID_counter_shadow
-		data['table'] = {pack(k):pack(v)
+		data['table'] = {pack_member(k):pack_member(v)
 		                 for k, v in self.table.items()}
-		data['players'] = pack(self.players)
-		data['obj_types'] = pack(self.obj_types)
+		data['players'] = pack_member(self.players)
+		data['obj_types'] = pack_member(self.obj_types)
 		
 		return data
 	
 	def __unpack__(self, data):
 		
-		unpack = self.__class__._unpack_obj
-		
 		self.__init__()
 		
-		self.obj_types = unpack(data['obj_types'])
+		self.obj_types = unpack_member(data['obj_types'])
 		
 		for k, x in data['table'].items():
-			self.table[unpack(k)] = unpack(x)
+			self.table[unpack_member(k)] = unpack_member(x)
 			
 		self.ID_counter = data['ID_counter']
 		self.ID_counter_shadow = data['ID_counter_shadow']
 		
-		self.players = unpack(data['players'])
+		self.players = unpack_member(data['players'])
 	
 	def __getitem__(self, item):
 		return self.table[item]
