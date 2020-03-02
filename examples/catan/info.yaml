@@ -5,6 +5,10 @@ short_name: catan
 
 num_players: [3, 4]
 player_names: [White, Red, Blue, Orange]
-
+player_info:
+  - color: White
+  - color: Red
+  - color: Blue
+  - color: Orange
 
 

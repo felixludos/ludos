@@ -22,13 +22,12 @@ class GameTable(Transactionable, Packable, Pullable):
 		self.obj_types = tdict()
 		self.ID_counter_shadow = None
 		
-		self.reset()
-	
-
-	def reset(self, players=None):
 		self.table = tdict()
 		self.ID_counter = 0
-		self.players = players
+		self.players = None
+	
+	def reset(self, ctrl):
+		self.players = tlist(ctrl.manager)
 	
 	def in_transaction(self):
 		return self.ID_counter_shadow is not None
@@ -67,6 +66,12 @@ class GameTable(Transactionable, Packable, Pullable):
 			
 		self.ID_counter += 1
 		return ID # always returns a str -> all IDs are str
+	
+	def populate(self, objects):
+		for objname, info in objects.items():
+			self.register_obj_type(name=objname, obj_cls=info['cls'],
+			                       open=[] if info['open'] is None else info['open'],
+			                       req=[] if info['req'] is None else info['req'],)
 	
 	def register_obj_type(self, obj_cls=None, name=None, open=[], req=[]):
 		

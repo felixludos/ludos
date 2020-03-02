@@ -123,7 +123,7 @@ class Ipython_Runner(object):
 			if isinstance(msg, dict):
 				self.print_error(msg['error'])
 			else:
-				print(msg)
+				print(type(msg), msg)
 			assert False
 		return msg
 		

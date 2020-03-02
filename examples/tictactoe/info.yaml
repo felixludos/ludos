@@ -5,6 +5,8 @@ short_name: ttt
 
 num_players: [2]
 player_names: [Player1, Player2]
-
+player_info:
+  - symbol: X
+  - symbol: O
 
 

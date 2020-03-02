@@ -9,13 +9,14 @@ import yaml
 from humpack import tset, tdict, tlist, containerify
 from humpack import pack_member, unpack_member, json_pack, json_unpack
 from .logging import GameLogger
-from .state import GameState
+from .state import GameState, GameData
 from .table import GameTable
 from .player import GameManager
 from .phase import GameStack
 from ..mixins import Named, Transactionable, Packable
 from ..signals import _PhaseControl, PhaseComplete, SwitchPhase, GameOver
-from ..errors import InvalidPlayerError, NoActiveGameError, InvalidKeyError, ClosedRegistryError, RegistryCollisionError, MissingValueError, MissingObjectError
+from ..errors import InvalidPlayerError, NoActiveGameError, InvalidKeyError, ClosedRegistryError, RegistryCollisionError
+from ..errors import ResolutionError, MissingValueError, MissingObjectError, NoPlayersFoundError
 from ..util import RandomGenerator, jsonify, get_printer
 from ..io.registry import Game
 
@@ -25,7 +26,7 @@ prt = get_printer(__name__)
 
 class GameController(Named, Transactionable, Packable):
 	
-	def __init_subclass__(cls, register=False, name=None, info_path=None, **kwargs):
+	def __init_subclass__(cls, register=True, name=None, info_path=None, **kwargs):
 		super().__init_subclass__(**kwargs)
 		
 		cls.__home__ = os.path.dirname(inspect.getfile(cls))
@@ -37,7 +38,7 @@ class GameController(Named, Transactionable, Packable):
 			prt.info(f'Config dir found for {cls.__name__} at {config_dir}')
 			
 			for fname in os.listdir(config_dir):
-				name = '.'.join(fname.split('.')[:-1])
+				name = fname.split('.')[0]
 				path = os.path.join(config_dir, fname)
 				cls.register_config(name, path)
 			
@@ -60,11 +61,50 @@ class GameController(Named, Transactionable, Packable):
 		
 		return config
 	
+	@classmethod
+	def _view_info(cls):
+		return cls.info.copy()
+	
+	@classmethod
+	def choose_table(cls):
+		return cls._choose_obj('objects', '_req_table', GameTable)
+	@classmethod
+	def choose_stack(cls):
+		return cls._choose_obj('phases', '_req_stack', GameStack)
+	@classmethod
+	def choose_manager(cls):
+		return cls._choose_obj('players', '_req_manager', GameManager)
+	
+	@classmethod
+	def _choose_obj(cls, key, attr, default):
+		
+		if key not in cls.info:
+			return default
+		
+		reqs = []
+		for name, obj in cls.info[key].items():
+			obj = obj['cls']
+			req = getattr(obj, attr, None)
+			if req is not None:
+				reqs.append(req)
+		
+		if len(reqs) == 0:
+			return default
+		
+		for req in reqs:
+			for parent in reqs:
+				if req not in parent.__mro__:
+					break
+			else:
+				return req
+		
+		raise ResolutionError(reqs)
+	
 	def __new__(cls, *args, **kwargs):
 		new = super().__new__(cls)
 		
 		# meta values (neither for dev nor user) (not including soft registries - they dont change)
-		new._tmembers = {'state', 'log', 'table', 'stack', 'players', 'end_info', '_advice', 'active_players',
+		new._tmembers = {'state', 'log', 'table', 'stack', 'manager', 'end_info', '_advice', 'active_players',
 		                 'keys', 'RNG', '_key_rng', '_images', '_advisor_images', 'config', 'player_names'}
 		return new
 	
@@ -77,19 +117,20 @@ class GameController(Named, Transactionable, Packable):
 		super().__init__(name)
 
 		if manager is None:
-			manager = GameManager()
+			manager = self.choose_manager()()
 		if stack is None:
-			stack = GameStack()
+			stack = self.choose_stack()()
 		if table is None:
-			table = GameTable()
+			table = self.choose_table()()
 		if log is None:
 			log = GameLogger()
 		
 		# Registries and managers
-		self.players = manager
 		self.stack = stack
-		self.stack.register(self.info['phases'])
+		self.stack.populate(self.info['phases'])
 		self.table = table
+		self.table.populate(self.info['objects'])
+		self.manager = manager # manager gets populated in reset()
 		
 		self.config_files = tdict()
 		
@@ -109,7 +150,7 @@ class GameController(Named, Transactionable, Packable):
 		self.state = None
 		self.active_players = None
 		self.settings = containerify(settings)
-		self.config = None
+		self.config = self.load_configs()
 		self.end_info = None
 		
 		# Game components
@@ -190,17 +231,6 @@ class GameController(Named, Transactionable, Packable):
 		self.DEBUG = unpack_member(data['debug'])
 		self.active_players = unpack_member(data['active_players'])
 	
-	
-	
-	######################
-	# Registration
-	######################
-	
-	def register_player(self, name, **props):
-		if self._in_progress:
-			raise ClosedRegistryError
-		self.players.register(name, **props)
-	
 	######################
 	# Do NOT Override
 	######################
@@ -218,14 +248,15 @@ class GameController(Named, Transactionable, Packable):
 		self.end_info = None
 		self.active_players = tdict()
 		
-		# add players, prep phase stack
-		self._add_players(self.config, self.settings)
-		
 		# init components
 		self.state = GameState()
-		self.log.reset(tset(self.players))  # TODO: maybe this shouldnt just be the names
-		self.table.reset(tset(self.players))
-		self.stack.reset()
+		self.manager.reset(self)
+		self._add_players(self.config, self.settings)
+		self.log.reset(self)  # TODO: maybe this shouldnt just be the names
+		self.table.reset(self)
+		self.stack.reset(self)
+		
+		
 		
 		# init game
 		self._init_game(self.config, self.settings)  # builds maps/objects
@@ -237,8 +268,8 @@ class GameController(Named, Transactionable, Packable):
 	def _step(self, player, group=None, action=None, key=None):  # returns python objs (but json readable)
 		
 		try:
-			if player in self.players:
-				player = self.players[player]
+			if player in self.manager:
+				player = self.manager[player]
 			else:
 				raise InvalidPlayerError(player)
 			
@@ -260,15 +291,16 @@ class GameController(Named, Transactionable, Packable):
 			# start transaction
 			self.begin()
 			
-			# prepare executing acitons
+			# prepare executing actions - collect game data
+			data = GameData(self._get_data())
 			
 			# execute action
 			while len(self.stack):
 				phase = self.stack.pop()
 				try:
-					phase.execute(self, player=player, action=action)
+					phase.execute(data, player=player, action=action)
 					# get next action
-					out = phase.encode(self)
+					out = phase.encode(data)
 				except PhaseComplete as intr:
 					if not intr.transfer_action():
 						action = None
@@ -323,13 +355,6 @@ class GameController(Named, Transactionable, Packable):
 	# Must be Overridden
 	######################
 	
-	def _add_players(self, config, settings):
-		raise NotImplementedError
-	
-	# must be implemented to define initial phase sequence
-	def _set_phase_stack(self, config, settings):
-		raise NotImplementedError
-	
 	# This function is implemented by dev to initialize the gamestate, and define player order
 	def _init_game(self, config, settings):
 		raise NotImplementedError
@@ -341,6 +366,35 @@ class GameController(Named, Transactionable, Packable):
 	# Optionally Overridden
 	######################
 	
+	def _add_players(self, config, settings,
+	                 player_names=None, player_info=None):
+		
+		game_info = self._view_info()
+		
+		if player_names is None:
+			if 'player_names' in settings:
+				player_names = settings['player_names']
+			elif 'player_names' in game_info:
+				player_names = game_info['player_names']
+			else:
+				raise NoPlayersFoundError()
+		
+		if player_info is None:
+			if 'player_info' in game_info:
+				player_info = game_info['player_info']
+			else:
+				player_info = [{} for _ in player_names]
+			
+			assert len(player_info) == len(player_names), 'number of player_info doesnt match player_names: ' \
+			                                              f'{len(player_names)} vs {len(player_info)}'
+			
+			if 'player_info' in settings: # TODO: include option to shuffle player order
+				for info, new in zip(player_info, settings['player_info']):
+					info.update(new)
+		
+		for name, info in zip(player_names, player_info):
+			self.manager.create(name, **info)
+		
 	def cheat(self, code=None):
 		pass
 	
@@ -355,6 +409,9 @@ class GameController(Named, Transactionable, Packable):
 		if player is not None:
 			self.keys[player] = key
 		return key
+	
+	def _extra_game_data(self):
+		return {}
 	
 	def _compose_msg(self, player=None, advisor=False):
 		
@@ -377,9 +434,9 @@ class GameController(Named, Transactionable, Packable):
 				else:
 					msg = {}
 				
-				msg['players'] = self.players.pull(player)
+				msg['players'] = self.manager.pull(player)
 				msg['table'] = self.table.pull(player)
-				msg['phase'] = self.stack[0].name
+				msg['phase'] = self.stack.peek().get_name()
 				
 			msg['log'] = self.log.pull(player)
 			# log = self.log.pull(player)
@@ -402,15 +459,13 @@ class GameController(Named, Transactionable, Packable):
 		
 		return msg
 	
-	######################
-	# Dev functions (return obj)
-	######################
-	
-	def create_phase(self, name, **kwargs):
-		return self.stack.create(name, **kwargs)
-	
-	def create_object(self, obj_type, **spec): # this should delegate right away, all logic in GameTable
-		return self.table.create(obj_type=obj_type, **spec)
+	def _get_data(self):
+		return tdict(
+			state=self.state,
+			players=self.manager,
+			
+			create_object=self.table.create,
+		)
 	
 	######################
 	# User functions (return json str)
@@ -449,10 +504,10 @@ class GameController(Named, Transactionable, Packable):
 		return json.dumps(list(self.active_players.keys()))
 	
 	def get_player(self, player):
-		return json.dumps(jsonify(self.players[player]))
+		return json.dumps(jsonify(self.manager[player]))
 	
 	def get_players(self):
-		return json.dumps(list(self.players.names()))
+		return json.dumps(list(self.manager.names()))
 	
 	def get_table(self, player=None):
 		return json.dumps(self.table.pull(player))

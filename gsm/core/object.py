@@ -13,16 +13,23 @@ prt = get_printer(__name__)
 
 class GameObject(Typed, Writable, Jsonable, Pullable, tdict):
 	
-	def __init_subclass__(cls, game=None, open=None, req=None, **kwargs):
+	def __init_subclass__(cls, game=None, name=None, open=None, req=None,
+	                      req_table=None, obj_type=None, **kwargs):
 		
-		if 'obj_type' not in kwargs:
-			prt.warning('No obj_type provided for {}'.format(cls.__name__))
-			kwargs['obj_type'] = cls.__name__
+		if obj_type is None:
+			if name is not None: # acts as an alias to obj_type
+				obj_type = name
+			else:
+				prt.warning('No obj_type provided for {}'.format(cls.__name__))
+				obj_type = cls.__name__
 		
-		super().__init_subclass__(**kwargs)
+		super().__init_subclass__(obj_type=obj_type, **kwargs)
+		
+		if req_table is not None:
+			cls._req_table = req_table
 		
 		if game is not None:
-			register_object(game=game, open=open, req=req)(cls)
+			register_object(game=game, cls=cls, name=cls.get_type(), open=open, req=req)
 	
 	def __new__(cls, *args, **kwargs):
 		self = super().__new__(cls)

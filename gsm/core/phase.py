@@ -58,15 +58,24 @@ class GameStack(Transactionable, Packable):
 		self._in_transaction = unpack_member(data['_in_transaction'])
 		self._start_phase = unpack_member(data['_start'])
 	
-	# registry
 	
-	def register(self, phases):
+	def populate(self, phases):
+		
+		start_phase = None
+		
 		for name, info in phases.items():
 			self._phases[name] = tdict(info)
+			if 'start' in info and info['start']:
+				start_phase = name
+				
+		if self._start_phase is None:
+			assert start_phase is not None, 'no start phase found in: {}'.format(phases)
+		
+		self._start_phase = start_phase
 		
 	def create(self, name, **kwargs):
 		
-		cls = self._phases[name].phase_cls
+		cls = self._phases[name].cls
 		if 'props' in self._phases[name]:
 			props = self._phases[name].props
 			props.update(kwargs)
@@ -85,7 +94,7 @@ class GameStack(Transactionable, Packable):
 			phase = self.create(phase, **kwargs)
 		return phase
 	
-	def reset(self):
+	def reset(self, ctrl):
 		self._stack.clear()
 		self.push(self._start_phase)
 		
@@ -108,7 +117,7 @@ class GameStack(Transactionable, Packable):
 
 class GamePhase(Named, tdict):
 	
-	def __init_subclass__(cls, name=None, game=None, start=False, **kwargs):
+	def __init_subclass__(cls, name=None, game=None, start=False, req_stack=None, **kwargs):
 		super().__init_subclass__(**kwargs)
 		
 		if name is None:
@@ -116,8 +125,15 @@ class GamePhase(Named, tdict):
 		
 		cls.name = name
 		
+		if req_stack is not None:
+			cls._req_stack = req_stack
+		
 		if game is not None:
-			register_phase(game, start=start)(cls)
+			register_phase(game, cls, name=name, start=start)
+	
+	@classmethod
+	def get_name(cls): # TODO probably should use 'Typed' mixin here
+		return cls.name
 	
 	def __init__(self, name=None, **info):
 		if name is None:

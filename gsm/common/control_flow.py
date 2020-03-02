@@ -1,4 +1,5 @@
 
+from humpack import pack_member, unpack_member
 from .. import tdict, tlist, tset
 from ..core import GameStack, GamePhase
 
@@ -12,23 +13,21 @@ class TurnPhaseStack(GameStack): # tracks turn counter, inc when creating a Turn
 		self.turn_phases = tset()
 		
 	def __pack__(self):
-		pack = self.__class__._pack_obj
 		data = super().__pack__()
 		
-		data['players'] = pack(self.players)
-		data['counter'] = pack(self.counter)
-		data['turn_phases'] = pack(self.turn_phases)
+		data['players'] = pack_member(self.players)
+		data['counter'] = pack_member(self.counter)
+		data['turn_phases'] = pack_member(self.turn_phases)
 		
 		return data
 		
 	def __unpack__(self, data):
-		unpack = self.__class__._unpack_obj
 		
 		TurnPhaseStack.__init__(self)
 		
-		self.players = unpack(data['players'])
-		self.counter = unpack(data['counter'])
-		self.turn_phases = unpack(data['turn_phases'])
+		self.players = unpack_member(data['players'])
+		self.counter = unpack_member(data['counter'])
+		self.turn_phases = unpack_member(data['turn_phases'])
 		
 		super().__unpack__(data)
 		
@@ -39,9 +38,10 @@ class TurnPhaseStack(GameStack): # tracks turn counter, inc when creating a Turn
 			self.turn_phases.add(name)
 		super().register(cls, name=name, **props)
 		
-	def reset(self, phases=None):
+	def reset(self, ctrl):
 		self.counter = 0
-		super().reset(phases=phases)
+		self.set_player_order(ctrl.manager)
+		super().reset(ctrl)
 		
 	def set_player_order(self, players):
 		self.players = players
@@ -60,7 +60,7 @@ class TurnPhaseStack(GameStack): # tracks turn counter, inc when creating a Turn
 		return super().create(name, **kwargs)
 
 
-class TurnPhase(GamePhase):
+class TurnPhase(GamePhase, req_stack=TurnPhaseStack):
 	def __init__(self, player=None, **info):
 		super().__init__(**info)
 		self.player = player

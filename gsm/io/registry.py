@@ -20,6 +20,7 @@ def register_game(cls, name=None, path=None, info=None):
 		info['short_name'] = name
 	
 	info['cls'] = cls
+	cls.info = info
 	
 	name = info['short_name']
 	if name in _game_registry:
@@ -142,6 +143,44 @@ def register_phase_dec(game, start=False):
 		
 	return _reg_phase
 
+
+def register_player_type(game, cls, name=None, open=None, default=False):
+	if game not in _game_registry:
+		prt.warning('Registering player type {} for a game before registering the game {}'.format(name, game))
+		_game_registry[game] = {}
+	
+	info = _game_registry[game]
+
+	if name is None:
+		prt.warning(f'No name provided for player type: {cls}')
+		name = cls.get_type()
+		
+	if 'player_types' not in info:
+		info['player_types'] = {}
+		
+	players = info['player_types']
+	
+	if name not in players:
+		players[name] = {}
+	else:
+		prt.warning(f'A player type {name} has already been registered, overwriting now.')
+		
+	player = players[name]
+	
+	player['cls'] = cls
+	player['name'] = name
+	if open is not None:
+		player['open'] = open
+	player['default'] = default
+
+def register_player_type_dec(game, name=None, open=None):
+	def _reg_ply(cls=None):
+		nonlocal game, name, open
+		register_object(game, name=name, cls=cls, open=open)
+		return cls
+	
+	return _reg_ply
+	
 
 _interface_registry = {}
 def register_interface(name, cls):

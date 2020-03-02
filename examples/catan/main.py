@@ -6,45 +6,19 @@ from gsm.errors import InvalidPlayerError
 from gsm.common.world import grid
 from gsm.common import TurnPhaseStack
 
+from .phases import MainPhase, RobberPhase, SetupPhase, TradePhase
+from . import objects
+from . import players
+
 from .ops import build_catan_map, gain_res
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 
-class Catan(gsm.GameController, register=True):
+class Catan(gsm.GameController):
 	
-	def __init__(self, player_names, debug=False, shuffle_order=False):
-		
-		# create player manager
-		manager = gsm.GameManager(open={'num_res', 'color', 'devcards', 'buildings',
-		                                'reserve', 'ports', 'past_devcards'},
-		                          )
-		
-		stack = TurnPhaseStack()
-		
-		log = gsm.GameLogger(indent_level=0)
-		
-		super().__init__(debug=debug,
-		                 manager=manager,
-		                 stack=stack,
-		                 log=log,
-		                 # settings
-		                 shuffle_order=shuffle_order, player_names=player_names)
-		
-	# def _pre_setup(self, config, info=None): # TODO: deprecated!
-	# 	# register players
-	# 	assert len(self.player_names) in {3,4}, 'Not the right number of players: {}'.format(self.player_names)
-	# 	for name in self.player_names:
-	# 		if name not in info.player_names:
-	# 			raise InvalidPlayerError(name)
-	# 		self.register_player(name, num_res=0, color=name)
-
-	# def _set_phase_stack(self, config):
-	# 	self.stack.set_player_order(tlist(self.players))
-	# 	return tlist([self.create_phase('setup', player_order=tlist(self.players))])
-
-	def _init_game(self, config):
+	def _init_game(self, config, settings):
 		
 		res_names = config.rules.res_names
 		
@@ -130,6 +104,8 @@ class Catan(gsm.GameController, register=True):
 			return out
 		out.winners = winners
 		return out
+	
+	
 	
 	def cheat(self, code=None):
 		

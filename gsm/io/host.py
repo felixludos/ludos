@@ -3,6 +3,7 @@ import time
 import pickle
 import yaml
 import json
+import humpack as hp
 from collections import OrderedDict
 from ..mixins import Named
 from ..errors import WrappedException, InvalidValueError, RegistryCollisionError, NoActiveGameError, UnknownGameError, UnknownInterfaceError, UnknownPlayerError, UnknownUserError
@@ -52,25 +53,30 @@ class Host(object):
 		return list(_game_registry.keys())
 		
 	def get_available_players(self):
-		all_players = list(self.get_game_info()['player_names'])
+		all_players = list(self._get_game_info()['player_names'])
 		for p in self.players:
 			if p in all_players:
 				all_players.remove(p)
 		return all_players
 		
-	def get_game_info(self, name=None):
+	def _get_game_info(self, name=None):
 		if name is None:
 			name = self.game
 		if name not in _game_registry:
 			raise UnknownGameError
-		return _game_registry[name][1]
+		return _game_registry[name]
+		# return list(_game_registry[name].keys())
+	
+	def get_game_info(self, name=None):
+		return hp.pack(self._get_game_info(name))
 	
 	def set_game(self, name):
 		
 		if name not in _game_registry:
 			raise UnknownGameError
 		
-		cls, info = _game_registry[name]
+		info = _game_registry[name]
+		cls = info['cls']
 		
 		self.game = name
 		self.info = info

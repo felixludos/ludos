@@ -36,6 +36,10 @@ class InvalidPlayerError(Exception):
 
 # Controller registry errors
 
+class ResolutionError(Exception):
+	def __init__(self, reqs):
+		super().__init__('Could not resolve a valid type from the requirements: {}'.format(', '.join(reqs)))
+
 class ClosedRegistryError(Exception):
 	'''
 	The registries close after the game begins, so no new players, phases types, game object types,
@@ -69,6 +73,10 @@ class NoActiveGameError(Exception):
 	Error thrown when GameController.step() is called before calling GameController.reset() (to start a game)
 	'''
 	pass
+
+class NoPlayersFoundError(Exception):
+	def __init__(self):
+		super().__init__('No names found to add (try including player_names in the game info or settings)')
 
 # host errors
 

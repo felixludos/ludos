@@ -28,8 +28,8 @@ class GameLogger(Packable, Transactionable, Pullable):
 		self.players = None
 		self.targets = None
 	
-	def reset(self, players):
-		self.players = tlist(players)
+	def reset(self, ctrl):
+		self.players = tlist(ctrl.manager.names()) # TODO maybe change to full player objects
 		self.clear()
 		self.update = tdict({player:tlist() for player in self.players})
 	
