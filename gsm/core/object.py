@@ -29,7 +29,7 @@ class GameObject(Typed, Writable, Jsonable, Pullable, tdict):
 			cls._req_table = req_table
 		
 		if game is not None:
-			register_object(game=game, cls=cls, name=cls.get_type(), open=open, req=req)
+			register_object(game=game, cls=cls, name=cls.obj_type, open=open, req=req)
 	
 	def __new__(cls, *args, **kwargs):
 		self = super().__new__(cls)

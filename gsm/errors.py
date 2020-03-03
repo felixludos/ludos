@@ -191,6 +191,13 @@ class FormatException(Exception):
 	'''Unknown formatting information'''
 	pass
 
+# game data
+
+class OverwritingDataError(Exception):
+	'''The game data shouldn't be overwritten directly.'''
+	pass
+
+
 # wrapper for multiprocessing
 
 

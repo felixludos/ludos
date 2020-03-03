@@ -51,26 +51,22 @@ class StagePhase(GamePhase):
 		
 	@classmethod
 	def get_stage(cls, name):
-		if name not in cls.stages:
+		if name not in cls._stage_registry:
 			raise NotFoundException('stage', name, cls.name)
-		return cls.stages[name]
+		return cls._stage_registry[name]
 
 	@classmethod
 	def get_decision(cls, name):
-		if name not in cls.decisions:
+		if name not in cls._decision_registry:
 			raise NotFoundException('decision', name, cls.name)
-		return cls.deicisions[name]
+		return cls._decision_registry[name]
 	
 	@classmethod
 	def get_entry_stage(cls):
-		if cls.entry_stage is None:
+		if cls._entry_stage_name is None:
 			raise NoEntryStageException(cls)
-		return cls.entry_stage
+		return cls._entry_stage_name
 	
-	@classmethod
-	def update_current_stage(cls, stage_name, decision_name):
-		cls._entry_stage_name = stage_name
-
 	@classmethod
 	def _get_static_stage_format(cls):
 		return {}
@@ -85,8 +81,8 @@ class StagePhase(GamePhase):
 		self.current_stage = self.get_entry_stage()
 		self.decision_info = None
 		
-	def set_current_stage(self, name):
-		self.current_stage = self.get_stage(name)
+	def update_current_stage(self, stage_name, decision_name):
+		self.current_stage = stage_name
 		
 	def execute(self, C, player=None, action=None):
 		stage_name = self.current_stage
@@ -97,7 +93,7 @@ class StagePhase(GamePhase):
 		while self.decision_info is None:
 			try:
 				stage = self.get_stage(stage_name)
-				stage(C, player=player, action=action, **stage_info)
+				stage(self, C, player=player, action=action, **stage_info)
 			except Switch as s:
 				stage_name = s.name
 				stage_info = s.info
@@ -117,7 +113,7 @@ class StagePhase(GamePhase):
 		name, info = self.decision_info
 		
 		decision = self.get_decision(name)
-		out = decision(C, **info)
+		out = decision(self, C, **info)
 		
 		self.decision_info = None
 		return out

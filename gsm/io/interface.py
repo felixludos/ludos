@@ -5,7 +5,7 @@ from .registry import register_interface
 
 class Interface(Typed, object):
 	def __init__(self, *users, host_addr=None):
-		super().__init__(self.__class__.__name__)
+		super().__init__()
 		self.users = {user:None for user in users}
 		self.host = host_addr
 	

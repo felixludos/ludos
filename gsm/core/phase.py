@@ -96,7 +96,7 @@ class GameStack(Transactionable, Packable):
 	
 	def reset(self, ctrl):
 		self._stack.clear()
-		self.push(self._start_phase)
+		# self.push(self._start_phase)
 		
 	def push(self, *items, **kwargs):
 		for item in items:
@@ -115,7 +115,7 @@ class GameStack(Transactionable, Packable):
 		return self._stack[item]
 
 
-class GamePhase(Named, tdict):
+class GamePhase(tdict):
 	
 	def __init_subclass__(cls, name=None, game=None, start=False, req_stack=None, **kwargs):
 		super().__init_subclass__(**kwargs)
@@ -134,11 +134,6 @@ class GamePhase(Named, tdict):
 	@classmethod
 	def get_name(cls): # TODO probably should use 'Typed' mixin here
 		return cls.name
-	
-	def __init__(self, name=None, **info):
-		if name is None:
-			name = self.__class__.__name__
-		super().__init__(name=name, **info)
 	
 	def execute(self, C, player=None, action=None): # must be implemented
 		raise NotImplementedError

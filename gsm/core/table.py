@@ -69,7 +69,7 @@ class GameTable(Transactionable, Packable, Pullable):
 	
 	def populate(self, objects):
 		for objname, info in objects.items():
-			self.register_obj_type(name=objname, obj_cls=info['cls'],
+			self.register_obj_type(name=objname, obj_cls=info['cls'] if 'cls' in info else GameObject,
 			                       open=[] if info['open'] is None else info['open'],
 			                       req=[] if info['req'] is None else info['req'],)
 	

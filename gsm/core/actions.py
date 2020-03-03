@@ -232,11 +232,14 @@ class GameActions(Packable, Pullable): # created and returned in phases
 
 # Advanced action queries
 
-class ActionTuple(Typed, tuple):
+class ActionTuple(tuple):
 	def __new__(cls, name, tpl):
 		return super().__new__(cls, tpl)
 	def __init__(self, group, tpl):
-		super().__init__(group)
+		self.obj_type = group
+		
+	def get_type(self):
+		return self.obj_type
 
 class ActionElement(Typed, Transactionable, Packable, Hashable):
 	
@@ -246,10 +249,10 @@ class ActionElement(Typed, Transactionable, Packable, Hashable):
 	def evaluate(self, q): # either returns element or raises ActionMismatch
 		raise NotImplementedError
 
-class FixedAction(ActionElement):
+class FixedAction(ActionElement, obj_type='fixed'):
 	def __init__(self, val): # works for primitives
 		# super().__init__(type(val).__name__)
-		super().__init__('fixed')
+		super().__init__()
 		self.val = val
 
 	def __pack__(self):
@@ -273,9 +276,8 @@ class FixedAction(ActionElement):
 	def __str__(self):
 		return 'FixedAction({})'.format(str(self.val))
 		
-class ObjectAction(ActionElement):
+class ObjectAction(ActionElement, obj_type='obj'):
 	def __init__(self, obj):
-		super().__init__('obj')
 		self.obj = obj
 		
 	def __pack__(self):
@@ -292,9 +294,9 @@ class ObjectAction(ActionElement):
 			return self.obj
 		raise ActionMismatch
 
-class PlayerAction(ActionElement):
+class PlayerAction(ActionElement, obj_type='player'):
 	def __init__(self, player):
-		super().__init__('player')
+		super().__init__()
 		self.player = player
 		
 	def __pack__(self):
@@ -311,10 +313,10 @@ class PlayerAction(ActionElement):
 			return self.player
 		raise ActionMismatch
 
-class TextAction(ActionElement): # allows player to enter arbitrary text as action
+class TextAction(ActionElement, obj_type='text'): # allows player to enter arbitrary text as action
 	
 	def __init__(self):
-		super().__init__('text')
+		super().__init__()
 		
 	def __pack__(self):
 		pack = self.__class__._pack_obj
@@ -331,10 +333,10 @@ class TextAction(ActionElement): # allows player to enter arbitrary text as acti
 		raise NotImplementedError # TODO
 	
 
-class NumberAction(ActionElement): # allows player to choose from a number (float/int) range
+class NumberAction(ActionElement, obj_type='number'): # allows player to choose from a number (float/int) range
 	
 	def __init__(self):
-		super().__init__('number')
+		super().__init__()
 	
 	def __pack__(self):
 		pack = self.__class__._pack_obj

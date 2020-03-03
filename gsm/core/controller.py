@@ -73,20 +73,23 @@ class GameController(Named, Transactionable, Packable):
 		return cls._choose_obj('phases', '_req_stack', GameStack)
 	@classmethod
 	def choose_manager(cls):
-		return cls._choose_obj('players', '_req_manager', GameManager)
+		return cls._choose_obj('player_types', '_req_manager', GameManager)
 	
 	@classmethod
 	def _choose_obj(cls, key, attr, default):
 		
-		if key not in cls.info:
+		game_info = cls.info
+		
+		if key not in game_info:
 			return default
 		
 		reqs = []
-		for name, obj in cls.info[key].items():
-			obj = obj['cls']
-			req = getattr(obj, attr, None)
-			if req is not None:
-				reqs.append(req)
+		for name, obj in game_info[key].items():
+			if 'cls' in obj:
+				obj = obj['cls']
+				req = getattr(obj, attr, None)
+				if req is not None:
+					reqs.append(req)
 		
 		if len(reqs) == 0:
 			return default
@@ -105,10 +108,10 @@ class GameController(Named, Transactionable, Packable):
 		
 		# meta values (neither for dev nor user) (not including soft registries - they dont change)
 		new._tmembers = {'state', 'log', 'table', 'stack', 'manager', 'end_info', '_advice', 'active_players',
-		                 'keys', 'RNG', '_key_rng', '_images', '_advisor_images', 'config', 'player_names'}
+		                 'keys', 'RNG', '_key_rng', '_images', '_advisor_images', 'config'}
 		return new
 	
-	def __init__(self, name=None, debug=False, player_names=[],
+	def __init__(self, name=None, debug=False,
 	             manager=None, stack=None, table=None, log=None,
 	             **settings):
 		if name is None:
@@ -125,11 +128,13 @@ class GameController(Named, Transactionable, Packable):
 		if log is None:
 			log = GameLogger()
 		
+		game_info = self._view_info()
+		
 		# Registries and managers
 		self.stack = stack
-		self.stack.populate(self.info['phases'])
+		self.stack.populate(game_info['phases'])
 		self.table = table
-		self.table.populate(self.info['objects'])
+		self.table.populate(game_info['objects'])
 		self.manager = manager # manager gets populated in reset()
 		
 		self.config_files = tdict()
@@ -138,7 +143,6 @@ class GameController(Named, Transactionable, Packable):
 		self._in_progress = False # flag for registration to end
 		self._in_transaction = False # flag for transactionable
 		self.DEBUG = debug # flag for dev to use as needed
-		self.player_names = tlist(player_names)
 		
 		self.keys = tdict() # a one time permission to call step() (with a valid action)
 		self.RNG = RandomGenerator()
@@ -256,11 +260,15 @@ class GameController(Named, Transactionable, Packable):
 		self.table.reset(self)
 		self.stack.reset(self)
 		
-		
-		
 		# init game
-		self._init_game(self.config, self.settings)  # builds maps/objects
+		data = self._get_data()
+		data.lock()
+		
+		self._init_game(data, self.config, self.settings)  # builds maps/objects
 		self._in_progress = True
+		
+		# create starting phase
+		self._create_start_phase(data, self.config, self.settings)
 		
 		# execute first player
 		return self._step(player)
@@ -292,7 +300,8 @@ class GameController(Named, Transactionable, Packable):
 			self.begin()
 			
 			# prepare executing actions - collect game data
-			data = GameData(self._get_data())
+			data = self._get_data()
+			data.lock()
 			
 			# execute action
 			while len(self.stack):
@@ -323,7 +332,9 @@ class GameController(Named, Transactionable, Packable):
 			
 			if self.end_info is None:
 				self._clear_images()
-				self.end_info = self._end_game()
+				data = self._get_data()
+				data.lock()
+				self.end_info = self._end_game(data)
 				self._in_progress = False
 			
 			msg = self._compose_msg(player)
@@ -356,18 +367,21 @@ class GameController(Named, Transactionable, Packable):
 	######################
 	
 	# This function is implemented by dev to initialize the gamestate, and define player order
-	def _init_game(self, config, settings):
+	def _init_game(self, C, config, settings):
 		raise NotImplementedError
 	
-	def _end_game(self): # return info to be sent at the end of the game
+	def _end_game(self, C): # return info to be sent at the end of the game
 		raise NotImplementedError
 	
 	######################
 	# Optionally Overridden
 	######################
 	
+	def _create_start_phase(self, C, config, settings, **kwargs):
+		self.stack.push(self.stack._start_phase, **kwargs)
+	
 	def _add_players(self, config, settings,
-	                 player_names=None, player_info=None):
+	                 player_names=None, player_info=None, shuffle_order=None):
 		
 		game_info = self._view_info()
 		
@@ -378,6 +392,15 @@ class GameController(Named, Transactionable, Packable):
 				player_names = game_info['player_names']
 			else:
 				raise NoPlayersFoundError()
+		
+		if shuffle_order is None:
+			if 'shuffle_order' in settings:
+				shuffle_order = settings['shuffle_order']
+			elif 'shuffle_order' in game_info:
+				shuffle_order = game_info['shuffle_order']
+			else:
+				shuffle_order = False
+			
 		
 		if player_info is None:
 			if 'player_info' in game_info:
@@ -392,8 +415,12 @@ class GameController(Named, Transactionable, Packable):
 				for info, new in zip(player_info, settings['player_info']):
 					info.update(new)
 		
-		for name, info in zip(player_names, player_info):
-			self.manager.create(name, **info)
+		player_info = dict(zip(player_names, player_info))
+		if shuffle_order:
+			self.RNG.shuffle(player_names)
+		
+		for name in player_names:
+			self.manager.create(name, **player_info[name])
 		
 	def cheat(self, code=None):
 		pass
@@ -460,11 +487,17 @@ class GameController(Named, Transactionable, Packable):
 		return msg
 	
 	def _get_data(self):
-		return tdict(
-			state=self.state,
-			players=self.manager,
+		return GameData(
+			state = self.state,
 			
-			create_object=self.table.create,
+			log = self.log,
+			players = self.manager,
+			table = self.table,
+			stack = self.stack,
+			
+			RNG = self.RNG,
+			
+			create_object = self.table.create,
 		)
 	
 	######################

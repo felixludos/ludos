@@ -15,11 +15,11 @@ from gsm import SwitchPhase
 
 class TicTacToe(gsm.GameController):
 	
-	def _init_game(self, config, settings):
+	def _init_game(self, C, config, settings):
 		
 		# update player props
 		
-		p1, p2 = self.manager
+		p1, p2 = C.players
 		
 		p1.symbol = config.basic.characters.p1
 		p2.symbol = config.basic.characters.p2
@@ -31,22 +31,22 @@ class TicTacToe(gsm.GameController):
 		
 		side = config.basic.side_length
 		
-		grid = world.make_quadgrid(rows=side, cols=side, table=self.table,
+		grid = world.make_quadgrid(rows=side, cols=side, table=C.table,
 		                           field_obj_type='Tick', grid_obj_type='Board')
 		
-		self.state.board = grid
+		C.state.board = grid
 		
-	def _end_game(self):
+	def _end_game(self, C):
 		
-		val = self.state.winner
+		val = C.state.winner
 		
 		if val is None:
-			self.log.writef('Game over! Draw game!')
+			C.log.writef('Game over! Draw game!')
 			return tdict(winner=None)
 		
-		for player in self.manager:
-			if player.val == val:
-				self.log.writef('Game Over! {} wins!', player)
+		for player in C.players:
+			if player._val == val:
+				C.log.writef('Game Over! {} wins!', player)
 				return tdict(winner=player.name)
 			
 		raise Exception('No player with val: {}'.format(val))
@@ -69,7 +69,7 @@ class TicPhase(TurnPhase, game='ttt', name='tic', start=True):
 			
 			assert loc._val == 0, 'this should not happen'
 			
-			loc._val = player.val
+			loc._val = player._val
 			loc.symbol = player.symbol
 			loc.player = player
 			

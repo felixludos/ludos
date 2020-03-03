@@ -40,13 +40,17 @@ class Typed(object):
 			obj_type = cls.__name__
 		cls.obj_type = obj_type
 	
-	@classmethod
-	def get_type(cls):
+	def __init__(self, obj_type=None, **kwargs):
+		super().__init__(**kwargs)
+		if obj_type is not None:
+			self.obj_type = obj_type
+		
+	def get_type(self):
 		'''
 		Queries the obj_type (not related to type(self))
 		:return: obj_type
 		'''
-		return cls.obj_type
+		return self.obj_type
 
 class Jsonable(object):
 	'''

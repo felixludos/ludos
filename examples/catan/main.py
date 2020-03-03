@@ -18,40 +18,47 @@ MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
 class Catan(gsm.GameController):
 	
-	def _init_game(self, config, settings):
+	def _create_start_phase(self, C, config, settings, **kwargs):
+		super()._create_start_phase(C, config, settings,
+		                            player_order=tlist(C.players),
+		                            real_estate=C.state.world.corners,
+		                            **kwargs)
+	
+	def _init_game(self, C, config, settings):
 		
 		res_names = config.rules.res_names
 		
 		# update player props
-		for player in self.players.values():
+		for player in C.players.values():
 			player.reserve = tdict(config.rules.building_limits)
 			player.buildings = tdict(road=tset(), settlement=tset(), city=tset())
 			player.resources = tdict({res:0 for res in res_names})
+			player.num_res = 0
 			player.devcards = tset()
 			player.past_devcards = tset()
 			player.vps = 0
 			player.ports = tset()
 			
-		self.state.costs = config.rules.building_costs
+		C.state.costs = config.rules.building_costs
 		
 		bank = tdict()
 		for res in res_names:
 			bank[res] = config.rules.num_res
-		self.state.bank = bank
+		C.state.bank = bank
 		
-		self.state.rewards = config.rules.victory_points
-		self.state.production = config.rules.resource_pays
-		self.state.reqs = config.rules.reqs
-		self.state.victory_condition = config.rules.victory_condition
-		self.state.hand_limit = config.rules.hand_limit
+		C.state.rewards = config.rules.victory_points
+		C.state.production = config.rules.resource_pays
+		C.state.reqs = config.rules.reqs
+		C.state.victory_condition = config.rules.victory_condition
+		C.state.hand_limit = config.rules.hand_limit
 		# init map
-		G = grid.make_hexgrid(config.map.map, table=self.table,
+		G = grid.make_hexgrid(config.map.map, table=C.table,
 		                      enable_corners=True, enable_edges=True,
-		                      
-		                      field_obj_type='hex', grid_obj_type='board')
+		                      field_obj_type='Field', grid_obj_type='Grid',
+		                      )
 		
-		build_catan_map(G, config.map.fields, config.map.ports, config.rules.numbers, self.RNG)
-		self.state.world = G
+		build_catan_map(G, config.map.fields, config.map.ports, config.rules.numbers, C.RNG)
+		C.state.world = G
 		
 		# robber and numbers
 		numbers = tdict()
@@ -64,32 +71,32 @@ class Catan(gsm.GameController):
 					numbers[f.num] = tset()
 				numbers[f.num].add(f)
 		assert loc is not None, 'couldnt find the desert'
-		self.state.robber = self.table.create('robber', loc=loc)
-		self.state.desert = loc
-		self.state.numbers = numbers
-		loc.robber = self.state.robber
+		C.state.robber = C.table.create('robber', loc=loc)
+		C.state.desert = loc
+		C.state.numbers = numbers
+		loc.robber = C.state.robber
 		
 		# setup dev card deck
 		cards = tlist()
 		
-		for name, info in config.dev.items():
+		for name, info in config.dev_cards.items():
 			cards.extend([tdict(name=name, desc=info.desc)]*info.num)
 		
-		self.state.dev_deck = self.table.create(obj_type='devdeck', cards=cards,
-		                                        seed=self.RNG.getrandbits(64),
-		                                        default='devcard')
-		self.state.dev_deck.shuffle()
+		C.state.dev_deck = C.table.create(obj_type='Deck', cards=cards,
+		                                        seed=C.RNG.getrandbits(64),
+		                                        default='Card')
+		C.state.dev_deck.shuffle()
 		
-		self.state.bank_trading = config.rules.bank_trading
-		self.state.msgs = config.msgs
+		C.state.bank_trading = config.rules.bank_trading
+		C.state.msgs = config.msgs
 		
-		self.state.rolls = tstack()
+		C.state.rolls = tstack()
 		
-	def _end_game(self):
+	def _end_game(self, C):
 		
 		out = tdict()
 		
-		vps = tdict({player.name:player.vps for player in self.players})
+		vps = tdict({player.name:player.vps for player in C.players})
 		out.vps = vps
 		
 		mx = max(vps.values())
@@ -113,25 +120,25 @@ class Catan(gsm.GameController):
 		self.log.iindent()
 		
 		if code == 'devcard':
-			for player in self.players:
+			for player in self.manager:
 				gain_res('wheat', self.state.bank, player, 1, log=self.log)
 				gain_res('ore', self.state.bank, player, 1, log=self.log)
 				gain_res('sheep', self.state.bank, player, 1, log=self.log)
 
 		if code == 'road':
-			for player in self.players:
+			for player in self.manager:
 				gain_res('wood', self.state.bank, player, 1, log=self.log)
 				gain_res('brick', self.state.bank, player, 1, log=self.log)
 				
 		if code == 'settlement':
-			for player in self.players:
+			for player in self.manager:
 				gain_res('wood', self.state.bank, player, 1, log=self.log)
 				gain_res('brick', self.state.bank, player, 1, log=self.log)
 				gain_res('wheat', self.state.bank, player, 1, log=self.log)
 				gain_res('sheep', self.state.bank, player, 1, log=self.log)
 				
 		if code == 'city':
-			for player in self.players:
+			for player in self.manager:
 				gain_res('wheat', self.state.bank, player, 2, log=self.log)
 				gain_res('ore', self.state.bank, player, 3, log=self.log)
 		
@@ -143,7 +150,7 @@ class Catan(gsm.GameController):
 		if code == 'gain8':
 			self.log.write('White gains 8 resources')
 			
-			for res in self.players['White'].resources.keys():
-				gain_res(res, self.state.bank, self.players['White'], 3, log=self.log)
+			for res in self.manager['White'].resources.keys():
+				gain_res(res, self.state.bank, self.manager['White'], 3, log=self.log)
 		
 		self.log.dindent()

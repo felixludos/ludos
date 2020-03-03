@@ -20,7 +20,6 @@ def register_game(cls, name=None, path=None, info=None):
 		info['short_name'] = name
 	
 	info['cls'] = cls
-	cls.info = info
 	
 	name = info['short_name']
 	if name in _game_registry:
@@ -29,8 +28,10 @@ def register_game(cls, name=None, path=None, info=None):
 	else:
 		prt.debug('Registering game: {}'.format(name))
 		_game_registry[info['short_name']] = info
-		
-	# info['start_phase'] = cls._start_phase
+	
+	cls.info = _game_registry[name]
+
+# info['start_phase'] = cls._start_phase
 	# assert info['start_phase'] is not None, f'No start phase for {name}'
 
 def Game(name=None, info_path=None):
@@ -67,7 +68,7 @@ def register_object(game, name=None, cls=None, open=None, req=None):
 	assert cls is not None or name is not None, 'no name or class provided'
 	
 	if cls is not None:
-		name = cls.get_type()
+		name = cls.obj_type
 	
 	if game not in _game_registry:
 		prt.warning('Registering the GameObject {} for a game before registering the game {}'.format(name, game))
@@ -153,7 +154,7 @@ def register_player_type(game, cls, name=None, open=None, default=False):
 
 	if name is None:
 		prt.warning(f'No name provided for player type: {cls}')
-		name = cls.get_type()
+		name = cls.obj_type
 		
 	if 'player_types' not in info:
 		info['player_types'] = {}

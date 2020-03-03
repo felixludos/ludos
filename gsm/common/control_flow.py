@@ -31,12 +31,11 @@ class TurnPhaseStack(GameStack): # tracks turn counter, inc when creating a Turn
 		
 		super().__unpack__(data)
 		
-	def register(self, cls, name=None, **props):
-		if name is None:
-			name = cls.__class__.__name__
-		if issubclass(cls, TurnPhase):
-			self.turn_phases.add(name)
-		super().register(cls, name=name, **props)
+	def populate(self, phases):
+		super().populate(phases)
+		for name, info in self._phases.items():
+			if issubclass(info.cls, TurnPhase):
+				self.turn_phases.add(name)
 		
 	def reset(self, ctrl):
 		self.counter = 0
@@ -61,7 +60,7 @@ class TurnPhaseStack(GameStack): # tracks turn counter, inc when creating a Turn
 
 
 class TurnPhase(GamePhase, req_stack=TurnPhaseStack):
-	def __init__(self, player=None, **info):
+	def __init__(self, player, **info):
 		super().__init__(**info)
 		self.player = player
 
