@@ -3,7 +3,7 @@ import yaml
 import numpy as np
 import random
 import logging
-from humpack import tdict, tset, tlist
+from humpack import tdict, tset, tlist, pack_member, unpack_member
 
 from .mixins import Named, Typed, Jsonable, Packable, Transactionable, primitive
 from .errors import UnknownElementError, InvalidKeyError, GameError
@@ -236,27 +236,24 @@ class RandomGenerator(Packable, Transactionable, random.Random):
 		return copy
 	
 	def __pack__(self):
-		pack = self.__class__._pack_obj
-		
 		data = {}
 		
-		data['state'] = pack(self.getstate())
+		data['state'] = pack_member(self.getstate())
 		if self._shadow is not None:
-			data['_shadow'] = pack(self._shadow)
+			data['_shadow'] = pack_member(self._shadow)
 		
 		return data
 	
 	def __unpack__(self, data):
-		unpack = self.__class__._unpack_obj
 		
 		self._shadow = None
 		
-		x = unpack(data['state'])
+		x = unpack_member(data['state'])
 		
 		self.setstate(x)
 		
 		if '_shadow' in data:
-			self._shadow = unpack(data['_shadow'])
+			self._shadow = unpack_member(data['_shadow'])
 		
 	
 	def begin(self):

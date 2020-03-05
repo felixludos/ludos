@@ -7,9 +7,6 @@ from ..ops import gain_res, play_dev, steal_options
 
 class RobberPhase(StagePhase, name='robber', game='catan'):
 	
-	def __init__(self, player, **kwargs): # requires the player that should move the robber
-		super().__init__(current_stage_policy='latest', player=player, **kwargs)
-	
 	@Entry_Stage('entry')
 	def entry(self, C, player, action=None):
 		
@@ -65,8 +62,9 @@ class RobberPhase(StagePhase, name='robber', game='catan'):
 	def encode_locs(self, C):
 		out = GameActions()
 		
-		with out('cancel', desc='Cancel playing knight'):
-			out.add('cancel')
+		if 'knight' in self:
+			with out('cancel', desc='Cancel playing knight'):
+				out.add('cancel')
 		
 		with out('loc', desc='Choose where to move the robber'):
 			options = tset(f for f in C.state.world.fields if 'robber' not in f)

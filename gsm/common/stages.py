@@ -81,8 +81,11 @@ class StagePhase(GamePhase):
 		self.current_stage = self.get_entry_stage()
 		self.decision_info = None
 		
-	def update_current_stage(self, stage_name, decision_name):
+	def set_current_stage(self, stage_name):
 		self.current_stage = stage_name
+	
+	def update_current_stage(self, stage_name, decision_name):
+		self.set_current_stage(stage_name)
 		
 	def execute(self, C, player=None, action=None):
 		stage_name = self.current_stage

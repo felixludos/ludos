@@ -211,7 +211,6 @@ class GameController(Named, Transactionable, Packable):
 		data['name'] = pack_member(self.name)
 		data['_in_progress'] = pack_member(self._in_progress)
 		data['_in_transaction'] = pack_member(self._in_transaction)
-		data['_pre_setup_complete'] = pack_member(self._pre_setup_complete)
 		data['_spec_image'] = pack_member(self._spec_image)
 		data['debug'] = pack_member(self.DEBUG)
 		data['active_players'] = pack_member(self.active_players)
@@ -230,7 +229,6 @@ class GameController(Named, Transactionable, Packable):
 		self.name = unpack_member(data['name'])
 		self._in_transaction = unpack_member(data['_in_transaction'])
 		self._in_progress = unpack_member(data['_in_progress'])
-		self._pre_setup_complete = unpack_member(data['_pre_setup_complete'])
 		self._spec_image = unpack_member(data['_spec_image'])
 		self.DEBUG = unpack_member(data['debug'])
 		self.active_players = unpack_member(data['active_players'])
@@ -408,7 +406,7 @@ class GameController(Named, Transactionable, Packable):
 			else:
 				player_info = [{} for _ in player_names]
 			
-			assert len(player_info) == len(player_names), 'number of player_info doesnt match player_names: ' \
+			assert len(player_info) >= len(player_names), 'number of player_info doesnt match player_names: ' \
 			                                              f'{len(player_names)} vs {len(player_info)}'
 			
 			if 'player_info' in settings: # TODO: include option to shuffle player order

@@ -44,7 +44,7 @@ def _format_log(lines):
 			txt = '*DEBUG: ' + txt
 		
 		if 'targets' in line:
-			txt = '({}): '.format(', '.join(t['_player'] for t in line['targets'])) + txt
+			txt = '({}): '.format(', '.join(t for t in line['targets'])) + txt
 		log.append(txt)
 		
 	return ''.join(log)
@@ -111,6 +111,8 @@ class Ipython_Runner(object):
 		self.key = None
 		self.actions = None
 		self.users = tdeque(users)
+		self.user2players = tdict()
+		self.players = tdict()
 		self.specs = tset()
 		
 	def restart(self, debug=False):
@@ -173,6 +175,8 @@ class Ipython_Runner(object):
 		if user is None:
 			user = self.users[0]
 		assert player is not None # TODO maybe automatically load available players
+		self.user2players[user] = player
+		self.players[player] = user
 		return self._execute('add/player', user, player)
 	
 	def add_advisor(self, user=None, player=None):
@@ -186,6 +190,15 @@ class Ipython_Runner(object):
 			user = self.users[0]
 		self.specs.add(user)
 		return self._execute('add/spectator', user)
+	
+	def auto_user(self, user=None):
+		if user is None and self.msg is not None and 'waiting_for' in self.msg:
+			user = self.players[next(iter(self.msg.waiting_for))]
+		if user in self.users:
+			self.users.remove(user)
+		if user is not None:
+			self.users.appendleft(user)
+			print(f'Auto user: {user}')
 	
 	def set_user(self, user=None):
 		if user is not None:

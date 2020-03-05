@@ -21,7 +21,7 @@ class MainPhase(TurnPhase, stg.StagePhase, name='main', game='catan'):
 		self.bought_devcards = tset()
 	
 	@stg.Entry_Stage('roll')
-	def roll(self, C, player, action=None):
+	def roll_dice(self, C, player, action=None):
 		
 		if action is not None:
 			

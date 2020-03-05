@@ -82,11 +82,11 @@ class GameManager(Transactionable, Packable, Pullable):
 		data = {}
 		
 		data['players'] = pack_member(self.players)
-		data['req'] = pack_member(self.req)
-		data['open'] = pack_member(self.open)
 		data['_in_transaction'] = pack_member(self._in_transaction)
 		data['meta_info'] = pack_member(self.meta_info)
 		data['default_player'] = pack_member(self.default_player)
+		data['force_player_type'] = pack_member(self.force_player_type)
+		data['hide_name'] = pack_member(self.hide_name)
 		
 		return data
 	
@@ -94,11 +94,11 @@ class GameManager(Transactionable, Packable, Pullable):
 		
 		self.players = unpack_member(data['players'])
 		self.players_list = tlist(self.players.values())
-		self.req = unpack_member(data['req'])
-		self.open = unpack_member(data['open'])
 		self._in_transaction = unpack_member(data['_in_transaction'])
 		self.meta_info = unpack_member(data['meta_info'])
 		self.default_player = unpack_member(data['default_player'])
+		self.force_player_type = unpack_member(data['force_player_type'])
+		self.hide_name = unpack_member(data['hide_name'])
 		
 		# self.verify() # TODO: maybe enforce req upon load
 	

@@ -281,10 +281,10 @@ class ObjectAction(ActionElement, obj_type='obj'):
 		self.obj = obj
 		
 	def __pack__(self):
-		return {'obj': self.__class__._pack_obj(self.obj)}
+		return {'obj': pack_member(self.obj)}
 	
 	def __unpack__(self, data):
-		ObjectAction.__init__(self, self.__class__._unpack_obj(data['obj']))
+		ObjectAction.__init__(self, unpack_member(data['obj']))
 		
 	def encode(self):
 		return {'ID':self.obj._id, 'val':str(self.obj)}
@@ -300,10 +300,10 @@ class PlayerAction(ActionElement, obj_type='player'):
 		self.player = player
 		
 	def __pack__(self):
-		return {'player': self.__class__._pack_obj(self.player)}
+		return {'player': pack_member(self.player)}
 	
 	def __unpack__(self, data):
-		PlayerAction.__init__(self, self.__class__._unpack_obj(data['player']))
+		PlayerAction.__init__(self, unpack_member(data['player']))
 		
 	def encode(self):
 		return {'val':str(self.player)}
@@ -319,11 +319,9 @@ class TextAction(ActionElement, obj_type='text'): # allows player to enter arbit
 		super().__init__()
 		
 	def __pack__(self):
-		pack = self.__class__._pack_obj
 		raise NotImplementedError
 		
 	def __unpack__(self, data):
-		unpack = self.__class__._unpack_obj
 		raise NotImplementedError
 	
 	def encode(self):
@@ -339,11 +337,9 @@ class NumberAction(ActionElement, obj_type='number'): # allows player to choose 
 		super().__init__()
 	
 	def __pack__(self):
-		pack = self.__class__._pack_obj
 		raise NotImplementedError
 	
 	def __unpack__(self, data):
-		unpack = self.__class__._unpack_obj
 		raise NotImplementedError
 	
 	def encode(self):

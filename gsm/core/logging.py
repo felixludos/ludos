@@ -121,7 +121,7 @@ class GameLogger(Packable, Transactionable, Pullable):
 	def _add_line(self, line):
 		targets = self.targets
 		if self.targets is not None and len(self.targets):
-			line['targets'] = self.targets
+			line['targets'] = [(t.name if isinstance(t, GamePlayer) else t) for t in targets]
 		self.log.append(line)
 		for update in self.update.values():
 			update.append(line)

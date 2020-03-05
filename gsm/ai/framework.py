@@ -1,5 +1,5 @@
 import json, yaml
-from humpack import Packable, Transactionable
+from humpack import Packable, Transactionable, json_pack, json_unpack
 from .. import tdict, tset, tlist, containerify
 from ..mixins import Named
 from .. import Interface, RandomGenerator, unjsonify, obj_unjsonify, util
@@ -68,10 +68,10 @@ class Agent_Interface(Interface):
 			self.agents[user].reset()
 			
 	def save(self):
-		return {user:Packable.pack(agent) for user, agent in self.agents.items()}
+		return {user:json_pack(agent) for user, agent in self.agents.items()}
 	
 	def load(self, state):
-		self.agents = {user:Packable.unpack(data) for user, data in state.items()}
+		self.agents = {user:json_unpack(data) for user, data in state.items()}
 		
 	def __str__(self):
 		return '{}({})'.format(super().__str__(), self.agent_type)
