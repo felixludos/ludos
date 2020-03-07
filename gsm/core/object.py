@@ -42,23 +42,26 @@ class GameObject(Typed, Writable, Jsonable, Pullable, tdict):
 		
 		return self
 	
-	def __init__(self, visible, obj_type=None, **props):
+	def __init__(self, obj_type, visible, **props):
 		
 		if self._id is None:
 			InvalidInitializationError()
 		
 		super().__init__(**props) # all GameObjects are basically just tdicts with a obj_type and visible attrs and they can use a table to signal track changes
-		
 		self.visible = visible
-		self.obj_type = self.get_type() if obj_type is None else obj_type # set in class declaration for subclasses
-		# self._verify()
+		self.obj_type = obj_type
 		
-	def _verify(self):
-		assert 'obj_type' in self
-		assert 'visible' in self
-		for req in self._req:
-			if req not in self:
-				raise MissingValueError(self.get_type(), req, *self._req)
+	def __getattribute__(self, item): # TODO clean up
+		if item == 'obj_type' and 'obj_type' in self:
+			return self['obj_type']
+		return super().__getattribute__(item)
+		
+	# def _verify(self):
+	# 	assert 'obj_type' in self
+	# 	assert 'visible' in self
+	# 	for req in self._req:
+	# 		if req not in self:
+	# 			raise MissingValueError(self.get_type(), req, *self._req)
 		
 	def __pack__(self):
 		

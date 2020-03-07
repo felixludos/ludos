@@ -100,7 +100,7 @@ class GameTable(Transactionable, Packable, Pullable):
 			raise ObjectIDCollisionError(ID)
 		
 		if visible is None:
-			visible = tset(self.players)
+			visible = self.players
 		
 		obj = info.obj_cls.__new__(info.obj_cls)
 		
@@ -109,11 +109,11 @@ class GameTable(Transactionable, Packable, Pullable):
 		obj._open = info.open
 		obj._req = info.req
 		
-		obj.__init__(obj_type=obj_type, visible=visible, **props)
+		obj.__init__(obj_type=obj_type, visible=tset(visible), **props)
 		
 		self.table[obj._id] = obj
 		
-		obj._verify()
+		# obj._verify()
 		
 		return obj
 	

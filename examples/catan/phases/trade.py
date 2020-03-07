@@ -42,7 +42,7 @@ class TradePhase(stg.StagePhase, name='trade', game='catan'):
 			self.maritime_msg = num, res
 			raise stg.Switch('maritime')
 		
-		if cmd == 'send':
+		if cmd == 'submit':
 			
 			C.log[self.player].write('Asking other players for response.')
 			self.responses = tdict({p: None for p in C.players if p != self.player})
