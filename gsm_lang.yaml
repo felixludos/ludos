@@ -1,0 +1,53 @@
+
+
+## preamble
+
+global:
+  _group_by: .obj_type
+
+me:
+  _cond: .obj_type == self
+
+opponent:
+  _cond: .obj_type == opponent
+
+player:
+  _source: [me, opponent]
+
+
+board_element:
+  _filter:
+    key: .obj_type
+    include: [Grid, Field, Edge, Corner] # values (not sets)
+
+#sort_obj_types:
+#  _promote:
+#    name: all_ + .obj_type # name of sets to be created
+#    val: .obj_type # value to group on (promote)
+
+
+russel:
+  _filter:
+    exclude: .
+
+
+
+
+_res_color:
+  wood:
+    texture: 'grain'
+    color: 'maroon' #fe: not used, war eine simplere vorige art colors fuer strings zu specifien
+  brick:
+    texture: 'rect'
+    color: 'salmon'
+  wheat:
+    texture: 'grain'
+    color: 'yellow'
+  sheep:
+    color: 'green'
+  ore:
+    texture: 'grain'
+    color: 'dimgray'
+
+
+
