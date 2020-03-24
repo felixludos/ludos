@@ -20,9 +20,11 @@ victory_points:
   estate: 2
   farm: 1
 
-hand_size:
-  max: 7
-  starting: 7
+max_hand_size: 7
+
+starting:
+  cards: 6
+  coins: 3
 
 draw_cards: 1
 
@@ -33,7 +35,7 @@ neutral_market:
 
 discard_market: 4
 
-royal_phases: ['king', 'queen', 'jack']
+#royal_phases: ['king', 'queen', 'jack']
 
 num_royals:
   king: 8

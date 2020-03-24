@@ -51,3 +51,104 @@ _res_color:
 
 
 
+
+# static
+
+p_elm:
+  type: panel
+  params:
+    num: 2
+    orientation: h
+    split: 0.6
+  panels:
+    - type: list # player hand/stand
+      params:
+        orientation: h
+    - type: dict # player info
+
+root:
+  type: panel
+  params:
+    num: 2
+    orientation: h
+    split: 0.6
+  panels:
+    - type: panel
+      params:
+        num: 2
+        orientation: v
+        split: 0.6
+      panels:
+        - id: market_loc
+          type: list # any data here is merged with any object that has "loc: market_loc"
+        - id: me_loc
+    - type: panel
+      id: all_opps
+      params:
+        split: equal
+        panel_type: p_elm
+
+
+# dynamic
+
+
+self_info: # in general sets containing one element behave like the element on its own
+  cond:
+    obj_type: _me
+  loc: me_loc
+  type: p_elm
+
+  panels.0.data: .hand # "composite" keys
+  panels.1.data:
+    vps: .vps
+    money: .money
+    herald: .herald # only shown if it is found
+
+market_info:
+  cond:
+    obj_type: market
+  loc: market_loc
+
+  data: .neutral
+
+all_cards:
+  cond:
+    obj_type: card
+  type: info # leaf component
+
+all_viz_cards:
+  _source: all_cards
+  cond:
+    prop: short_name # prop exists
+  params:
+    bg: white
+  data: .short_name
+
+all_hidden_cards:
+  _source: all_cards
+  cond:
+    no_prop: short_name # prop doesn't exist
+  params:
+    bg:
+      image: card_bg.jpg # some texture file
+
+opp_info: # defines a type
+  cond:
+    obj_type: _opponent
+  loc: all_opps
+  params.num: this._size # all sets have some default properties, eg. size accessed through "this"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

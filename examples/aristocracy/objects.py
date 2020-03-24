@@ -4,17 +4,20 @@ from gsm.common.world import grid
 from gsm.common.elements import Card as CardBase
 from gsm.common.elements import Deck
 
-class Card(Named, CardBase):
+class Card(Named, CardBase, game='aristocracy', name='card'):
 	
 	def isroyal(self):
 		return '_royal' in self
 	
-class DiscardPile(Deck):
+	def __str__(self):
+		return self.value
+	
+class DiscardPile(Deck, game='aristocracy', name='discard_pile'):
 	def __init__(self, seed, default, top_face_up):
 		super().__init__(cards=tlist(), seed=seed, default=default,
 		                 top_face_up=top_face_up)
 
-class DrawPile(Deck):
+class DrawPile(Deck, game='aristocracy', name='draw_pile'):
 	def __init__(self, discard_pile, log, **props):
 		super().__init__(_discard_pile=discard_pile, _log=log, **props)
 	
@@ -24,29 +27,49 @@ class DrawPile(Deck):
 			self.refill()
 		return super().draw(n=n, player=player)
 	
+	def discard(self, *cards):
+		for c in cards:
+			self._in_play.remove(c)
+		
+		self._discard_pile.extend(cards)
+		
 	def refill(self):
 		self._log.write('Refilling {} with {}', self, self._discard_pile)
 		
-		
-		raise NotImplementedError
-		
+		self._objs.extend(self._discard_pile._objs)
+		self._objs.clear()
 		self.shuffle()
 	
+	
 
-class Building(GameObject):
-	def __init__(self, address, owner, **props):
-		super().__init__(harvest=None, owner=owner,
-		                 address=address, intruders=tlist(),
+class Building(GameObject): # dont register yet
+	def __init__(self, address, storage, owner, **props):
+		super().__init__(harvest=None, owner=owner, storage=storage,
+		                 address=address, intruders=tlist(), # face up
 		                 **props)
 
 	def visit(self):
 		raise NotImplementedError
 
 
-class Market(GameObject):
+class Market(GameObject, game='aristocracy', name='market'):
 	
 	def clear(self):
 		self.neutral.clear()
+	
+	def update(self, cards):
+		self.neutral.update(cards)
+	
+	def __iter__(self):
+		return iter(self.neutral)
+	
+	def __len__(self):
+		return len(self.neutral)
+	
+	def remove(self, *cards):
+		for card in cards:
+			self.neutral.discard(card)
+			card.discard()
 	
 	def reset(self, num):
 		

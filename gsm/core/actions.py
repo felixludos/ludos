@@ -155,6 +155,9 @@ class GameActions(Packable, Pullable): # created and returned in phases
 	def add(self, *items):
 		if not self.in_transaction():
 			raise Exception('Call begin() to start new action group')
+		for item in items:
+			if isinstance(item, set) and len(item) == 0:
+				return
 		self._current.add(items)
 	
 	def __pack__(self):

@@ -1,2 +1,0 @@
-
-from .regular import Regular

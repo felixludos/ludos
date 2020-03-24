@@ -179,7 +179,7 @@ class GameObjectGenerator(GameObject):
 	
 	# should not be overridden
 	def extend(self, objs):
-		return self._add(*map(self._freed,objs))
+		return self._add(*map(self._freed, objs))
 	
 	# should not be overridden
 	def append(self, obj):

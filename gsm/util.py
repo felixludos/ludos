@@ -220,6 +220,20 @@ def obj_cross_ref(obj, tables):
 			else:
 				obj[k] = _fmt_obj(v, tables)
 
+def sort_by(ls, order):
+	return tlist(x[0] for x in sorted(zip(ls,order),key=lambda x: x[1]))
+
+def format_quantity(item, num=1, plural=None):
+	if plural is None:
+		plural = item + 's'
+	if num == 0:
+		return 'no {}'.format(plural)
+	if num == 1:
+		article = 'an' if item[0] in 'aeiouAEIOU8' else 'a'
+		if item in {'11', '18'}:
+			article = 'an'
+		return '{} {}'.format(article, item)
+	return '{} {}'.format(num, plural)
 
 class RandomGenerator(Packable, Transactionable, random.Random):
 	
