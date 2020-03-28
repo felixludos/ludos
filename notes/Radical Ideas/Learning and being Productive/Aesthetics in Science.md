@@ -1,1 +1,0 @@
-# Aesthetics in Science

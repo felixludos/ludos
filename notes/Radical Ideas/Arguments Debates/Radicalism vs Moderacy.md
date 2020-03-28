@@ -1,1 +1,0 @@
-# Radicalism vs. Moderacy
