@@ -13,6 +13,11 @@ from gsm import util
 
 class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 	
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+	
+		self.royal_actions = {'king':'build', 'queen':'visit', 'jack':'buy'}
+	
 	@stg.Entry_Stage('select')
 	def select_stand(self, C, player, action=None):
 		
@@ -91,10 +96,12 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 		
 		return best
 
-	@stg.Stage('main', switch=['king', 'queen', 'jack'])
+	@stg.Stage('main', switch=['build', 'visit', 'buy'])
 	def main_market(self, C, player, action=None):
 		
 		if action is not None:
+			
+			self.actions -= 1
 			
 			cmd, = action
 			
@@ -111,7 +118,10 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 				raise stg.Switch('sell', send_action=True)
 			
 			elif action.obj_type == 'favor':
-				raise stg.Switch(cmd._royal)
+				raise stg.Switch(self.royal_actions[cmd._royal])
+		
+		if self.actions == 0:
+			raise stg.Switch('prep')
 		
 		raise stg.Decide('action')
 		
@@ -159,3 +169,30 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 						out.add(bld.storage)
 		
 		return tdict({player: out})
+	
+	@stg.Stage('trade')
+	def trade_cards(self, C, player, action=None):
+		
+		raise stg.Switch('main')
+		
+	@stg.Stage('sell')
+	def sell_cards(self, C, player, action=None):
+		
+		raise stg.Switch('main')
+	
+	@stg.Stage('cleanup')
+	def cleanup_market(self, C, player, action=None):
+		
+		raise PhaseComplete
+	
+	@stg.Stage('build')
+	def build_action(self, C, player, action=None):
+		raise stg.Switch('main')
+	
+	@stg.Stage('visit')
+	def visit_action(self, C, player, action=None):
+		raise stg.Switch('main')
+	
+	@stg.Stage('buy')
+	def buy_action(self, C, player, action=None):
+		raise stg.Switch('main')

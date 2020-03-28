@@ -58,6 +58,7 @@ def extract_info(r):
 			pass
 	
 	if name is None and typ is not None:
+		typ = 'Unknown({})'.format(typ)
 		name = 'error'
 	
 	if name is None:
@@ -123,14 +124,12 @@ def process_phase(phase, debug=False):
 	
 	calls = {}
 	
-	for name, fn in stages.items():
+	for name, info in stages.items():
 		
-		calls[name] = process_fn(fn, get_fn=get_fn)
+		calls[name] = process_fn(info['fn'], get_fn=get_fn)
 		if not debug:
 			#             calls[name] = list(filter(clean_info, map(extract_info, calls[name])))
 			calls[name] = list(map(extract_info, calls[name]))
-			
-			info = phase.get_stage_info(name)
 			
 			switch = info['switch']
 			if switch is not None:

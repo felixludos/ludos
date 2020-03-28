@@ -21,7 +21,7 @@ if __name__ == '__main__':
 	argv = sys.argv
 	
 	if sys.gettrace() is not None:
-		argv = ['', 'catan']
+		argv = ['', 'aristocracy']
 	
 	game = argv[1]
 	

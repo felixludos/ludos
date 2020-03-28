@@ -1,113 +1,123 @@
 digraph G {
 	compound=true concentrate=true newrank=true nodesep=0.4 splines=true
-	subgraph cluster_setup {
-		label=setup
-		"PhaseNode(setup)" [label=begin color=purple style=filled]
-		"StageNode(setup.settlement)" [label=settlement color=skyblue style=filled]
-		"StageNode(setup.road)" [label=road color=skyblue style=filled]
-		"DecisionNode(setup.settlement)" [label=settlement color=orange shape=rect style="rounded,filled"]
-		"DecisionNode(setup.road)" [label=road color=orange shape=rect style="rounded,filled"]
-		"CompleteNode(setup complete)" [label=complete color=limegreen style=filled]
+	subgraph cluster_market {
+		label=market
+		"PhaseNode(market)" [label=begin color=purple style=filled]
+		"StageNode(market.select)" [label=select color=skyblue style=filled]
+		"StageNode(market.prep)" [label=prep color=skyblue style=filled]
+		"StageNode(market.main)" [label=main color=skyblue style=filled]
+		"StageNode(market.trade)" [label=trade color=skyblue style=filled]
+		"StageNode(market.sell)" [label=sell color=skyblue style=filled]
+		"StageNode(market.cleanup)" [label=cleanup color=skyblue style=filled]
+		"StageNode(market.build)" [label=build color=skyblue style=filled]
+		"StageNode(market.visit)" [label=visit color=skyblue style=filled]
+		"StageNode(market.buy)" [label=buy color=skyblue style=filled]
+		"DecisionNode(market.select)" [label=select color=orange shape=rect style="rounded,filled"]
+		"DecisionNode(market.action)" [label=action color=orange shape=rect style="rounded,filled"]
+		"CompleteNode(market complete)" [label=complete color=limegreen style=filled]
 	}
-	subgraph cluster_main {
-		label=main
-		"PhaseNode(main)" [label=begin color=purple style=filled]
-		"StageNode(main.roll)" [label=roll color=skyblue style=filled]
-		"StageNode(main.main)" [label=main color=skyblue style=filled]
-		"StageNode(main.road-building)" [label="road-building" color=skyblue style=filled]
-		"StageNode(main.year-plenty)" [label="year-plenty" color=skyblue style=filled]
-		"DecisionNode(main.pre-knight)" [label="pre-knight" color=orange shape=rect style="rounded,filled"]
-		"DecisionNode(main.main)" [label=main color=orange shape=rect style="rounded,filled"]
-		"DecisionNode(main.road-building)" [label="road-building" color=orange shape=rect style="rounded,filled"]
-		"DecisionNode(main.year-plenty)" [label="year-plenty" color=orange shape=rect style="rounded,filled"]
-		"CompleteNode(main complete)" [label=complete color=limegreen style=filled]
+	subgraph cluster_king {
+		label=king
+		"PhaseNode(king)" [label=begin color=purple style=filled]
+		"StageNode(king.pre)" [label=pre color=skyblue style=filled]
+		"StageNode(king.tax)" [label=tax color=skyblue style=filled]
+		"StageNode(king.post)" [label=post color=skyblue style=filled]
+		"StageNode(king.claim)" [label=claim color=skyblue style=filled]
+		"StageNode(king.init)" [label=init color=skyblue style=filled]
+		"StageNode(king.market)" [label=market color=skyblue style=filled]
+		"DecisionNode(king.tax)" [label=tax color=orange shape=rect style="rounded,filled"]
+		"DecisionNode(king.claim)" [label=claim color=orange shape=rect style="rounded,filled"]
+		"CompleteNode(king complete)" [label=complete color=limegreen style=filled]
 	}
-	subgraph cluster_trade {
-		label=trade
-		"PhaseNode(trade)" [label=begin color=purple style=filled]
-		"StageNode(trade.offer)" [label=offer color=skyblue style=filled]
-		"StageNode(trade.counter)" [label=counter color=skyblue style=filled]
-		"StageNode(trade.commit)" [label=commit color=skyblue style=filled]
-		"StageNode(trade.maritime)" [label=maritime color=skyblue style=filled]
-		"DecisionNode(trade.propose)" [label=propose color=orange shape=rect style="rounded,filled"]
-		"DecisionNode(trade.counter)" [label=counter color=orange shape=rect style="rounded,filled"]
-		"DecisionNode(trade.commit)" [label=commit color=orange shape=rect style="rounded,filled"]
-		"DecisionNode(trade.maritime)" [label=maritime color=orange shape=rect style="rounded,filled"]
-		"CompleteNode(trade complete)" [label=complete color=limegreen style=filled]
+	subgraph cluster_queen {
+		label=queen
+		"PhaseNode(queen)" [label=begin color=purple style=filled]
+		"StageNode(queen.pre)" [label=pre color=skyblue style=filled]
+		"StageNode(queen.ball)" [label=ball color=skyblue style=filled]
+		"StageNode(queen.post)" [label=post color=skyblue style=filled]
+		"StageNode(queen.init)" [label=init color=skyblue style=filled]
+		"StageNode(queen.market)" [label=market color=skyblue style=filled]
+		"DecisionNode(queen.ball)" [label=ball color=orange shape=rect style="rounded,filled"]
+		"CompleteNode(queen complete)" [label=complete color=limegreen style=filled]
 	}
-	subgraph cluster_robber {
-		label=robber
-		"PhaseNode(robber)" [label=begin color=purple style=filled]
-		"StageNode(robber.entry)" [label=entry color=skyblue style=filled]
-		"StageNode(robber.debt)" [label=debt color=skyblue style=filled]
-		"StageNode(robber.loc)" [label=loc color=skyblue style=filled]
-		"StageNode(robber.target)" [label=target color=skyblue style=filled]
-		"DecisionNode(robber.debt)" [label=debt color=orange shape=rect style="rounded,filled"]
-		"DecisionNode(robber.loc)" [label=loc color=orange shape=rect style="rounded,filled"]
-		"DecisionNode(robber.target)" [label=target color=orange shape=rect style="rounded,filled"]
-		"CompleteNode(robber complete)" [label=complete color=limegreen style=filled]
+	subgraph cluster_jack {
+		label=jack
+		"PhaseNode(jack)" [label=begin color=purple style=filled]
+		"StageNode(jack.pre)" [label=pre color=skyblue style=filled]
+		"StageNode(jack.auction)" [label=auction color=skyblue style=filled]
+		"StageNode(jack.collection)" [label=collection color=skyblue style=filled]
+		"StageNode(jack.post)" [label=post color=skyblue style=filled]
+		"StageNode(jack.init)" [label=init color=skyblue style=filled]
+		"StageNode(jack.market)" [label=market color=skyblue style=filled]
+		"DecisionNode(jack.auction)" [label=auction color=orange shape=rect style="rounded,filled"]
+		"DecisionNode(jack.collection)" [label=collection color=orange shape=rect style="rounded,filled"]
+		"CompleteNode(jack complete)" [label=complete color=limegreen style=filled]
 	}
 	"GameOverNode(Game Over)" [label="Game Over" shape=rect style=diagonals]
 	"StartNode(Start Game)" [label="Start Game" shape=diamond style=diagonals]
-	"PhaseNode(setup)" -> "StageNode(setup.settlement)"
-	"PhaseNode(main)" -> "StageNode(main.roll)"
-	"PhaseNode(trade)" -> "StageNode(trade.offer)"
-	"PhaseNode(robber)" -> "StageNode(robber.entry)"
-	"PhaseNode(main)" -> "StageNode(main.main)"
-	"StageNode(setup.settlement)" -> "DecisionNode(setup.settlement)"
-	"DecisionNode(setup.settlement)" -> "StageNode(setup.settlement)" [style=dotted]
-	"StageNode(setup.settlement)" -> "StageNode(setup.road)"
-	"StageNode(setup.road)" -> "DecisionNode(setup.road)"
-	"DecisionNode(setup.road)" -> "StageNode(setup.road)" [style=dotted]
-	"StageNode(setup.road)" -> "CompleteNode(setup complete)"
-	"CompleteNode(setup complete)" -> "PhaseNode(main)"
-	"StageNode(setup.road)" -> "StageNode(setup.settlement)"
-	"StageNode(main.roll)" -> "PhaseNode(robber)"
-	"StageNode(main.roll)" -> "DecisionNode(main.pre-knight)"
-	"DecisionNode(main.pre-knight)" -> "StageNode(main.roll)" [style=dotted]
-	"StageNode(main.roll)" -> "StageNode(main.main)"
-	"StageNode(main.main)" -> "DecisionNode(main.main)"
-	"DecisionNode(main.main)" -> "StageNode(main.main)" [style=dotted]
-	"StageNode(main.main)" -> "CompleteNode(main complete)"
-	"CompleteNode(main complete)" -> "PhaseNode(main)"
-	"StageNode(main.main)" -> "PhaseNode(trade)"
-	"StageNode(main.main)" -> "PhaseNode(robber)"
-	"StageNode(main.main)" -> "StageNode(main.year-plenty)"
-	"StageNode(main.main)" -> "StageNode(main.road-building)"
-	"StageNode(main.main)" -> "GameOverNode(Game Over)"
-	"StageNode(main.road-building)" -> "StageNode(main.main)"
-	"StageNode(main.road-building)" -> "DecisionNode(main.road-building)"
-	"DecisionNode(main.road-building)" -> "StageNode(main.road-building)" [style=dotted]
-	"StageNode(main.year-plenty)" -> "DecisionNode(main.year-plenty)"
-	"DecisionNode(main.year-plenty)" -> "StageNode(main.year-plenty)" [style=dotted]
-	"StageNode(main.year-plenty)" -> "StageNode(main.main)"
-	"StageNode(trade.offer)" -> "CompleteNode(trade complete)"
-	"CompleteNode(trade complete)" -> "PhaseNode(main)" [style=dashed]
-	"StageNode(trade.offer)" -> "StageNode(trade.maritime)"
-	"StageNode(trade.offer)" -> "StageNode(trade.counter)"
-	"StageNode(trade.offer)" -> "DecisionNode(trade.propose)"
-	"DecisionNode(trade.propose)" -> "StageNode(trade.offer)" [style=dotted]
-	"StageNode(trade.counter)" -> "StageNode(trade.commit)"
-	"StageNode(trade.counter)" -> "DecisionNode(trade.counter)"
-	"DecisionNode(trade.counter)" -> "StageNode(trade.counter)" [style=dotted]
-	"StageNode(trade.commit)" -> "DecisionNode(trade.commit)"
-	"DecisionNode(trade.commit)" -> "StageNode(trade.commit)" [style=dotted]
-	"StageNode(trade.commit)" -> "CompleteNode(trade complete)"
-	"StageNode(trade.maritime)" -> "DecisionNode(trade.maritime)"
-	"DecisionNode(trade.maritime)" -> "StageNode(trade.maritime)" [style=dotted]
-	"StageNode(trade.maritime)" -> "CompleteNode(trade complete)"
-	"StageNode(robber.entry)" -> "StageNode(robber.debt)"
-	"StageNode(robber.entry)" -> "StageNode(robber.loc)"
-	"StageNode(robber.debt)" -> "DecisionNode(robber.debt)"
-	"DecisionNode(robber.debt)" -> "StageNode(robber.debt)" [style=dotted]
-	"StageNode(robber.debt)" -> "StageNode(robber.loc)"
-	"StageNode(robber.loc)" -> "DecisionNode(robber.loc)"
-	"DecisionNode(robber.loc)" -> "StageNode(robber.loc)" [style=dotted]
-	"StageNode(robber.loc)" -> "CompleteNode(robber complete)"
-	"CompleteNode(robber complete)" -> "PhaseNode(main)" [style=dashed]
-	"StageNode(robber.loc)" -> "StageNode(robber.target)"
-	"StageNode(robber.target)" -> "DecisionNode(robber.target)"
-	"DecisionNode(robber.target)" -> "StageNode(robber.target)" [style=dotted]
-	"StageNode(robber.target)" -> "CompleteNode(robber complete)"
-	"StartNode(Start Game)" -> "PhaseNode(setup)"
+	"PhaseNode(market)" -> "StageNode(market.select)"
+	"PhaseNode(king)" -> "StageNode(king.init)"
+	"PhaseNode(queen)" -> "StageNode(queen.init)"
+	"PhaseNode(jack)" -> "StageNode(jack.init)"
+	"PhaseNode(king)" -> "StageNode(king.post)"
+	"PhaseNode(queen)" -> "StageNode(queen.post)"
+	"PhaseNode(jack)" -> "StageNode(jack.post)"
+	"StageNode(market.select)" -> "CompleteNode(market complete)"
+	"CompleteNode(market complete)" -> "PhaseNode(king)" [style=dashed]
+	"CompleteNode(market complete)" -> "PhaseNode(jack)" [style=dashed]
+	"CompleteNode(market complete)" -> "PhaseNode(queen)" [style=dashed]
+	"StageNode(market.select)" -> "StageNode(market.prep)"
+	"StageNode(market.select)" -> "DecisionNode(market.select)"
+	"DecisionNode(market.select)" -> "StageNode(market.select)" [style=dotted]
+	"StageNode(market.prep)" -> "StageNode(market.cleanup)"
+	"StageNode(market.prep)" -> "StageNode(market.main)"
+	"StageNode(market.main)" -> "StageNode(market.trade)"
+	"StageNode(market.main)" -> "StageNode(market.sell)"
+	"StageNode(market.main)" -> "StageNode(market.prep)"
+	"StageNode(market.main)" -> "DecisionNode(market.action)"
+	"DecisionNode(market.action)" -> "StageNode(market.main)" [style=dotted]
+	"StageNode(market.main)" -> "StageNode(market.build)"
+	"StageNode(market.main)" -> "StageNode(market.visit)"
+	"StageNode(market.main)" -> "StageNode(market.buy)"
+	"StageNode(market.trade)" -> "StageNode(market.main)"
+	"StageNode(market.sell)" -> "StageNode(market.main)"
+	"StageNode(market.cleanup)" -> "CompleteNode(market complete)"
+	"StageNode(market.build)" -> "StageNode(market.main)"
+	"StageNode(market.visit)" -> "StageNode(market.main)"
+	"StageNode(market.buy)" -> "StageNode(market.main)"
+	"StageNode(king.pre)" -> "StageNode(king.tax)"
+	"StageNode(king.tax)" -> "DecisionNode(king.tax)"
+	"DecisionNode(king.tax)" -> "StageNode(king.tax)" [style=dotted]
+	"StageNode(king.tax)" -> "StageNode(king.market)"
+	"StageNode(king.post)" -> "StageNode(king.claim)"
+	"StageNode(king.post)" -> "CompleteNode(king complete)"
+	"CompleteNode(king complete)" -> "PhaseNode(queen)"
+	"StageNode(king.claim)" -> "DecisionNode(king.claim)"
+	"DecisionNode(king.claim)" -> "StageNode(king.claim)" [style=dotted]
+	"StageNode(king.claim)" -> "GameOverNode(Game Over)"
+	"StageNode(king.claim)" -> "StageNode(king.post)"
+	"StageNode(king.init)" -> "StageNode(king.pre)"
+	"StageNode(king.market)" -> "PhaseNode(market)"
+	"StageNode(queen.pre)" -> "StageNode(queen.ball)"
+	"StageNode(queen.pre)" -> "StageNode(queen.market)"
+	"StageNode(queen.ball)" -> "StageNode(queen.market)"
+	"StageNode(queen.ball)" -> "DecisionNode(queen.ball)"
+	"DecisionNode(queen.ball)" -> "StageNode(queen.ball)" [style=dotted]
+	"StageNode(queen.post)" -> "CompleteNode(queen complete)"
+	"CompleteNode(queen complete)" -> "PhaseNode(jack)"
+	"StageNode(queen.init)" -> "StageNode(queen.pre)"
+	"StageNode(queen.market)" -> "PhaseNode(market)"
+	"StageNode(jack.pre)" -> "StageNode(jack.auction)"
+	"StageNode(jack.pre)" -> "StageNode(jack.market)"
+	"StageNode(jack.auction)" -> "StageNode(jack.collection)"
+	"StageNode(jack.auction)" -> "StageNode(jack.market)"
+	"StageNode(jack.auction)" -> "DecisionNode(jack.auction)"
+	"DecisionNode(jack.auction)" -> "StageNode(jack.auction)" [style=dotted]
+	"StageNode(jack.collection)" -> "DecisionNode(jack.collection)"
+	"DecisionNode(jack.collection)" -> "StageNode(jack.collection)" [style=dotted]
+	"StageNode(jack.post)" -> "CompleteNode(jack complete)"
+	"CompleteNode(jack complete)" -> "PhaseNode(king)"
+	"StageNode(jack.init)" -> "StageNode(jack.pre)"
+	"StageNode(jack.market)" -> "PhaseNode(market)"
+	"StartNode(Start Game)" -> "PhaseNode(king)"
 }
