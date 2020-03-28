@@ -1,6 +1,7 @@
 
-from gsm import GameOver, GamePhase, GameActions, GameObject
-from gsm import tset, tdict, tlist
+from ... import GameOver
+from ...core import GameActions
+from ... import tset, tdict, tlist
 
 class Selection(tdict):
 	def __init__(self, players, allow_multiple=True,

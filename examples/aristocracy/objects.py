@@ -42,7 +42,7 @@ class DrawPile(Deck, game='aristocracy', name='draw_pile'):
 	
 	
 
-class Building(GameObject): # dont register yet
+class Building(GameObject, game='aristocracy', name='building'): # TODO: handle game object super objects correctly
 	def __init__(self, address, storage, owner, **props):
 		super().__init__(harvest=None, owner=owner, storage=storage,
 		                 address=address, intruders=tlist(), # face up

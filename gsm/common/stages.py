@@ -35,16 +35,25 @@ class StagePhase(GamePhase):
 		
 		super().__init_subclass__(**kwargs)
 		
-		cls._stage_registry = StagePhase._stage_registry
-		# cls._entry_stage_name = StagePhase._entry_stage_name
-		cls._decision_registry = StagePhase._decision_registry
-		cls._decision_action_groups = StagePhase._decision_action_groups
+		# cls._clear_stages()
+		parents = cls.__mro__
+		parent = parents[1] if isinstance(parents[1], StagePhase) else StagePhase
+		# cls._stage_registry.update(parent._stage_registry)
+		# cls._decision_registry.update(parent._decision_registry)
+		# cls._decision_action_groups.update(parent._decision_action_groups)
+		# cls._stage_info.update(parent._stage_info)
+
+		if cls.__name__ == 'KingPhase':
+			len(StagePhase._stage_info)
+			pass
 		
 		StagePhase._clear_stages()
+		len(cls._stage_info)
 		
 	@classmethod
 	def _clear_stages(cls):
 		cls._stage_registry = tdict()
+		cls._stage_info = tdict()
 		cls._entry_stage_name = None
 		cls._decision_registry = tdict()
 		cls._decision_action_groups = tdict()
@@ -66,6 +75,12 @@ class StagePhase(GamePhase):
 		if cls._entry_stage_name is None:
 			raise NoEntryStageException(cls)
 		return cls._entry_stage_name
+	
+	@classmethod
+	def get_stage_info(cls, name):
+		if name not in cls._stage_info:
+			raise NotFoundException('stage', name, cls.name)
+		return cls._stage_info[name]
 	
 	@classmethod
 	def _get_static_stage_format(cls):
@@ -129,7 +144,7 @@ class FixedStagePhase(StagePhase):
 		pass
 	
 
-def Stage(name=None):
+def Stage(name=None, switch=None, decide=None,):
 
 	class _reg(object):
 		def __init__(self, fn):
@@ -147,13 +162,15 @@ def Stage(name=None):
 				prt.warning(f'A stage called {name} was already registered in phase {phase.name}')
 				
 			phase._stage_registry[name] = self.fn
+			info = {'switch': switch, 'decide': decide}
+			phase._stage_info[name] = info
 			
 			setattr(phase, fn_name, self.fn)
 
 	return _reg
 
 
-def Entry_Stage(name=None):
+def Entry_Stage(name=None, switch=None, decide=None,):
 	class _reg(object):
 		def __init__(self, fn):
 			self.fn = fn
@@ -169,6 +186,8 @@ def Entry_Stage(name=None):
 				prt.warning(f'A stage called {name} was already registered in phase {phase.name}')
 			
 			phase._stage_registry[name] = self.fn
+			info = {'switch': switch, 'decide': decide}
+			phase._stage_info[name] = info
 			
 			if phase._entry_stage_name is not None:
 				prt.warning(f'{phase.name} already has an entry stage, now setting to {name}')

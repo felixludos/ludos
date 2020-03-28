@@ -1,0 +1,15 @@
+# Evolution of Communication
+
+Originally written Sep 12, 2014.
+
+Communication, that is, the transfer of any information between two consciousnesses, is an extremely important trait for species to have acquired. Not only does communication help individuals in a group transfer information vital to the wellbeing of the individuals, but it can help the individuals collect information from previous generations, rather than having to build new models every time.
+
+In order for successful communication to occur several things are necessary: information to be communicated, a sender sending the information, a medium through which the information is sent, and a receiver who receives and comprehends the information. There is obvious value in being the receiver and refined receiving skills. In other words it’s important for the individual to be able to decode the information being communicated and to understand it. However what benefit does the sender have?
+
+Interpreting information that an individual receives is vital for survival, just as perception and interpretation of the environment around the individual is. Interpreting information that is perceived is and obvious benefit to the survival and wellbeing of the individual, therefore, it stands to reason that those individuals with mutations that allow them to interpret more information or more accurately, are more likely to survive and pass on their mutation.
+
+However the same cannot be said about sending information. Sending information is beneficial not to the sender but to the receiver who can then use the information and act accordingly. Then why would sending information be a trait that is encouraged by natural selection. An individual with a mutation to send more information, or more accurately does not have an obvious advantage over an individual that does not have this mutation.
+
+The only reason sending information would a valuable trait for an individual is under the premise that if more information is sent, the individual is more likely to receive information. However this argument relies on the concept of fairness, not logic.
+
+This would suggest the concept of individualism, where sending information relies on fairness, rather than logic, not nearly as much communication would occur. However increased communication (sending and receiving) benefits all individuals in the group, as they receive more information, and therefore have more information to base their actions on. Individualism, by principle discourages communication by discouraging sending information, while collectivism encourages communication by focusing on the benefits of the collective, rather than the individual. In collectivism all information benefits the collective, because all information that is sent must be received, benefiting the receiver and therefore benefiting the collective.

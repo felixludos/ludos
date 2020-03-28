@@ -91,7 +91,7 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 		
 		return best
 
-	@stg.Stage('main')
+	@stg.Stage('main', switch=['king', 'queen', 'jack'])
 	def main_market(self, C, player, action=None):
 		
 		if action is not None:
@@ -112,8 +112,6 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 			
 			elif action.obj_type == 'favor':
 				raise stg.Switch(cmd._royal)
-			
-			pass
 		
 		raise stg.Decide('action')
 		

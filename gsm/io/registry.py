@@ -21,15 +21,17 @@ def register_game(cls, name=None, path=None, info=None):
 	
 	info['cls'] = cls
 	
+	registry = _game_registry
+	
 	name = info['short_name']
-	if name in _game_registry:
+	if name in registry:
 		prt.warning('{} is already registered, updating info'.format(name))
-		_game_registry[name].update(info)
+		registry[name].update(info)
 	else:
 		prt.debug('Registering game: {}'.format(name))
-		_game_registry[info['short_name']] = info
+		registry[info['short_name']] = info
 	
-	cls.info = _game_registry[name]
+	cls.info = registry[name]
 
 # info['start_phase'] = cls._start_phase
 	# assert info['start_phase'] is not None, f'No start phase for {name}'

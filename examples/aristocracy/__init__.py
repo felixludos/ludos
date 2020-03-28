@@ -1,3 +1,3 @@
-from .main import Catan
+from .main import Aristocracy
 from .ai import *
 

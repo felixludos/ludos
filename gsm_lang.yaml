@@ -49,38 +49,94 @@ _res_color:
     texture: 'grain'
     color: 'dimgray'
 
+##############
+# Catan
+##############
+
+root: # root of the UI
+  type: panel
+  params:
+    orientation: h
+    split: 0.8
+  panels:
+    - type: panel
+      params:
+        orientation: v
+        split: 0.8
+      panels:
+        - type: board
+          id: board_loc
+        - type: remainder # by default place all remaining objects here
+    - type: panel
+      params:
+        orientation: v
+        split: 0.3
+      panel:
+        - id: me_loc
+        - type: panel
+          id: opp_loc
+          params:
+            orientation: v
+            split: equal
 
 
+
+
+
+
+##############
+# Aristocracy
+##############
 
 # static
 
 p_elm:
   type: panel
   params:
-    num: 2
-    orientation: h
-    split: 0.6
-  panels:
-    - type: list # player hand/stand
-      params:
-        orientation: h
-    - type: dict # player info
-
-root:
-  type: panel
-  params:
-    num: 2
+    num: 2 # usually optional (inferred by provided "panels")
     orientation: h
     split: 0.6
   panels:
     - type: panel
       params:
-        num: 2
         orientation: v
-        split: 0.6
+        split: 0.5
+      panels:
+        - type: list
+          params:
+            orientation: h
+          id: stand_loc
+        - type: list
+          params:
+            orientation: h
+          id: bld_loc
+    - type: panel
+      params:
+        orientation: v
+        split: 0.5
+      panels:
+        - type: list # player hand/stand
+          id: hand_loc
+          params:
+            orientation: h
+        - type: dict # player info
+
+
+root:
+  type: panel
+  params:
+    orientation: h
+    split: 0.6
+  panels:
+    - type: panel
+      params:
+        orientation: v
+        split: 0.5
       panels:
         - id: market_loc
           type: list # any data here is merged with any object that has "loc: market_loc"
+          params:
+            orientation: h
         - id: me_loc
     - type: panel
       id: all_opps
@@ -88,28 +144,63 @@ root:
         split: equal
         panel_type: p_elm
 
+global_market:
+  loc: market_loc
+  type: panel
+  params:
+    orientation: h
+    split: 0.5
+  panels:
+    - type: list
+      id: neutral_loc
+    - type: list
+      params:
+        orientation: v
+      id: discard_loc
 
-# dynamic
+# dynamic - subsets of the full gameobject/player set in status
 
+player_info:
+  cond:
+    instanceof: _player # auto-parent of me and opponents
+  type: p_elm
+
+  panels.0.panels.0.elm: .market # "composite" keys
+  panels.0.panels.1.elm: .buildings
+
+  panels.1.panels.0.elm: .hand
+  panels.1.panels.1.data:
+    vps: .vps
+    money: .money
+    herald: .herald # only shown if it is found
 
 self_info: # in general sets containing one element behave like the element on its own
   cond:
     obj_type: _me
   loc: me_loc
-  type: p_elm
 
-  panels.0.data: .hand # "composite" keys
-  panels.1.data:
-    vps: .vps
-    money: .money
-    herald: .herald # only shown if it is found
+opp_info: # defines a type
+  cond:
+    obj_type: _opponent
+  loc: all_opps
+  panels: . # number of panels infered by number specified
+#  params.num: this._size # all sets have some default properties, eg. size accessed through "this"
+
 
 market_info:
   cond:
     obj_type: market
-  loc: market_loc
+  loc: neutral_loc
 
   data: .neutral
+
+discard_info:
+  cond:
+    obj_type: discard_pile
+  loc: discard_loc
+
+  data: .next
+
 
 all_cards:
   cond:
@@ -117,11 +208,15 @@ all_cards:
   type: info # leaf component
 
 all_viz_cards:
-  _source: all_cards
+  _source: all_cards # override default (all gameobjects/players) to the gameobjects/players in specified set
   cond:
     prop: short_name # prop exists
   params:
     bg: white
+    font:
+      color: black
+      bold: True
+      size: medium
   data: .short_name
 
 all_hidden_cards:
@@ -132,12 +227,25 @@ all_hidden_cards:
     bg:
       image: card_bg.jpg # some texture file
 
-opp_info: # defines a type
-  cond:
-    obj_type: _opponent
-  loc: all_opps
-  params.num: this._size # all sets have some default properties, eg. size accessed through "this"
 
+bld_info:
+  cond:
+    instanceof: building # any sub game object of building
+
+  type: panel
+
+  params:
+    num: 2
+    orientation: h
+    split: 0.4
+
+  panels:
+    - type: info
+      data: # info data can also be specified as a list of "key,value" pairs if the keys also have to be computed/dynamic
+        - key: .obj_type
+          value: .address
+    - type: list
+      elm: .storage
 
 
 

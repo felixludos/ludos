@@ -129,7 +129,16 @@ def process_phase(phase, debug=False):
 		if not debug:
 			#             calls[name] = list(filter(clean_info, map(extract_info, calls[name])))
 			calls[name] = list(map(extract_info, calls[name]))
-	
+			
+			info = phase.get_stage_info(name)
+			
+			switch = info['switch']
+			if switch is not None:
+				calls[name].extend(('Switch', n) for n in switch)
+			decide = info['decide']
+			if decide is not None:
+				calls[name].extend(('Decide', n) for n in decide)
+			
 	return calls
 
 
@@ -354,7 +363,7 @@ def analyze_game_flow(game):
 	if game not in registry._game_registry:
 		raise UnknownGameError(f'No game called {game} found. (Have you registerd it?)')
 	
-	info = registry._game_registry['catan']
+	info = registry._game_registry[game]
 	
 	phases = {n: v['cls'] for n, v in info['phases'].items()}
 
@@ -465,7 +474,7 @@ def default_graph(game, name=None, directory='figures',
 	if nodes is None or edges is None:
 		nodes, edges = analyze_game_flow(game)
 	
-	info = registry._game_registry['catan']
+	info = registry._game_registry[game]
 	pnames = list(info['phases'].keys())
 	
 	if include_default_attrs:
