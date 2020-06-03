@@ -2,7 +2,7 @@
 import numpy as np
 from gsm import GameOver, GamePhase, GameActions, GameObject
 from gsm import tset, tdict, tlist
-from gsm import SwitchPhase, PhaseComplete
+from gsm import SwitchPhase, PhaseComplete, SubPhase
 
 from gsm.common import TurnPhase
 from gsm.common import stages as stg
@@ -96,20 +96,21 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 		
 		return best
 
-	@stg.Stage('main', switch=['build', 'visit', 'buy'])
+	@stg.Stage('main', switch=['visit', 'buy'])
 	def main_market(self, C, player, action=None):
 		
 		if action is not None:
 			
-			self.actions -= 1
-			
 			cmd, = action
 			
 			if cmd == 'pass':
-				pass
+				self.actions -= 1
 			
-			elif cmd == 'royal':
-				raise NotImplementedError
+			elif action.obj_type == 'royal':
+				self.cost = None
+				if cmd == 'build':
+					raise SubPhase('build', player=player, cost=self.cost)
+				raise stg.Switch(cmd)
 			
 			elif action.obj_type == 'trade':
 				raise stg.Switch('trade', send_action=True)
@@ -118,10 +119,16 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 				raise stg.Switch('sell', send_action=True)
 			
 			elif action.obj_type == 'favor':
-				raise stg.Switch(self.royal_actions[cmd._royal])
+				self.cost = cmd
+				typ = self.royal_actions[cmd._royal]
+				if typ == 'build':
+					raise SubPhase('build', player=player, cost=self.cost)
+				raise stg.Switch(typ)
 		
 		if self.actions == 0:
 			raise stg.Switch('prep')
+		else:
+			C.log.writef('{} has {} actions remaining', player, self.actions)
 		
 		raise stg.Decide('action')
 		
@@ -136,11 +143,9 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 			out.add('pass')
 		
 		with out('trade', 'Trade in the market'):
-			out.add(player.market)
-			out.add(C.state.market.neutral)
-			for p in C.players:
-				if p != player and len(p.market):
-					out.add(p.market)
+			my, other = self._get_trade_options(C, player)
+			out.add(my)
+			out.add(other)
 		
 		with out('hide', 'Hide a card from your stand'):
 			out.add(player.market)
@@ -155,7 +160,7 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 			
 		with out('royal', 'Pay 1 coin to take the royal action'):
 			if player.money > 0:
-				out.add('royal')
+				out.add(self.royal_actions[self.royal])
 		
 		with out('store', 'Store a card in your building'):
 			for name, buildings in player.buildings.items():
@@ -170,29 +175,181 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 		
 		return tdict({player: out})
 	
+	def _get_trade_options(self, C, player):
+		my = tset(player.market)
+		other = tset(C.state.market.neutral)
+		for p in C.players:
+			if p != player:
+				other.update(p.market)
+		return my, other
+	
 	@stg.Stage('trade')
 	def trade_cards(self, C, player, action=None):
 		
+		card, = action
+		
+		if card == 'cancel':
+			if 'trade_offer' in self:
+				del self.trade_offer
+			if 'trade_demand' in self:
+				del self.trade_demand
+			
+			C.log[player].write('You canceled the trade.')
+			
+			raise stg.Switch('main')
+		
+		if 'trade_offer' in self:
+			self.trade_demand = card
+		elif 'trade_demand' in self:
+			self.trade_offer = card
+		else: # find out where to store this selection
+			my, other = self._get_trade_options(C, player)
+			
+			if card in my:
+				self.trade_offer = card
+			elif card in other:
+				self.trade_demand = card
+			else:
+				raise Exception('Error: invalid trade')
+	
+		if 'trade_offer' not in self or 'trade_demand' not in self:
+			raise stg.Decide('trade')
+		
+		# execute trade
+		
+		src = C.state.market.neutral
+		if self.trade_demand not in src:
+			for p in C.players:
+				if p != player and self.trade_demand in p.market:
+					src = p.market
+		
+		src.remove(self.trade_demand)
+		player.market.add(self.trade_demand)
+		
+		player.market.remove(self.trade_offer)
+		src.add(self.trade_offer)
+		
+		C.log.writef('{} trades {} and {}'.format(player, self.trade_offer, self.trade_demand))
+		del self.trade_offer
+		del self.trade_demand
+		
+		self.actions -= 1
 		raise stg.Switch('main')
+	
+	
+	@stg.Decision('trade', ['cancel', 'trade'])
+	def trade_options(self, C):
+		out = GameActions('Choose a second card to trade with')
+		
+		with out('cancel', 'Cancel trade'):
+			out.add('cancel')
+		
+		with out('trade', 'Complete trade'):
+			my, other = self._get_trade_options(C, self.active)
+			if 'trade_demand' in self:
+				out.add(my)
+			if 'trade_offer' in self:
+				out.add(other)
+				
+		return tdict({self.active:out})
+	
 		
 	@stg.Stage('sell')
 	def sell_cards(self, C, player, action=None):
 		
+		card, = action
+		
+		if card == 'cancel':
+			if 'pick' in self:
+				del self.pick
+			
+			C.log[player].write('You cancel the sale.')
+		
+		elif 'pick' in self:
+			
+			player.market.remove(self.pick)
+			player.market.remove(card)
+			
+			player.money += 1
+			
+			C.log.writef('{} sells {} and {} for a coin.', player, self.pick, card)
+			
+			self.actions -= 1
+			
+		else:
+			self.pick = card
+			raise stg.Decide('sell')
+		
 		raise stg.Switch('main')
+	
+	@stg.Decision('sell', ['cancel', 'sell'])
+	def sell_options(self, C):
+		out = GameActions('Choose a second card to sell')
+		
+		with out('cancel', 'Cancel sell'):
+			out.add('cancel')
+		
+		with out('sell', 'Complete sale'):
+			out.add(self.active.market - tset(self.pick))
+			
+		return tdict({self.active:out})
 	
 	@stg.Stage('cleanup')
 	def cleanup_market(self, C, player, action=None):
+		
+		for p in C.players:
+			for card in p.market:
+				card.visible.clear()
+				card.visible.add(p)
+				p.hand.add(card)
+			p.market.clear()
 		
 		raise PhaseComplete
 	
 	@stg.Stage('build')
 	def build_action(self, C, player, action=None):
+		
+		if action is None:
+			raise stg.Decide('build')
+		
+		cmd, = action
+		
+		
+		
+		self.actions -= 1
 		raise stg.Switch('main')
+	
+	@stg.Decision('build', ['cancel', 'create', 'upgrade'])
+	def build_choices(self, C):
+		
+		out = GameActions('Select what to build or upgrade')
+		
+		with out('cancel', 'Cancel build'):
+			out.add('cancel')
+			
+		available = len(self.active.hand) + len(self.active.market) - int(self.cost is not None)
+		
+		with out('create', 'Create new building'):
+			for name, count in C.config.rules.counts.items():
+				if available >= count:
+					out.add(name)
+		
+		with out('upgrade', 'Upgrade one of your buildings'):
+			if available:
+				for bld, options in self.active.buildings.items():
+					if bld != 'palace' and len(options):
+						out.add(options)
+		
+		return tdict({self.active: out})
 	
 	@stg.Stage('visit')
 	def visit_action(self, C, player, action=None):
+		
+		self.actions -= 1
 		raise stg.Switch('main')
 	
 	@stg.Stage('buy')
 	def buy_action(self, C, player, action=None):
+		
+		self.actions -= 1
 		raise stg.Switch('main')

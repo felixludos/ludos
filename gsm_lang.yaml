@@ -65,7 +65,7 @@ root: # root of the UI
         split: 0.8
       panels:
         - type: board
-          id: board_loc
+          id: board_loc # will automatically fill with board
         - type: remainder # by default place all remaining objects here
     - type: panel
       params:
@@ -80,9 +80,60 @@ root: # root of the UI
             split: equal
 
 
+fields:
+  cond:
+    obj_type: hex
+  type: info
+  params:
+    key: None
+    font:
+      size: medium
+    bg:
+      _map:
+        map: fields_map
+        key: .res
+  data:
+    - .num
+
+high_num_fields:
+  _source: fields
+  cond:
+    obj_type: hex
+    value:
+      key: num
+      include: [6, 8]
+
+  params:
+    font:
+      color: red
+      size: medium-large
+
+#wood_fields:
+#  cond:
+#    value:
+#      key: res
+#      include: [wood]
+#  params:
+#    bg:
+#      color: 'maroon'
+#      texture: 'grain'
 
 
-
+fields_map:
+  wood:
+    texture: 'grain'
+    color: 'maroon' #fe: not used, war eine simplere vorige art colors fuer strings zu specifien
+  brick:
+    texture: 'rect'
+    color: 'salmon'
+  wheat:
+    texture: 'grain'
+    color: 'yellow'
+  sheep:
+    color: 'green'
+  ore:
+    texture: 'grain'
+    color: 'dimgray'
 
 ##############
 # Aristocracy

@@ -48,7 +48,7 @@ class JackPhase(RoyalPhase, game='aristocracy', name='jack'):
 				else:
 					C.log.writef('No one bid anything')
 				
-				raise stg.Switch('market')
+				raise stg.Switch('market', royal='jack')
 		
 		raise stg.Decide('auction')
 	

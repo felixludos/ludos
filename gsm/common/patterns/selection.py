@@ -5,9 +5,11 @@ from ... import tset, tdict, tlist
 
 class Selection(tdict):
 	def __init__(self, players, allow_multiple=True,
+	             min_select=None, max_select=None,
 	             log=None, status=None,
 	             options=None, source=None, key=None, option_fn=None):
 		super().__init__(players=players, allow_multiple=allow_multiple,
+		                 min_select=min_select, max_select=max_select,
 		                 log=log, done=False)
 		self.sel = tdict()
 		self.done = tdict()

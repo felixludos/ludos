@@ -5,8 +5,6 @@ from gsm import tset, tdict, tlist
 from gsm import PhaseComplete, SwitchPhase, SubPhase
 from gsm.common import stages as stg
 
-from ..ops import satisfies_vic_req, get_next_market
-
 class RoyalPhase(stg.StagePhase):
 	
 	@stg.Entry_Stage('init')

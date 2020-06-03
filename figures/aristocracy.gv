@@ -14,7 +14,16 @@ digraph G {
 		"StageNode(market.buy)" [label=buy color=skyblue style=filled]
 		"DecisionNode(market.select)" [label=select color=orange shape=rect style="rounded,filled"]
 		"DecisionNode(market.action)" [label=action color=orange shape=rect style="rounded,filled"]
+		"DecisionNode(market.trade)" [label=trade color=orange shape=rect style="rounded,filled"]
+		"DecisionNode(market.sell)" [label=sell color=orange shape=rect style="rounded,filled"]
+		"DecisionNode(market.build)" [label=build color=orange shape=rect style="rounded,filled"]
 		"CompleteNode(market complete)" [label=complete color=limegreen style=filled]
+	}
+	subgraph cluster_build {
+		label=build
+		"PhaseNode(build)" [label=begin color=purple style=filled]
+		"StageNode(build.choose)" [label=choose color=skyblue style=filled]
+		"CompleteNode(build complete)" [label=complete color=limegreen style=filled]
 	}
 	subgraph cluster_king {
 		label=king
@@ -56,6 +65,7 @@ digraph G {
 	"GameOverNode(Game Over)" [label="Game Over" shape=rect style=diagonals]
 	"StartNode(Start Game)" [label="Start Game" shape=diamond style=diagonals]
 	"PhaseNode(market)" -> "StageNode(market.select)"
+	"PhaseNode(build)" -> "StageNode(build.choose)"
 	"PhaseNode(king)" -> "StageNode(king.init)"
 	"PhaseNode(queen)" -> "StageNode(queen.init)"
 	"PhaseNode(jack)" -> "StageNode(jack.init)"
@@ -63,25 +73,31 @@ digraph G {
 	"PhaseNode(queen)" -> "StageNode(queen.post)"
 	"PhaseNode(jack)" -> "StageNode(jack.post)"
 	"StageNode(market.select)" -> "CompleteNode(market complete)"
-	"CompleteNode(market complete)" -> "PhaseNode(king)" [style=dashed]
 	"CompleteNode(market complete)" -> "PhaseNode(jack)" [style=dashed]
+	"CompleteNode(market complete)" -> "PhaseNode(king)" [style=dashed]
 	"CompleteNode(market complete)" -> "PhaseNode(queen)" [style=dashed]
 	"StageNode(market.select)" -> "StageNode(market.prep)"
 	"StageNode(market.select)" -> "DecisionNode(market.select)"
 	"DecisionNode(market.select)" -> "StageNode(market.select)" [style=dotted]
 	"StageNode(market.prep)" -> "StageNode(market.cleanup)"
 	"StageNode(market.prep)" -> "StageNode(market.main)"
+	"StageNode(market.main)" -> "PhaseNode(build)"
 	"StageNode(market.main)" -> "StageNode(market.trade)"
 	"StageNode(market.main)" -> "StageNode(market.sell)"
 	"StageNode(market.main)" -> "StageNode(market.prep)"
 	"StageNode(market.main)" -> "DecisionNode(market.action)"
 	"DecisionNode(market.action)" -> "StageNode(market.main)" [style=dotted]
-	"StageNode(market.main)" -> "StageNode(market.build)"
 	"StageNode(market.main)" -> "StageNode(market.visit)"
 	"StageNode(market.main)" -> "StageNode(market.buy)"
 	"StageNode(market.trade)" -> "StageNode(market.main)"
+	"StageNode(market.trade)" -> "DecisionNode(market.trade)"
+	"DecisionNode(market.trade)" -> "StageNode(market.trade)" [style=dotted]
+	"StageNode(market.sell)" -> "DecisionNode(market.sell)"
+	"DecisionNode(market.sell)" -> "StageNode(market.sell)" [style=dotted]
 	"StageNode(market.sell)" -> "StageNode(market.main)"
 	"StageNode(market.cleanup)" -> "CompleteNode(market complete)"
+	"StageNode(market.build)" -> "DecisionNode(market.build)"
+	"DecisionNode(market.build)" -> "StageNode(market.build)" [style=dotted]
 	"StageNode(market.build)" -> "StageNode(market.main)"
 	"StageNode(market.visit)" -> "StageNode(market.main)"
 	"StageNode(market.buy)" -> "StageNode(market.main)"

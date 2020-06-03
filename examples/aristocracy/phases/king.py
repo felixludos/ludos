@@ -47,7 +47,7 @@ class KingPhase(RoyalPhase, game='aristocracy', name='king', start=True):
 			
 		if len(self.taxable):
 			raise stg.Decide('tax')
-		raise stg.Switch('market')
+		raise stg.Switch('market', royal='king')
 	
 	@stg.Decision('tax', ['tax'])
 	def decide_tax(self, C):

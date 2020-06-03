@@ -54,7 +54,7 @@ class QueenPhase(RoyalPhase, game='aristocracy', name='queen'):
 				for card in C.state.market:
 					card.visible.update(C.players)
 				
-				raise stg.Switch('market')
+				raise stg.Switch('market', royal='queen')
 			
 		raise stg.Decide('ball')
 		
