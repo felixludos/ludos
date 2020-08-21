@@ -1,6 +1,6 @@
 .idea/
-gsm.egg-info/
-gsm/__pycharm__/
+ludos.egg-info/
+__pycache__/
 .ipynb_checkpoints/
 extra/
 logs/

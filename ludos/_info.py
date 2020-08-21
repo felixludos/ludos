@@ -1,6 +1,6 @@
 
 
-name = 'Ludos'
+name = 'ludos'
 long_name = 'Ludos'
 
 version = '0.7'

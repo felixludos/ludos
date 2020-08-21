@@ -1,11 +1,5 @@
 README.md
 setup.py
-Ludos.egg-info/PKG-INFO
-Ludos.egg-info/SOURCES.txt
-Ludos.egg-info/dependency_links.txt
-Ludos.egg-info/not-zip-safe
-Ludos.egg-info/requires.txt
-Ludos.egg-info/top_level.txt
 ludos/__init__.py
 ludos/_info.py
 ludos/_lib_info.py
@@ -16,3 +10,9 @@ ludos/static.py
 ludos/util.py
 ludos/viz.py
 ludos/writing.py
+ludos.egg-info/PKG-INFO
+ludos.egg-info/SOURCES.txt
+ludos.egg-info/dependency_links.txt
+ludos.egg-info/not-zip-safe
+ludos.egg-info/requires.txt
+ludos.egg-info/top_level.txt
