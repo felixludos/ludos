@@ -1,0 +1,582 @@
+
+
+
+nao:
+  - nwg
+  - cly
+  - lvp
+  - iri
+  - mao
+
+mao:
+  - nao
+  - iri
+  - eng
+  - bre
+  - gas
+  - spa-nc
+  - por
+  - spa-sc
+  - naf
+
+por:
+  - mao
+  - spa-nc
+  - spa-sc
+
+naf:
+  - mao
+  - wes
+  - tun
+
+iri:
+  - nao
+  - lvp
+  - wal
+  - eng
+  - mao
+
+eng:
+  - lon
+  - nth
+  - bel
+  - pic
+  - bre
+  - mao
+  - iri
+  - wal
+
+bre:
+  - eng
+  - pic
+  - par
+  - gas
+  - mao
+
+gas:
+  - bre
+  - par
+  - bur
+  - mar
+  - spa-nc
+  - mao
+
+spa:
+  - gas
+  - mar
+  - por
+
+spa-nc:
+  - mao
+  - gas
+  - por
+
+spa-sc:
+  - mao
+  - mar
+  - lyo
+  - wes
+  - por
+
+wes:
+  - lyo
+  - tys
+  - tun
+  - naf
+  - mao
+  - spa-sc
+
+tun:
+  - tys
+  - ion
+  - naf
+  - wes
+
+nwg:
+  - bar
+  - nwy
+  - nth
+  - edi
+  - cly
+  - nao
+
+nth:
+  - nwg
+  - nwy
+  - ska
+  - den
+  - hel
+  - hol
+  - bel
+  - eng
+  - lon
+  - yor
+  - edi
+
+cly:
+  - nwg
+  - edi
+  - lvp
+  - nao
+
+lvp:
+  - cly
+  - edi
+  - yor
+  - wal
+  - iri
+  - nao
+
+wal:
+  - lvp
+  - yor
+  - lon
+  - eng
+  - iri
+
+edi:
+  - nwg
+  - nth
+  - yor
+  - lvp
+  - cly
+
+yor:
+  - edi
+  - nth
+  - lon
+  - wal
+  - lvp
+
+lon:
+  - yor
+  - nth
+  - eng
+  - wal
+
+pic:
+  - bel
+  - bur
+  - par
+  - bre
+  - eng
+
+par:
+  - pic
+  - bur
+  - gas
+  - bre
+
+bur:
+  - bel
+  - ruh
+  - mun
+  - mar
+  - gas
+  - par
+  - pic
+
+mar:
+  - bur
+  - pie
+  - lyo
+  - spa-sc
+  - gas
+
+lyo:
+  - mar
+  - pie
+  - tus
+  - tys
+  - wes
+  - spa-sc
+
+hel:
+  - den
+  - kie
+  - hol
+  - nth
+
+ska:
+  - nwy
+  - swe
+  - den
+  - nth
+
+bal:
+  - bot
+  - lvn
+  - pru
+  - ber
+  - kie
+  - den
+  - swe
+
+bot:
+  - fin
+  - stp-sc
+  - lvn
+  - bal
+  - swe
+
+nwy:
+  - nwg
+  - stp-nc
+  - fin
+  - swe
+  - ska
+  - nth
+
+swe:
+  - fin
+  - bot
+  - bal
+  - den
+  - ska
+  - nwy
+
+fin:
+  - stp-sc
+  - bot
+  - swe
+  - nwy
+
+stp:
+  - bar
+  - mos
+  - lvn
+  - bot
+  - fin
+
+stp-nc:
+  - bar
+  - nwy
+
+stp-sc:
+  - lvn
+  - bot
+  - fin
+
+mos:
+  - stp
+  - sev
+  - ukr
+  - war
+  - lvn
+
+sev:
+  - mos
+  - arm
+  - bla
+  - rum
+  - ukr
+
+arm:
+  - sev
+  - syr
+  - smy
+  - ank
+  - bla
+
+syr:
+  - arm
+  - eas
+  - smy
+
+eas:
+  - smy
+  - syr
+  - ion
+  - aeg
+
+aeg:
+  - bul-sc
+  - con
+  - smy
+  - eas
+  - ion
+  - gre
+
+ion:
+  - alb
+  - gre
+  - aeg
+  - eas
+  - tun
+  - tys
+  - nap
+  - apu
+  - adr
+
+adr:
+  - tri
+  - alb
+  - ion
+  - apu
+  - ven
+
+tys:
+  - tus
+  - rom
+  - nap
+  - ion
+  - tun
+  - wes
+  - lyo
+
+bel:
+  - hol
+  - ruh
+  - bur
+  - pic
+  - eng
+  - nth
+
+hol:
+  - hel
+  - kie
+  - ruh
+  - bel
+  - nth
+
+ruh:
+  - kie
+  - mun
+  - bur
+  - bel
+  - hol
+
+mun:
+  - kie
+  - ber
+  - sil
+  - boh
+  - tyr
+  - bur
+  - ruh
+
+kie:
+  - den
+  - bal
+  - ber
+  - mun
+  - ruh
+  - hol
+  - hel
+
+ber:
+  - bal
+  - pru
+  - sil
+  - mun
+  - kie
+
+den:
+  - ska
+  - swe
+  - bal
+  - kie
+  - hel
+  - nth
+
+pru:
+  - bal
+  - lvn
+  - war
+  - sil
+  - ber
+
+sil:
+  - pru
+  - war
+  - gal
+  - vie
+  - boh
+  - mun
+  - ber
+
+boh:
+  - sil
+  - gal
+  - vie
+  - tyr
+  - mun
+
+tyr:
+  - boh
+  - vie
+  - tri
+  - ven
+  - pie
+  - mun
+
+ven:
+  - tyr
+  - tri
+  - adr
+  - apu
+  - rom
+  - tus
+  - pie
+
+pie:
+  - tyr
+  - ven
+  - tus
+  - lyo
+  - mar
+
+tus:
+  - ven
+  - rom
+  - tys
+  - lyo
+  - pie
+
+rom:
+  - ven
+  - apu
+  - nap
+  - tys
+  - tus
+
+nap:
+  - apu
+  - ion
+  - tys
+  - rom
+
+apu:
+  - adr
+  - ion
+  - nap
+  - rom
+  - ven
+
+vie:
+  - gal
+  - bud
+  - tri
+  - tyr
+  - boh
+
+tri:
+  - vie
+  - bud
+  - ser
+  - alb
+  - adr
+  - ven
+  - tyr
+
+bud:
+  - gal
+  - rum
+  - ser
+  - tri
+  - vie
+
+ser:
+  - bud
+  - rum
+  - bul
+  - gre
+  - alb
+  - tri
+
+alb:
+  - ser
+  - gre
+  - ion
+  - adr
+  - tri
+
+lvn:
+  - stp-sc
+  - mos
+  - war
+  - pru
+  - bal
+  - bot
+
+war:
+  - lvn
+  - mos
+  - ukr
+  - gal
+  - sil
+  - pru
+
+gal:
+  - war
+  - ukr
+  - rum
+  - bud
+  - vie
+  - boh
+  - sil
+
+rum:
+  - ukr
+  - sev
+  - bla
+  - bul-ec
+  - ser
+  - bud
+  - gal
+
+bul:
+  - rum
+  - con
+  - gre
+  - ser
+
+bul-ec:
+  - rum
+  - bla
+  - con
+
+bul-sc:
+  - con
+  - aeg
+  - gre
+
+gre:
+  - bul-sc
+  - aeg
+  - ion
+  - alb
+  - ser
+
+con:
+  - bla
+  - ank
+  - smy
+  - aeg
+  - bul-sc
+  - bul-ec
+
+ank:
+  - bla
+  - arm
+  - smy
+  - con
+
+smy:
+  - ank
+  - arm
+  - syr
+  - eas
+  - aeg
+  - con
+
+bla:
+  - sev
+  - arm
+  - ank
+  - con
+  - bul-ec
+  - rum
+
+
+
