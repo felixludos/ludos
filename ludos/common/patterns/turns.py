@@ -1,7 +1,7 @@
 
 from humpack import pack_member, unpack_member
-from gsm import tdict, tlist, tset
-from gsm.core import GameStack, GamePhase
+from ludos import tdict, tlist, tset
+from ludos.core import GameStack, GamePhase
 
 
 class TurnPhaseStack(GameStack): # tracks turn counter, inc when creating a TurnPhase

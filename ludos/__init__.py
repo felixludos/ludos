@@ -13,7 +13,12 @@ from . import ai
 from . import io
 from .core import GamePhase, GameStack, GamePlayer, GameActions, GameObject, GameTable, GameState, GameLogger, GameObjectGenerator, GameController, GameManager, SafeGenerator
 
-from ._lib_info import version as __version__
-from ._lib_info import author as __author__
-
+import os
+__info__ = {'__file__':os.path.join(os.path.abspath(os.path.dirname(__file__)), '_info.py')}
+with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), '_info.py'), 'r') as f:
+	exec(f.read(), __info__)
+del os
+del __info__['__file__']
+__author__ = __info__['author']
+__version__ = __info__['version']
 
