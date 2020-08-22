@@ -1,10 +1,10 @@
 import sys, os
 import numpy as np
-import gsm
-from gsm import tdict, tlist, tset, tdeque, tstack, containerify
-from gsm.errors import InvalidPlayerError
-from gsm.common.world import grid
-from gsm.common import TurnPhaseStack
+import ludos
+from ludos import adict, tlist, tset, tdeque, tstack, containerify
+from ludos.errors import InvalidPlayerError
+from ludos.common.world import grid
+from ludos.common import TurnPhaseStack
 
 from .phases import MainPhase, RobberPhase, SetupPhase, TradePhase
 from . import objects
@@ -16,7 +16,7 @@ MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 
-class Catan(gsm.GameController):
+class Catan(ludos.GameController):
 	
 	def _create_start_phase(self, C, config, settings, **kwargs):
 		super()._create_start_phase(C, config, settings,
@@ -30,9 +30,9 @@ class Catan(gsm.GameController):
 		
 		# update player props
 		for player in C.players.values():
-			player.reserve = tdict(config.rules.building_limits)
-			player.buildings = tdict(road=tset(), settlement=tset(), city=tset())
-			player.resources = tdict({res:0 for res in res_names})
+			player.reserve = adict(config.rules.building_limits)
+			player.buildings = adict(road=tset(), settlement=tset(), city=tset())
+			player.resources = adict({res:0 for res in res_names})
 			player.num_res = 0
 			player.devcards = tset()
 			player.past_devcards = tset()
@@ -41,7 +41,7 @@ class Catan(gsm.GameController):
 			
 		C.state.costs = config.rules.building_costs
 		
-		bank = tdict()
+		bank = adict()
 		for res in res_names:
 			bank[res] = config.rules.num_res
 		C.state.bank = bank
@@ -61,7 +61,7 @@ class Catan(gsm.GameController):
 		C.state.world = G
 		
 		# robber and numbers
-		numbers = tdict()
+		numbers = adict()
 		loc = None
 		for f in G.fields:
 			if f.res == 'desert':
@@ -80,7 +80,7 @@ class Catan(gsm.GameController):
 		cards = tlist()
 		
 		for name, info in config.dev_cards.items():
-			cards.extend([tdict(name=name, desc=info.desc)]*info.num)
+			cards.extend([adict(name=name, desc=info.desc)]*info.num)
 		
 		C.state.dev_deck = C.table.create(obj_type='Deck', cards=cards,
 		                                        seed=C.RNG.getrandbits(64),
@@ -94,9 +94,9 @@ class Catan(gsm.GameController):
 		
 	def _end_game(self, C):
 		
-		out = tdict()
+		out = adict()
 		
-		vps = tdict({player.name:player.vps for player in C.players})
+		vps = adict({player.name:player.vps for player in C.players})
 		out.vps = vps
 		
 		mx = max(vps.values())

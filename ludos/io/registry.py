@@ -1,18 +1,20 @@
 import os
 import yaml
 
-from ..util import get_printer
+from omnibelt import Registry
+
+from ..util import get_printer, load_yaml
 from ..errors import RegistryCollisionError, InvalidValueError
 
 prt = get_printer(__name__)
 
-_game_registry = {}
+_game_registry = Registry()
 def register_game(cls, name=None, path=None, info=None):
 	if name is None:
 		name = cls.__name__
 	
 	if info is None and path is not None:
-		info = yaml.load(open(path, 'r'))
+		info = load_yaml(path, 'r')
 	elif info is None:
 		info = {'short_name':name}
 	elif 'short_name' not in info:

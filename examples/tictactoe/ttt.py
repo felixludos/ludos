@@ -1,19 +1,19 @@
 import sys, os
 import numpy as np
-import gsm
-from gsm import tdict, tlist, tset
+import ludos
+from ludos import adict, tlist, tset
 
-from gsm import GameActions, GameOver, GamePlayer
-from gsm.common import world, TurnPhase
-from gsm.common.world import Grid, Field
-from gsm import SwitchPhase
+from ludos import GameController, GameActions, GameOver, GamePlayer
+from ludos.common import world, TurnPhase
+from ludos.common.world import Grid, Field
+from ludos import SwitchPhase
 
 
 ##################
 # region Controller
 ##################
 
-class TicTacToe(gsm.GameController):
+class TicTacToe(GameController):
 	
 	def _init_game(self, C, config, settings):
 		
@@ -42,12 +42,12 @@ class TicTacToe(gsm.GameController):
 		
 		if val is None:
 			C.log.writef('Game over! Draw game!')
-			return tdict(winner=None)
+			return adict(winner=None)
 		
 		for player in C.players:
 			if player._val == val:
 				C.log.writef('Game Over! {} wins!', player)
-				return tdict(winner=player.name)
+				return adict(winner=player.name)
 			
 		raise Exception('No player with val: {}'.format(val))
 
@@ -97,7 +97,7 @@ class TicPhase(TurnPhase, game='ttt', name='tic', start=True):
 		with out('tic', desc='Available spots'):
 			out.add(tset(free))
 		
-		return tdict({self.player: out})
+		return adict({self.player: out})
 
 
 # endregion

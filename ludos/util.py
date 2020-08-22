@@ -3,116 +3,14 @@ import yaml
 import numpy as np
 import random
 import logging
-from humpack import tdict, tset, tlist, pack_member, unpack_member
+
+from humpack import adict, tset, tlist, pack_member, unpack_member
+from omnibelt import get_printer, get_global_settings, set_global_setting, load_yaml, save_yaml
 
 from .mixins import Named, Typed, Jsonable, Packable, Transactionable, primitive
 from .errors import UnknownElementError, InvalidKeyError, GameError
 
 LIB_PATH = os.path.dirname(__file__)
-
-log_levels = {
-	'debug': logging.DEBUG,
-	'info': logging.INFO,
-	'warning': logging.WARNING,
-	'error': logging.ERROR,
-	'critical': logging.CRITICAL,
-}
-
-_global_settings = { # primarily for logging
-	'level': 'debug',
-	'logfile': os.path.join(os.path.dirname(LIB_PATH), 'logs', 'test.log'),
-	'format': '%(levelname)s:%(name)s: %(msg)s',
-	'stream': True,
-}
-
-def get_global_settings():
-	return _global_settings.copy()
-
-def set_global_setting(key, value):
-	_global_settings[key] = value
-
-def get_printer(name, level=None, format=None, formatter=None,
-				
-				no_file=None, file_handler=None,
-                filelevel=None, fileformatter=None, filepath=None,
-                
-				include_stream=None, stream_handler=None,
-                stream_level=None, stream_formatter=None,
-                
-                ):
-	'''
-	Create a logger possibly writing records to both a file and stdout (aka streaming).
-	For any unspecified arguments, the global settings are consulted.
-	
-	:param name:
-	:param level:
-	:param format:
-	:param formatter:
-	:param no_file:
-	:param file_handler:
-	:param filelevel:
-	:param fileformatter:
-	:param filepath:
-	:param include_stream:
-	:param stream_handler:
-	:param stream_level:
-	:param stream_formatter:
-	:return:
-	'''
-	
-	if include_stream is None:
-		include_stream = _global_settings['stream']
-	if no_file is None:
-		no_file = 'logfile' in _global_settings and _global_settings['logfile'] is not None
-	
-	assert not no_file or include_stream, 'Not logging anywhere'
-	
-	logger = logging.getLogger(name)
-	
-	if level is None:
-		level = _global_settings['level']
-	
-	logger.setLevel(log_levels[level] if level in log_levels else level)
-	
-	if format is None: # default formatter
-		format = _global_settings['format']
-	if formatter is None:
-		formatter = logging.Formatter(format)
-	
-	if filepath is None and 'logfile' in _global_settings and _global_settings['logfile'] is not None:
-		filepath = _global_settings['logfile']
-	
-	if file_handler is None and not no_file and filepath is not None: # create default file_handler
-		
-		if fileformatter is None:
-			fileformatter = formatter
-		
-		if filelevel is None:
-			filelevel = level
-		
-		file_handler = logging.FileHandler(filepath)
-		file_handler.setLevel(log_levels[filelevel] if filelevel in log_levels else filelevel)
-		file_handler.setFormatter(fileformatter)
-		
-	if file_handler is not None:
-		logger.addHandler(file_handler)
-	
-	if stream_handler is None and include_stream: # create default stream_handler
-		
-		if stream_level is None:
-			stream_level = level
-		
-		if stream_formatter is None:
-			stream_formatter = formatter
-		
-		stream_handler = logging.StreamHandler()
-		stream_handler.setLevel(log_levels[stream_level] if stream_level in log_levels else stream_level)
-		stream_handler.setFormatter(stream_formatter)
-	
-	if stream_handler is not None:
-		logger.addHandler(stream_handler)
-
-	return logger
 
 def assert_(cond, info=None):
 	if not cond:
@@ -181,7 +79,7 @@ def unjsonify(obj, tfm=None):
 			return tset(unjsonify(o, tfm=tfm) for o in obj['_set'])
 		if len(obj) == 2 and '_ndarray' in obj and '_dtype' in obj:
 			return np.array(unjsonify(obj['_ndarray'], tfm=tfm), dtype=obj['_dtype'])
-		return tdict({k: unjsonify(v, tfm=tfm) for k, v in obj.items()})
+		return adict({k: unjsonify(v, tfm=tfm) for k, v in obj.items()})
 	
 	raise UnknownElementError(obj)
 
@@ -227,13 +125,13 @@ def format_quantity(item, num=1, plural=None):
 	if plural is None:
 		plural = item + 's'
 	if num == 0:
-		return 'no {}'.format(plural)
+		return f'no {plural}'
 	if num == 1:
 		article = 'an' if item[0] in 'aeiouAEIOU8' else 'a'
 		if item in {'11', '18'}:
 			article = 'an'
-		return '{} {}'.format(article, item)
-	return '{} {}'.format(num, plural)
+		return f'{article} {item}'
+	return f'{num} {plural}'
 
 class RandomGenerator(Packable, Transactionable, random.Random):
 	
