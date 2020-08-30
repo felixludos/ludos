@@ -4,5 +4,5 @@ __pycache__/
 .ipynb_checkpoints/
 extra/
 logs/
-examples/innovation/config
-examples/wise_otherwise/config
+examples/innovation/data
+examples/wise_otherwise/data
