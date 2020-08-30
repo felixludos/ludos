@@ -1,6 +1,0 @@
-pyyaml
-flask
-flask_cors
-requests
-humpack
-omnibelt
