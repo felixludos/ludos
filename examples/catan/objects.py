@@ -1,7 +1,7 @@
-from gsm import GameObject, register_object
-from gsm.mixins import Named
-from gsm.common.world import grid
-from gsm.common.elements import Card, Deck
+from ludos import GameObject, register_object
+from ludos.mixins import Named
+from ludos.common.world import grid
+from ludos.common.elements import Card, Deck
 
 # Buildings
 register_object(game='catan', name='road', open={'loc', 'player'})

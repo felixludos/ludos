@@ -1,6 +1,6 @@
 import json, yaml
 from humpack import Packable, Transactionable, json_pack, json_unpack
-from .. import tdict, tset, tlist, containerify
+from .. import gdict, gset, glist, containerify
 from ..mixins import Named
 from .. import Interface, RandomGenerator, unjsonify, obj_unjsonify, util
 from ..viz import _package_action
@@ -48,8 +48,8 @@ class Agent_Interface(Interface):
 		me = msg.players[player]
 		msg.opponents = msg.players.copy()
 		del msg.opponents[player] # remove self from players list
-		msg.opponents = tlist(msg.opponents.values())
-		options = tdict()
+		msg.opponents = glist(msg.opponents.values())
+		options = gdict()
 		if 'options' in msg:
 			for name, opts in msg.options.items():
 				options[name] = decode_action_set(opts.actions)
@@ -78,7 +78,7 @@ class Agent_Interface(Interface):
 	
 register_interface('agent', Agent_Interface)
 
-class Agent(Named, tdict):
+class Agent(Named, gdict):
 	# def __init__(self, name): # player name
 	# 	super().__init__(name)
 	# 	self.msg = None
@@ -121,13 +121,13 @@ class Agent(Named, tdict):
 class ConfigAgent(Agent): # mixin only, this isnt a full agent
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		self.config_registry = tdict()
+		self.config_registry = gdict()
 		
 	def register_config(self, name, path):
 		self.config_registry[name] = path
 		
 	def load_config(self):
-		config = tdict()
+		config = gdict()
 		
 		for name, path in self.config_registry.items():
 			config[name] = containerify(yaml.load(open(path, 'r')))

@@ -1,6 +1,6 @@
 
-from gsm import tset, tlist, tdict
-from gsm.common.world import grid
+from ludos import gset, glist, gdict
+from ludos.common.world import grid
 
 def get_outside_corners(field): # start corner must be N of the field at seam "1"
 	
@@ -16,7 +16,7 @@ def get_outside_corners(field): # start corner must be N of the field at seam "1
 	x1, f, x2 = start.fields
 	assert f == field and x1 is None and x2 is None, 'Not the right corner'
 	
-	corners = tlist([start])
+	corners = glist([start])
 	
 	c = get_next(e.corners, start)
 	while c != start:
@@ -41,7 +41,7 @@ def build_catan_map(G, hex_info, ports, number_info, RNG):
 		outside[idx].port = port_type
 		
 	# set hex types
-	hextypes = tlist()
+	hextypes = glist()
 	for res, num in hex_info.items():
 		hextypes.extend([res]*num)
 	
@@ -53,9 +53,9 @@ def build_catan_map(G, hex_info, ports, number_info, RNG):
 	
 	hinums = number_info.hi
 	
-	options = tlist(f for f in G.fields if f.res != 'desert')
+	options = glist(f for f in G.fields if f.res != 'desert')
 	assert len(options) == (len(number_info.hi) + len(number_info.reg)), 'not the right number of tiles'
-	remaining = tset()
+	remaining = gset()
 	
 	for num in hinums:
 		
@@ -118,10 +118,10 @@ def play_dev(player, card):
 	player.past_devcards.add(card)
 
 def steal_options(loc, player):
-	return tset(c.building.player for c in loc.corners
+	return gset(c.building.player for c in loc.corners
 	            if 'building' in c
-	                and c.building.player != player
-	                and c.building.player.num_res > 0)
+	            and c.building.player != player
+	            and c.building.player.num_res > 0)
 
 def _settle_available(loc):
 	for e in loc.edges:
@@ -137,10 +137,10 @@ def _payable(player, cost):
 	return True
 def check_building_options(player, costs):
 	
-	locs = tdict(
-		road=tset(),
-		settlement=tset(),
-		city=tset(),
+	locs = gdict(
+		road=gset(),
+		settlement=gset(),
+		city=gset(),
 	)
 	
 	for road in player.buildings.road:
@@ -157,7 +157,7 @@ def check_building_options(player, costs):
 				if e is not None and 'building' not in e:
 					locs.road.add(e)
 	
-	options = tdict()
+	options = gdict()
 	for bld, opts in locs.items():
 		if _payable(player, costs[bld]) and player.reserve[bld] > 0:
 			options[bld] = opts
@@ -214,7 +214,7 @@ def unbuild(C, bld, silent=False):
 		C.log.writef('{} removes a {}{}', player, bld, '' if msg is None else msg)
 
 def bank_trade_options(player, bank_trading):
-	bank_options = tdict()
+	bank_options = gdict()
 	default = bank_trading['3to1'] if '3to1' in player.ports else bank_trading.default
 	for res, num in player.resources.items():
 		ratio = bank_trading[res] if res in player.ports else default
@@ -226,8 +226,8 @@ def bank_trade_options(player, bank_trading):
 def execute_trade(offer, demand, bank, from_player, to_player=None, log=None):
 	# gain_res(res, bank, player, delta, log=None)
 	
-	offer_res = tlist()
-	demand_res = tlist()
+	offer_res = glist()
+	demand_res = glist()
 	
 	for res in offer.keys():
 		

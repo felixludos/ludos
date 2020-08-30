@@ -1,7 +1,7 @@
 import sys, os
 import numpy as np
 import ludos
-from ludos import adict, tlist, tset
+from ludos import gdict, glist, gset
 
 from ludos import GameController, GameActions, GameOver, GamePlayer
 from ludos.common import world, TurnPhase
@@ -42,12 +42,12 @@ class TicTacToe(GameController):
 		
 		if val is None:
 			C.log.writef('Game over! Draw game!')
-			return adict(winner=None)
+			return gdict(winner=None)
 		
 		for player in C.players:
 			if player._val == val:
 				C.log.writef('Game Over! {} wins!', player)
-				return adict(winner=player.name)
+				return gdict(winner=player.name)
 			
 		raise Exception('No player with val: {}'.format(val))
 
@@ -95,9 +95,9 @@ class TicPhase(TurnPhase, game='ttt', name='tic', start=True):
 			raise GameOver
 		
 		with out('tic', desc='Available spots'):
-			out.add(tset(free))
+			out.add(gset(free))
 		
-		return adict({self.player: out})
+		return gdict({self.player: out})
 
 
 # endregion

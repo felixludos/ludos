@@ -14,9 +14,9 @@ from flask import Flask, render_template, request, send_from_directory
 from flask_cors import CORS
 
 import examples
-import gsm
-from gsm import jsonify
-from gsm.io.transmit import LstConverter, create_dir
+import ludos
+from ludos import jsonify
+from ludos.io.transmit import LstConverter, create_dir
 
 
 SAVE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
@@ -36,7 +36,7 @@ def _ex_wrap(cmd, *args, **kwargs):
 	try:
 		return cmd(*args, **kwargs)
 	except Exception as e:
-		if isinstance(e, gsm.errors.WrappedException):
+		if isinstance(e, ludos.errors.WrappedException):
 			msg = {'error':{'type':str(e.etype), 'msg':e.emsg}}
 		else:
 		
@@ -63,7 +63,7 @@ def _hard_restart(address=None, debug=False, **settings):
 	
 	debug = bool(debug)
 	
-	H = gsm.Host(address, debug=debug, **settings)
+	H = ludos.Host(address, debug=debug, **settings)
 	return 'Host restarted (debug={})'.format(debug)
 
 @app.route('/cheat')

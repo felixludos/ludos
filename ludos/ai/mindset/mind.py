@@ -2,10 +2,10 @@
 import numpy as np
 
 from ...mixins import Named, Typed
-from ... import tlist, tdict, tset, theap, Transactionable, Packable
+from ... import glist, gdict, gset, gheap, Transactionable, Packable
 from .. import RandomAgent
 
-class Tactic(Typed, Named, tdict):
+class Tactic(Typed, Named, gdict):
 	
 	def observe(self, mind, me, **status):
 		pass
@@ -22,7 +22,7 @@ class DontAskMe(Exception):
 	pass
 
 
-class Mindset(Typed, tdict): # high level goal
+class Mindset(Typed, gdict): # high level goal
 	
 	def observe(self, mind, me, **status):
 		pass
@@ -50,7 +50,7 @@ class Random_Mindset(Mindset):
 
 
 
-class Idea(tdict):
+class Idea(gdict):
 	def __init__(self, rank, *args, **items):
 		super().__init__(*args, **items)
 		self.rank = rank

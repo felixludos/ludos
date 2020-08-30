@@ -1,6 +1,5 @@
 
-import gsm
-from gsm import tdict, tlist, tset
+from ludos import gdict, glist, gset
 
 def count_vp(buildings, values):
 	vps = 0
@@ -9,11 +8,11 @@ def count_vp(buildings, values):
 	return vps
 
 def compute_missing(resources, costs):
-	dists = tdict()
-	missing_res = tdict()
+	dists = gdict()
+	missing_res = gdict()
 	for building, cost in costs.items():
 		dists[building] = 0
-		missing = tdict()
+		missing = gdict()
 		for res, num in cost.items():
 			if num > resources[res]:
 				diff = num - resources[res]

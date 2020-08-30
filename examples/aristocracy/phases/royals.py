@@ -1,9 +1,9 @@
 
 import numpy as np
-from gsm import GameOver, GamePhase, GameActions, GameObject
-from gsm import tset, tdict, tlist
-from gsm import PhaseComplete, SwitchPhase, SubPhase
-from gsm.common import stages as stg
+from ludos import GameOver, GamePhase, GameActions, GameObject
+from ludos import gset, gdict, glist
+from ludos import PhaseComplete, SwitchPhase, SubPhase
+from ludos.common import stages as stg
 
 class RoyalPhase(stg.StagePhase):
 	

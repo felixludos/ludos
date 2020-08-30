@@ -1,7 +1,7 @@
 
 import inspect
 
-from .. import tdict, tlist, tset
+from .. import gdict, glist, gset
 from ..mixins import Named
 from ..core import GamePhase
 from ..util import get_printer
@@ -30,8 +30,8 @@ class Decide(Signal):
 		self.info = info
 
 class StagePhase(GamePhase):
-	_stage_registry = tdict()
-	_decision_registry = tdict()
+	_stage_registry = gdict()
+	_decision_registry = gdict()
 	_entry_stage_name = None
 	
 	def __init_subclass__(cls, **kwargs):
@@ -43,7 +43,7 @@ class StagePhase(GamePhase):
 		
 		preg = parent.__dict__['_stage_registry']
 		if '_stage_registry' not in cls.__dict__:
-			reg = tdict()
+			reg = gdict()
 			cls._stage_registry = reg
 		else:
 			reg = cls.__dict__['_stage_registry']
@@ -53,7 +53,7 @@ class StagePhase(GamePhase):
 		
 		preg = parent.__dict__['_decision_registry']
 		if '_decision_registry' not in cls.__dict__:
-			reg = tdict()
+			reg = gdict()
 			cls._decision_registry = reg
 		else:
 			reg = cls.__dict__['_decision_registry']
@@ -71,7 +71,7 @@ class StagePhase(GamePhase):
 	def register_stage(cls, name, fn, entry=False, switch=None, decide=None):
 		
 		if '_stage_registry' not in cls.__dict__:
-			reg = tdict()
+			reg = gdict()
 			cls._stage_registry = reg
 		else:
 			reg = cls.__dict__['_stage_registry']
@@ -88,7 +88,7 @@ class StagePhase(GamePhase):
 	def register_decision(cls, name, fn, action_groups=None):
 		
 		if '_decision_registry' not in cls.__dict__:
-			reg = tdict()
+			reg = gdict()
 			cls._decision_registry = reg
 		else:
 			reg = cls.__dict__['_decision_registry']

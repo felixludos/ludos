@@ -1,15 +1,15 @@
 
 import numpy as np
-from gsm import GameOver, GamePhase, GameActions, GameObject
-from gsm import tset, tdict, tlist
-from gsm import SwitchPhase, PhaseComplete, SubPhase
+from ludos import GameOver, GamePhase, GameActions, GameObject
+from ludos import gset, gdict, glist
+from ludos import SwitchPhase, PhaseComplete, SubPhase
 
-from gsm.common import TurnPhase
-from gsm.common import stages as stg
-from gsm.common import Selection
+from ludos.common import TurnPhase
+from ludos.common import stages as stg
+from ludos.common import Selection
 
 from ..ops import get_next_market
-from gsm import util
+from ludos import util
 
 class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 	
@@ -22,7 +22,7 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 	def select_stand(self, C, player, action=None):
 		
 		if action is None:
-			players = tlist(p for p in C.players if len(p.hand))
+			players = glist(p for p in C.players if len(p.hand))
 			
 			if len(players) == 0:
 				raise PhaseComplete
@@ -36,7 +36,7 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 			if stands is not None:
 				for p, stand in stands.items():
 					if len(stand):
-						self.done = tset()
+						self.done = gset()
 						for p, stand in stands.items():
 							p.market.update(stand)
 							C.log.writef('{}\'s stand contains: {}', p, ', '.join(str(card) for card in stand))
@@ -71,7 +71,7 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 	def _find_next(self, players):
 		
 		mn = None
-		options = tset()
+		options = gset()
 		
 		# check order of available players with markets
 		for player in players:
@@ -173,11 +173,11 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 					for bld in buildings:
 						out.add(bld.storage)
 		
-		return tdict({player: out})
+		return gdict({player: out})
 	
 	def _get_trade_options(self, C, player):
-		my = tset(player.market)
-		other = tset(C.state.market.neutral)
+		my = gset(player.market)
+		other = gset(C.state.market.neutral)
 		for p in C.players:
 			if p != player:
 				other.update(p.market)
@@ -251,7 +251,7 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 			if 'trade_offer' in self:
 				out.add(other)
 				
-		return tdict({self.active:out})
+		return gdict({self.active:out})
 	
 		
 	@stg.Stage('sell')
@@ -290,9 +290,9 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 			out.add('cancel')
 		
 		with out('sell', 'Complete sale'):
-			out.add(self.active.market - tset(self.pick))
+			out.add(self.active.market - gset(self.pick))
 			
-		return tdict({self.active:out})
+		return gdict({self.active:out})
 	
 	@stg.Stage('cleanup')
 	def cleanup_market(self, C, player, action=None):
@@ -340,7 +340,7 @@ class MarketPhase(stg.StagePhase, game='aristocracy', name='market'):
 					if bld != 'palace' and len(options):
 						out.add(options)
 		
-		return tdict({self.active: out})
+		return gdict({self.active: out})
 	
 	@stg.Stage('visit')
 	def visit_action(self, C, player, action=None):

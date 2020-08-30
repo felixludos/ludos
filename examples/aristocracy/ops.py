@@ -1,6 +1,6 @@
 
-from gsm import tset, tlist, tdict
-from gsm.common.world import grid
+from ludos import gset, glist, gdict
+from ludos.common.world import grid
 
 def satisfies_vic_req(player, reqs):
 	

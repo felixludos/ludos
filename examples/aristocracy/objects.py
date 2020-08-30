@@ -1,8 +1,8 @@
-from gsm import GameObject, tdict, tlist, tset
-from gsm.mixins import Named
-from gsm.common.world import grid
-from gsm.common.elements import Card as CardBase
-from gsm.common.elements import Deck
+from ludos import GameObject, gdict, glist, gset
+from ludos.mixins import Named
+from ludos.common.world import grid
+from ludos.common.elements import Card as CardBase
+from ludos.common.elements import Deck
 
 class Card(Named, CardBase, game='aristocracy', name='card'):
 	
@@ -45,7 +45,7 @@ class DrawPile(Deck, game='aristocracy', name='draw_pile'):
 class Building(GameObject, game='aristocracy', name='building'): # TODO: handle game object super objects correctly
 	def __init__(self, address, storage, owner, **props):
 		super().__init__(harvest=None, owner=owner, storage=storage,
-		                 address=address, intruders=tlist(), # face up
+		                 address=address, intruders=glist(), # face up
 		                 **props)
 
 	def visit(self):

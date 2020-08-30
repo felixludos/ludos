@@ -5,10 +5,10 @@ from scipy.special import softmax
 
 from ..main import MY_PATH
 
-import gsm
-from gsm import tdict, tlist, tset
-from gsm import ai
-from gsm.viz import _package_action
+import ludos
+from ludos import gdict, glist, gset
+from ludos import ai
+from ludos.viz import _package_action
 
 from .ops import compute_missing, count_vp
 
@@ -59,11 +59,11 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 	
 	class setup_settlement(ai.mindset.Random_Tactic):
 		def get_sites(self, options, table):
-			sites = np.array([tdict(ID=a[0].ID) for a in options['loc-settlement']])
+			sites = np.array([gdict(ID=a[0].ID) for a in options['loc-settlement']])
 			for site in sites:
 				c = table[site['ID']]
-				site.nums = tlist(n.num for n in c.fields if n is not None and 'num' in n)
-				site.ress = tlist(n.res for n in c.fields if n is not None and 'res' in n)
+				site.nums = glist(n.num for n in c.fields if n is not None and 'num' in n)
+				site.ress = glist(n.res for n in c.fields if n is not None and 'res' in n)
 				site.val = sum(6 - abs(n - 7) for n in site.nums)
 				if 'port' in c:
 					site.port = c.port
@@ -180,14 +180,14 @@ class Regular(ai.ConfigAgent, ai.Mindset_Agent):
 		
 	class robber_loc(ai.mindset.Random_Tactic):
 		def observe(self, mind, me, options, table, opponents, **status):
-			hexs = tlist(table[a.ID] for a, in options['loc'])
+			hexs = glist(table[a.ID] for a, in options['loc'])
 			
-			remaining = tlist()
+			remaining = glist()
 			for h in hexs:
 				if 'num' in h:
 					for c in h.corners:
 						if 'building' in c and c.building.player.name != me.name and c.building.player.num_res > 0:
-							info = tdict()
+							info = gdict()
 							info.val = 6 - abs(h.num - 7)
 							info.res = h.res
 							info.ID = h._id

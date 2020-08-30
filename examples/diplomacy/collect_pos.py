@@ -166,8 +166,8 @@ def _collect_map_pos(A):
 					x,y = container['retreat']
 					plt.scatter([x], [y], marker='x', color='r')
 				
-			plt.draw()
-			plt.pause(0.0001)
+			# plt.draw()
+			# plt.pause(0.0001)
 			
 			# if coast_retreat_pos:
 			# 	if 'retreat' not in container:

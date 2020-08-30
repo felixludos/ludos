@@ -5,10 +5,10 @@ from scipy.special import softmax
 
 from ..main import MY_PATH
 
-import gsm
-from gsm import tdict, tlist, tset
-from gsm import ai
-from gsm.viz import _package_action
+import ludos
+from ludos import gdict, glist, gset
+from ludos import ai
+from ludos.viz import _package_action
 
 # from .ops import compute_missing, count_vp
 

@@ -1,6 +1,6 @@
 
 import numpy as np
-from ... import tdict, tlist, tset
+from ... import gdict, glist, gset
 from ... import GameObject, Array
 from ._old_grid_util import quadgrid as _quadgrid
 from ._grid_util import _create_grid
@@ -61,11 +61,11 @@ def _format_grid(raw, table=None,
 		table.register_obj_type(obj_cls=Field)
 		field_obj_type = Field.__name__
 	
-	fields = tdict()
+	fields = gdict()
 	for fid, f in raw['fields'].items():
 		
 		if table is None:
-			obj = tdict(obj_type='field', _id=f['ID'],
+			obj = gdict(obj_type='field', _id=f['ID'],
 			            row=f['row'], col=f['col'],
 			            neighbors=f['neighbors'])
 			
@@ -91,7 +91,7 @@ def _format_grid(raw, table=None,
 		fields[obj._id] = obj
 	
 	# edges
-	edges = tdict()
+	edges = gdict()
 	if enable_edges:
 		if table is not None and edge_obj_type is None:
 			table.register_obj_type(obj_cls=Edge)
@@ -99,7 +99,7 @@ def _format_grid(raw, table=None,
 		
 		for eid, e in raw['edges'].items():
 			if table is None:
-				obj = tdict(obj_type='edge', _id=e['ID'],
+				obj = gdict(obj_type='edge', _id=e['ID'],
 				            fields=e['fields'])
 			else:
 				obj = table.create(obj_type=edge_obj_type,
@@ -115,7 +115,7 @@ def _format_grid(raw, table=None,
 			edges[obj._id] = obj
 	
 	# corners
-	corners = tdict()
+	corners = gdict()
 	if enable_corners:
 		if table is not None and corner_obj_type is None:
 			table.register_obj_type(obj_cls=Corner)
@@ -124,7 +124,7 @@ def _format_grid(raw, table=None,
 		for cid, c in raw['corners'].items():
 			
 			if table is None:
-				obj = tdict(obj_type='corner', _id=c['ID'],
+				obj = gdict(obj_type='corner', _id=c['ID'],
 				            fields=c['fields'])
 			else:
 				obj = table.create(obj_type=corner_obj_type,
@@ -157,50 +157,50 @@ def _format_grid(raw, table=None,
 			grid_obj_type = Grid.__name__
 		
 		grid = table.create(obj_type=grid_obj_type,
-		                    fields=tset(fields.values()),
+		                    fields=gset(fields.values()),
 		                    rows=raw['rows'], cols=raw['cols'])
 	else:
-		grid = tdict(obj_type='grid',
-		             fields=tset(fields.values()),
+		grid = gdict(obj_type='grid',
+		             fields=gset(fields.values()),
 		             rows=raw['rows'], cols=raw['cols'])
 	
 	# connect fields
 	for f in fields.values():
 		
-		f.neighbors = tlist((fields[raw['fields'][n]['obj_id']] if n is not None else n)
+		f.neighbors = glist((fields[raw['fields'][n]['obj_id']] if n is not None else n)
 		                    for n in f['neighbors'])
 		
 		if len(edges):
-			f.edges = tlist((edges[raw['edges'][e]['obj_id']] if e is not None else e)
+			f.edges = glist((edges[raw['edges'][e]['obj_id']] if e is not None else e)
 			                for e in f['edges'])
 		
 		if len(corners):
-			f.corners = tlist((corners[raw['corners'][c]['obj_id']] if c is not None else c)
+			f.corners = glist((corners[raw['corners'][c]['obj_id']] if c is not None else c)
 			                  for c in f['corners'])
 	
 	# connect edges
 	if len(edges):
 		for e in edges.values():
-			e.fields = tlist((fields[raw['fields'][f]['obj_id']] if f is not None else f)
+			e.fields = glist((fields[raw['fields'][f]['obj_id']] if f is not None else f)
 			                 for f in e['fields'])
 			
 			if len(corners):
-				e.corners = tlist((corners[raw['corners'][c]['obj_id']] if c is not None else c)
+				e.corners = glist((corners[raw['corners'][c]['obj_id']] if c is not None else c)
 				                  for c in e['corners'])
 		
-		grid.edges = tset(edges.values())
+		grid.edges = gset(edges.values())
 	
 	# connect corners
 	if len(corners):
 		for c in corners.values():
-			c.fields = tlist((fields[raw['fields'][f]['obj_id']] if f is not None else f)
+			c.fields = glist((fields[raw['fields'][f]['obj_id']] if f is not None else f)
 			                 for f in c['fields'])
 			
 			if len(edges):
-				c.edges = tlist((edges[raw['edges'][e]['obj_id']] if e is not None else e)
+				c.edges = glist((edges[raw['edges'][e]['obj_id']] if e is not None else e)
 				                for e in c['edges'])
 		
-		grid.corners = tset(corners.values())
+		grid.corners = gset(corners.values())
 	
 	return grid
 

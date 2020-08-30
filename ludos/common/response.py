@@ -1,5 +1,5 @@
 
-from .. import tdict, tlist, tset
+from .. import tdict, glist, gset
 from .. import GamePhase, PhaseComplete, GameActions
 
 class Responsive(object): # mixin
@@ -31,7 +31,7 @@ class ResponsePhase(GamePhase):
 		
 		choices = self.options.keys() \
 			if isinstance(self.options, dict) else self.options
-		choices = tset(choices)
+		choices = gset(choices)
 		
 		with out('question', self.desc):
 			out.add(choices)

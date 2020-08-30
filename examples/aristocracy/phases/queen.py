@@ -1,11 +1,11 @@
 
 import numpy as np
-from gsm import GameOver, GamePhase, GameActions, GameObject
-from gsm import tset, tdict, tlist
-from gsm import PhaseComplete, SwitchPhase
-from gsm.common import stages as stg
-from gsm.common import Selection
-from gsm import util
+from ludos import GameOver, GamePhase, GameActions, GameObject
+from ludos import gset, gdict, glist
+from ludos import PhaseComplete, SwitchPhase
+from ludos.common import stages as stg
+from ludos.common import Selection
+from ludos import util
 
 from .royals import RoyalPhase
 
@@ -24,7 +24,7 @@ class QueenPhase(RoyalPhase, game='aristocracy', name='queen'):
 	def run_ball(self, C, player, action=None):
 		
 		if action is None:
-			self.sel = Selection(tlist(p for p in C.players if len(p.hand)), log=C.log,
+			self.sel = Selection(glist(p for p in C.players if len(p.hand)), log=C.log,
 			                     option_fn=lambda p: p.hand,
 			                     status='You may choose cards to attend the ball.')
 		else:
@@ -32,7 +32,7 @@ class QueenPhase(RoyalPhase, game='aristocracy', name='queen'):
 			if done is not None:
 				
 				# run ball
-				ball = tlist(C.state.market)
+				ball = glist(C.state.market)
 				for p, sel in done:
 					p.hand -= sel
 					ball.extend(sel)
@@ -42,7 +42,7 @@ class QueenPhase(RoyalPhase, game='aristocracy', name='queen'):
 				
 				C.RNG.shuffle(ball)
 				
-				ball = tset(ball)
+				ball = gset(ball)
 				for p, sel in done:
 					for _ in range(len(sel)):
 						card = ball.pop()

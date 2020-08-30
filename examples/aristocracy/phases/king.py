@@ -1,10 +1,10 @@
 
 import numpy as np
-from gsm import GameOver, GamePhase, GameActions, GameObject
-from gsm import tset, tdict, tlist
-from gsm import PhaseComplete, SwitchPhase
-from gsm.common import stages as stg
-from gsm import util
+from ludos import GameOver, GamePhase, GameActions, GameObject
+from ludos import gset, gdict, glist
+from ludos import PhaseComplete, SwitchPhase
+from ludos.common import stages as stg
+from ludos import util
 
 from ..ops import satisfies_vic_req
 
@@ -23,7 +23,7 @@ class KingPhase(RoyalPhase, game='aristocracy', name='king', start=True):
 				C.log.writef('{} becomes herald', p)
 		
 		# prep tax
-		extra = tdict()
+		extra = gdict()
 		for p in C.players:
 			if len(p.hand) > p.hand_limit:
 				extra[p] = len(p.hand) - p.hand_limit
@@ -65,7 +65,7 @@ class KingPhase(RoyalPhase, game='aristocracy', name='king', start=True):
 	def post_phase(self, C, player, action=None):
 		
 		if 'candidates' not in self:
-			self.candidates = tlist(p for p in C.players
+			self.candidates = glist(p for p in C.players
 			                        if satisfies_vic_req(p, C.config.rules.victory_conditions))
 		
 		if len(self.candidates):
@@ -95,7 +95,7 @@ class KingPhase(RoyalPhase, game='aristocracy', name='king', start=True):
 		out = GameActions('You have fulfilled the requirements to claim victory.')
 		
 		with out('end', 'End the game?'):
-			out.add(tset(['yes', 'no']))
+			out.add(gset(['yes', 'no']))
 		
-		return tdict({p:out for p in self.candidates})
+		return gdict({p:out for p in self.candidates})
 

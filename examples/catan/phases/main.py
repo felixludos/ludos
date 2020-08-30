@@ -1,10 +1,10 @@
 
 import numpy as np
-from gsm import GameOver, GamePhase, GameActions, GameObject
-from gsm.common import TurnPhase
-from gsm.common import stages as stg
-from gsm import tset, tdict, tlist, assert_
-from gsm import SwitchPhase, PhaseComplete, SubPhase
+from ludos import GameOver, GamePhase, GameActions, GameObject
+from ludos.common import TurnPhase
+from ludos.common import stages as stg
+from ludos import gset, gdict, glist, assert_
+from ludos import SwitchPhase, PhaseComplete, SubPhase
 
 from ..ops import build, unbuild, play_dev, pay_cost, can_buy, roll_dice, check_victory, get_knight, gain_res, check_building_options, bank_trade_options
 
@@ -18,7 +18,7 @@ class MainPhase(TurnPhase, stg.StagePhase, name='main', game='catan'):
 		self.devcard = None
 		self.card_info = None # for processing multi decision devcards
 		
-		self.bought_devcards = tset()
+		self.bought_devcards = gset()
 	
 	@stg.Entry_Stage('roll')
 	def roll_dice(self, C, player, action=None):
@@ -181,16 +181,16 @@ class MainPhase(TurnPhase, stg.StagePhase, name='main', game='catan'):
 		with out('maritime-trade', desc='Maritime Trade (with the bank)'):
 			options = bank_trade_options(self.player, C.state.bank_trading)
 			if len(options):
-				out.add('offer', tset((num, res) for res, num in options.items()))
+				out.add('offer', gset((num, res) for res, num in options.items()))
 		
 		with out('domestic-trade', desc='Domestic Trade (with players)'):
-			out.add('demand', tset(res for res in self.player.resources))
+			out.add('demand', gset(res for res in self.player.resources))
 			if self.player.num_res:
-				out.add('offer', tset(res for res, num in self.player.resources.items() if num > 0))
+				out.add('offer', gset(res for res, num in self.player.resources.items() if num > 0))
 		
 		with out('play', desc='Play a development card'):
 			if len(self.player.devcards) and self.devcard is None:
-				res = tset(self.player.resources.keys())
+				res = gset(self.player.resources.keys())
 				for card in self.player.devcards:
 					if card in self.bought_devcards:
 						pass
@@ -275,7 +275,7 @@ class MainPhase(TurnPhase, stg.StagePhase, name='main', game='catan'):
 			out.add('cancel')
 		
 		with out('dev-res', desc='Select a second resource'):
-			out.add(tset(self.player.resources.keys()))
+			out.add(gset(self.player.resources.keys()))
 		
 		return tdict({self.player: out})
 

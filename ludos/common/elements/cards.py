@@ -1,5 +1,5 @@
 
-from ... import tdict, tlist, tset, tdeque
+from ... import gdict, glist, gset, gdeque
 from ... import GameObject, SafeGenerator
 
 
@@ -27,10 +27,10 @@ class Deck(SafeGenerator):
 	
 	def __init__(self, seed, default, cards=[], top_face_up=None,
 	             **info):
-		super().__init__(seed=seed, objs=tdeque(cards), default=default, **info)
+		super().__init__(seed=seed, objs=gdeque(cards), default=default, **info)
 		
 		self._top_face_up = top_face_up
-		self._in_play = tset()
+		self._in_play = gset()
 		self._kwargs = tdict()
 		
 		self.shuffle()
@@ -41,7 +41,7 @@ class Deck(SafeGenerator):
 		return len(self._objs)
 	
 	def _get(self, n=1):
-		objs = tlist()
+		objs = glist()
 		for _ in range(n):
 			obj = self._objs.popleft()
 			obj.deck = self
@@ -63,7 +63,7 @@ class Deck(SafeGenerator):
 	
 	def _peek(self):
 		if self._top_face_up is not None:
-			self.next = tlist(self._objs[:self._top_face_up])
+			self.next = glist(self._objs[:self._top_face_up])
 	
 	def shuffle(self):
 		self._rng.shuffle(self._objs)
@@ -72,7 +72,7 @@ class Deck(SafeGenerator):
 	def draw(self, n=None, player=None):
 		
 		if player is not None:
-			self._kwargs = {'visible': tset([player.name])}
+			self._kwargs = {'visible': gset([player.name])}
 		
 		cards = self.get(n)
 		if n is None:

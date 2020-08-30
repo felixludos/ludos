@@ -1,9 +1,9 @@
 
 from ... import GameOver
 from ...core import GameActions
-from ... import tset, tdict, tlist
+from ... import gset, gdict, glist
 
-class Selection(tdict):
+class Selection(gdict):
 	def __init__(self, players, allow_multiple=True,
 	             min_select=None, max_select=None,
 	             log=None, status=None,
@@ -11,8 +11,8 @@ class Selection(tdict):
 		super().__init__(players=players, allow_multiple=allow_multiple,
 		                 min_select=min_select, max_select=max_select,
 		                 log=log, done=False)
-		self.sel = tdict()
-		self.done = tdict()
+		self.sel = gdict()
+		self.done = gdict()
 		
 		if options is not None:
 			option_fn = lambda p: options
@@ -55,7 +55,7 @@ class Selection(tdict):
 	
 	def options(self):
 		
-		outs = tdict()
+		outs = gdict()
 		
 		for p in self.players:
 			if p not in self.done:

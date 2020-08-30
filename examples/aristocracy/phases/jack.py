@@ -1,10 +1,10 @@
 
 import numpy as np
-from gsm import GameOver, GamePhase, GameActions, GameObject
-from gsm import tset, tdict, tlist
-from gsm import PhaseComplete, SwitchPhase
-from gsm.common import stages as stg
-from gsm import util
+from ludos import GameOver, GamePhase, GameActions, GameObject
+from ludos import gset, gdict, glist
+from ludos import PhaseComplete, SwitchPhase
+from ludos.common import stages as stg
+from ludos import util
 
 from .royals import RoyalPhase
 

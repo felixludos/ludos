@@ -1,4 +1,8 @@
-from humpack import adict, tlist, tset, tdeque, tstack, theap, containerify
+from humpack import containerify
+
+from humpack import adict as gdict, tlist as glist, tset as gset, \
+	tdeque as gdeque, tstack as gstack, theap as gheap
+
 from humpack.wrappers import Array
 from humpack import Packable, Transactionable
 from .util import jsonify, unjsonify, obj_unjsonify

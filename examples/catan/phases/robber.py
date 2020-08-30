@@ -1,7 +1,7 @@
 import numpy as np
-from gsm.common import StagePhase, Entry_Stage, Stage, Decision, Decide, Switch
-from gsm import GamePhase, GameActions, PhaseComplete
-from gsm import tset, tdict, tlist
+from ludos.common import StagePhase, Entry_Stage, Stage, Decision, Decide, Switch
+from ludos import GamePhase, GameActions, PhaseComplete
+from ludos import gset, gdict, glist
 
 from ..ops import gain_res, play_dev, steal_options
 
@@ -17,11 +17,11 @@ class RobberPhase(StagePhase, name='robber', game='catan'):
 	
 	@Decision('debt', ['robbed'])
 	def decide_steal(self, C):
-		outs = tdict()
+		outs = gdict()
 		for player, topay in self.debt.items():
 			outs[player] = GameActions('You are robbed, choose {} resources to discard.'.format(topay))
 			with outs[player]('robbed', desc='Choose resource to discard'):
-				outs[player].add(tset(res for res, num in player.resources.items() if num > 0))
+				outs[player].add(gset(res for res, num in player.resources.items() if num > 0))
 		
 		return outs
 		
@@ -30,15 +30,15 @@ class RobberPhase(StagePhase, name='robber', game='catan'):
 		
 		if 'debt' not in self:
 			
-			self.debt = tdict()
-			self.choices = tdict()
+			self.debt = gdict()
+			self.choices = gdict()
 			
 			lim = C.state.hand_limit
 			
 			for player in C.players:
 				if player.num_res > lim:
 					self.debt[player] = player.num_res // 2
-					self.choices[player] = tlist()
+					self.choices[player] = glist()
 		
 		elif action is not None:
 			res, = action
@@ -67,11 +67,11 @@ class RobberPhase(StagePhase, name='robber', game='catan'):
 				out.add('cancel')
 		
 		with out('loc', desc='Choose where to move the robber'):
-			options = tset(f for f in C.state.world.fields if 'robber' not in f)
+			options = gset(f for f in C.state.world.fields if 'robber' not in f)
 			out.add(options)
 			out.set_status('Choose where to move the robber.')
 		
-		return tdict({self.player: out})
+		return gdict({self.player: out})
 	
 	@Stage('loc')
 	def find_loc(self, C, player, action=None):
@@ -115,7 +115,7 @@ class RobberPhase(StagePhase, name='robber', game='catan'):
 			out.add(self.steal_options)
 			out.set_status('Choose what player to steal from.')
 		
-		return tdict({self.player: out})
+		return gdict({self.player: out})
 	
 	@Stage('target')
 	def set_target(self, C, player, action=None):

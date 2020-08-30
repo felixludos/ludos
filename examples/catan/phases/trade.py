@@ -1,9 +1,9 @@
 import numpy as np
-from gsm import GamePhase, GameActions, PhaseComplete
-from gsm import tset, tdict, tlist
-from gsm import writef, assert_
+from ludos import GamePhase, GameActions, PhaseComplete
+from ludos import gset, gdict, glist
+from ludos import writef, assert_
 
-from gsm.common import stages as stg
+from ludos.common import stages as stg
 
 from ..ops import trade_available, execute_trade
 
@@ -14,8 +14,8 @@ class TradePhase(stg.StagePhase, name='trade', game='catan'):
 		super().__init__(**info)
 		
 		self.player = player
-		self.demand = tdict({res: 0 for res in player.resources.keys()})
-		self.offer = tdict({res: 0 for res in player.resources.keys()})
+		self.demand = gdict({res: 0 for res in player.resources.keys()})
+		self.offer = gdict({res: 0 for res in player.resources.keys()})
 		
 		self.maritime = bank_trades
 		self.maritime_msg = None
@@ -45,8 +45,8 @@ class TradePhase(stg.StagePhase, name='trade', game='catan'):
 		if cmd == 'submit':
 			
 			C.log[self.player].write('Asking other players for response.')
-			self.responses = tdict({p: None for p in C.players if p != self.player})
-			self.counter_offers = tdict()
+			self.responses = gdict({p: None for p in C.players if p != self.player})
+			self.counter_offers = gdict()
 			for p in self.responses:
 				self.display_trade(C.log[p], self.player, self.offer, self.demand)
 			
@@ -84,12 +84,12 @@ class TradePhase(stg.StagePhase, name='trade', game='catan'):
 			out.add('submit')
 		
 		with out('trade', 'Change trade'):
-			out.add('demand', tset(res for res in demand))
-			out.add('offer', tset(res for res, num in self.player.resources.items() if num - offer[res] > 0))
+			out.add('demand', gset(res for res in demand))
+			out.add('offer', gset(res for res, num in self.player.resources.items() if num - offer[res] > 0))
 		
 		# TODO: add trade to info
 		
-		return tdict({self.player: out})
+		return gdict({self.player: out})
 	
 	@stg.Stage('counter')
 	def set_counter(self, C, player, action=None):
@@ -105,7 +105,7 @@ class TradePhase(stg.StagePhase, name='trade', game='catan'):
 			
 			else:
 				if player not in self.counter_offers:
-					self.counter_offers[player] = tlist([self.offer.copy(), self.demand.copy()])
+					self.counter_offers[player] = glist([self.offer.copy(), self.demand.copy()])
 				
 				res, = rest
 				delta = -1 ** (cmd == 'demand')
@@ -136,7 +136,7 @@ class TradePhase(stg.StagePhase, name='trade', game='catan'):
 	@stg.Decision('counter', ['reject', 'accept', 'counter'])
 	def get_counter(self, C):
 		
-		outs = tdict()
+		outs = gdict()
 		
 		for p, r in self.responses.items():
 			if r is None:
@@ -158,8 +158,8 @@ class TradePhase(stg.StagePhase, name='trade', game='catan'):
 				
 				if 'allow_counter_trades' not in C.state or C.state.allow_counter_trades:  # TODO: add this to config/settings
 					with out('counter', 'Counter by amending the trade'):
-						out.add('demand', tset(res for res in demand))
-						out.add('offer', tset(res for res, num in p.resources.items() if num - offer[res] > 0))
+						out.add('demand', gset(res for res in demand))
+						out.add('offer', gset(res for res, num in p.resources.items() if num - offer[res] > 0))
 				
 				outs[p] = out
 		
@@ -173,8 +173,8 @@ class TradePhase(stg.StagePhase, name='trade', game='catan'):
 		if len(self.responses):
 			if action is None:
 				
-				accepts = tset()
-				counters = tset()
+				accepts = gset()
+				counters = gset()
 				
 				for p in self.responses:
 					(counters if p in self.counter_offers else accepts).add(p)
@@ -225,7 +225,7 @@ class TradePhase(stg.StagePhase, name='trade', game='catan'):
 				
 		# TODO: add trades to out.info for AIs
 		
-		return tdict({self.player: out})
+		return gdict({self.player: out})
 	
 	
 	@stg.Stage('maritime')
@@ -254,6 +254,6 @@ class TradePhase(stg.StagePhase, name='trade', game='catan'):
 			out.add('cancel')
 		
 		with out('maritime-trade', desc='Select the resource to receive'):
-			out.add(tset(self.demand.keys()))
+			out.add(gset(self.demand.keys()))
 		
-		return tdict({self.player: out})
+		return gdict({self.player: out})

@@ -1,9 +1,8 @@
 import numpy as np
-import gsm
-from gsm import assert_
-from gsm import GamePhase, GameActions, PhaseComplete, SwitchPhase
-from gsm import tset, tdict, tlist
-from gsm.common import StagePhase, Entry_Stage, Stage, Decision, Decide, Switch
+from ludos import assert_
+from ludos import GamePhase, GameActions, PhaseComplete, SwitchPhase
+from ludos import gset, gdict, glist
+from ludos.common import StagePhase, Entry_Stage, Stage, Decision, Decide, Switch
 
 from ..ops import build, gain_res
 
@@ -11,7 +10,7 @@ class SetupPhase(StagePhase, name='setup', game='catan', start=True):
 	
 	def __init__(self, player_order, real_estate):
 		super().__init__()
-		self.available = tset(real_estate) # C.state.world.corners
+		self.available = gset(real_estate) # C.state.world.corners
 		self.settled = None
 		
 		self.on_second = False
@@ -37,7 +36,7 @@ class SetupPhase(StagePhase, name='setup', game='catan', start=True):
 					self.available.discard(c)
 		
 		if self.on_second:
-			res = tlist()
+			res = glist()
 			for f in loc.fields:
 				if f is not None and f.res != 'desert':
 					res.append(f.res)
@@ -63,7 +62,7 @@ class SetupPhase(StagePhase, name='setup', game='catan', start=True):
 		with out('loc-settlement', 'Available Locations'):
 			out.add(self.available)
 		
-		return tdict({self.active: out})
+		return gdict({self.active: out})
 	
 	@Stage('road')
 	def set_road(self, C, player, action=None):
@@ -88,8 +87,8 @@ class SetupPhase(StagePhase, name='setup', game='catan', start=True):
 	def get_road(self, C):
 		out = GameActions('Choose a location to place a road')
 		with out('loc-road', 'Available Locations'):
-			out.add(tset(e for e in self.settled.edges
-						 if e is not None and 'building' not in e), )
+			out.add(gset(e for e in self.settled.edges
+			             if e is not None and 'building' not in e), )
 		
-		return tdict({self.active: out})
+		return gdict({self.active: out})
 		

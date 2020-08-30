@@ -1,6 +1,6 @@
 
 from humpack import pack_member, unpack_member
-from ludos import tdict, tlist, tset
+from ludos import gdict, glist, gset
 from ludos.core import GameStack, GamePhase
 
 
@@ -10,7 +10,7 @@ class TurnPhaseStack(GameStack): # tracks turn counter, inc when creating a Turn
 		super().__init__()
 		self.players = None
 		self.counter = None
-		self.turn_phases = tset()
+		self.turn_phases = gset()
 		
 	def __pack__(self):
 		data = super().__pack__()

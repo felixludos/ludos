@@ -1,7 +1,7 @@
 import sys, os
 import numpy as np
 import ludos
-from ludos import adict, tlist, tset, tdeque, tstack, containerify
+from ludos import gdict, glist, gset, gdeque, gstack, containerify
 from ludos.errors import InvalidPlayerError
 from ludos.common.world import grid
 from ludos.common import TurnPhaseStack
@@ -20,7 +20,7 @@ class Catan(ludos.GameController):
 	
 	def _create_start_phase(self, C, config, settings, **kwargs):
 		super()._create_start_phase(C, config, settings,
-		                            player_order=tlist(C.players),
+		                            player_order=glist(C.players),
 		                            real_estate=C.state.world.corners,
 		                            **kwargs)
 	
@@ -30,18 +30,18 @@ class Catan(ludos.GameController):
 		
 		# update player props
 		for player in C.players.values():
-			player.reserve = adict(config.rules.building_limits)
-			player.buildings = adict(road=tset(), settlement=tset(), city=tset())
-			player.resources = adict({res:0 for res in res_names})
+			player.reserve = gdict(config.rules.building_limits)
+			player.buildings = gdict(road=gset(), settlement=gset(), city=gset())
+			player.resources = gdict({res:0 for res in res_names})
 			player.num_res = 0
-			player.devcards = tset()
-			player.past_devcards = tset()
+			player.devcards = gset()
+			player.past_devcards = gset()
 			player.vps = 0
-			player.ports = tset()
+			player.ports = gset()
 			
 		C.state.costs = config.rules.building_costs
 		
-		bank = adict()
+		bank = gdict()
 		for res in res_names:
 			bank[res] = config.rules.num_res
 		C.state.bank = bank
@@ -61,14 +61,14 @@ class Catan(ludos.GameController):
 		C.state.world = G
 		
 		# robber and numbers
-		numbers = adict()
+		numbers = gdict()
 		loc = None
 		for f in G.fields:
 			if f.res == 'desert':
 				loc = f
 			else:
 				if f.num not in numbers:
-					numbers[f.num] = tset()
+					numbers[f.num] = gset()
 				numbers[f.num].add(f)
 		assert loc is not None, 'couldnt find the desert'
 		C.state.robber = C.table.create('robber', loc=loc)
@@ -77,10 +77,10 @@ class Catan(ludos.GameController):
 		loc.robber = C.state.robber
 		
 		# setup dev card deck
-		cards = tlist()
+		cards = glist()
 		
 		for name, info in config.dev_cards.items():
-			cards.extend([adict(name=name, desc=info.desc)]*info.num)
+			cards.extend([gdict(name=name, desc=info.desc)] * info.num)
 		
 		C.state.dev_deck = C.table.create(obj_type='Deck', cards=cards,
 		                                        seed=C.RNG.getrandbits(64),
@@ -90,18 +90,18 @@ class Catan(ludos.GameController):
 		C.state.bank_trading = config.rules.bank_trading
 		C.state.msgs = config.msgs
 		
-		C.state.rolls = tstack()
+		C.state.rolls = gstack()
 		
 	def _end_game(self, C):
 		
-		out = adict()
+		out = gdict()
 		
-		vps = adict({player.name:player.vps for player in C.players})
+		vps = gdict({player.name:player.vps for player in C.players})
 		out.vps = vps
 		
 		mx = max(vps.values())
 		
-		winners = tlist()
+		winners = glist()
 		for name, V in vps.items():
 			if V == mx:
 				winners.append(name)

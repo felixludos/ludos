@@ -1,11 +1,11 @@
 import sys, os
 import numpy as np
-import gsm
-from gsm import tdict, tlist, tset, tdeque, tstack, containerify
-from gsm import register_object
-from gsm.common.elements import Deck
-from gsm.common.world import grid
-from gsm.common import TurnPhaseStack
+import ludos
+from ludos import gdict, glist, gset, gdeque, gstack, containerify
+from ludos import register_object
+from ludos.common.elements import Deck
+from ludos.common.world import grid
+from ludos.common import TurnPhaseStack
 
 from .phases import *
 from .objects import Card, DiscardPile, DrawPile, Building, Market
@@ -14,7 +14,7 @@ MY_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 
-class Aristocracy(gsm.GameController):
+class Aristocracy(ludos.GameController):
 	
 	def _init_game(self, C, config, settings):
 		
@@ -25,7 +25,7 @@ class Aristocracy(gsm.GameController):
 		QueenPhase.neutral_num = config.neutral_market.queen
 		JackPhase.neutral_num = config.neutral_market.jack
 		
-		cards = tlist()
+		cards = glist()
 		
 		num = config.rules.num_numbers
 		for n, c in config.cards.items():
@@ -43,19 +43,19 @@ class Aristocracy(gsm.GameController):
 		
 		C.state.deck.shuffle()
 		
-		C.state.market = C.create_object('market', neutral=tset(),
+		C.state.market = C.create_object('market', neutral=gset(),
 		                                 _log=C.log, _deck=C.state.deck)
 		
 		
 		for i, player in enumerate(C.players):
-			player.hand = tset()
+			player.hand = gset()
 			player._draw_increment = config.rules.draw_cards
 			player._deck = C.state.deck
 			
-			player.hand = tset()
-			player.market = tset()
+			player.hand = gset()
+			player.market = gset()
 			
-			player.buildings = tdict({bld:tset() for bld in config.rules.counts})
+			player.buildings = gdict({bld:gset() for bld in config.rules.counts})
 			
 			player.vps = 0
 			player.hand_limit = config.rules.max_hand_size
@@ -66,16 +66,16 @@ class Aristocracy(gsm.GameController):
 	
 	def _end_game(self, C):
 		
-		out = tdict()
+		out = gdict()
 		
-		vps = tdict({player.name: player.vps for player in C.players})
+		vps = gdict({player.name: player.vps for player in C.players})
 		out.vps = vps
 		
 		mx = max(vps.values())
 		
 		# TODO: break ties with money and hand card values
 		
-		winners = tlist()
+		winners = glist()
 		for name, V in vps.items():
 			if V == mx:
 				winners.append(name)
