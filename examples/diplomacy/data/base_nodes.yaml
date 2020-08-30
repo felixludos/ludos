@@ -35,7 +35,7 @@ gas:
 spa:
   name: Spain
   type: coast
-  coasts: [nc, sc]
+  dirs: [nc, sc]
 
 wes:
   name: Western Meditteranean Sea
@@ -133,9 +133,14 @@ fin:
   name: Finland
   type: coast
 
+bar:
+  name: Barents Sea
+  type: sea
+
 stp:
   name: St. Petersburg
   type: coast
+  dirs: [nc, sc]
   sc: 1
 
 mos:
@@ -290,6 +295,10 @@ gal:
   name: Galicia
   type: land
 
+ukr:
+  name: Ukraine
+  type: land
+
 rum:
   name: Rumania
   type: coast
@@ -298,7 +307,7 @@ rum:
 bul:
   name: Bulgaria
   type: coast
-  coasts: [ec, sc]
+  dirs: [ec, sc]
   sc: 1
 
 gre:
@@ -316,7 +325,7 @@ ank:
   type: coast
   sc: 1
 
-sym:
+smy:
   name: Smyrna
   type: coast
   sc: 1
@@ -325,35 +334,3 @@ bla:
   name: Black Sea
   type: sea
 
-ion:
-  name:
-  type:
-
-ion:
-  name:
-  type:
-
-ion:
-  name:
-  type:
-
-ion:
-  name:
-  type:
-
-ion:
-  name:
-  type:
-
-ion:
-  name:
-  type:
-
-ion:
-  name:
-  type:
-
-
-ion:
-  name:
-  type:

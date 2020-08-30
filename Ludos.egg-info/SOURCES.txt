@@ -2,7 +2,6 @@ README.md
 setup.py
 ludos/__init__.py
 ludos/_info.py
-ludos/_lib_info.py
 ludos/errors.py
 ludos/mixins.py
 ludos/signals.py

@@ -1,0 +1,31 @@
+
+Technology:
+  shortcut:
+    name: Masonry
+    age: 1
+  text: "Dominate this Domain immediately as soon as you achieve or score six cards in the same turn. Note: Cards transferred from other players are not included in this count neither are cards exchanged between your Hand and your Influence."
+
+Military:
+  shortcut:
+    name: Construction
+    age: 2
+  text: "Dominate this Domain immediately as soon as your cards provide at least three of each: [tower], [crown], [clock], [bulb], [tree], and [factory]."
+
+Diplomacy:
+  shortcut:
+    name: Translation
+    age: 3
+  text: Dominate this Domain immediately as soon as you have twelve or more [clock].
+
+Culture:
+  shortcut:
+    name: Invention
+    age: 4
+  text: Dominate this Domain immediately as soon as you have five colors in your Zone and they are all splayed up or right.
+
+Science:
+  shortcut:
+    name: Astronomy
+    age: 5
+  text: Dominate this Domain immediately as soon as all five of your Active cards have a value of [8] or more.
+

@@ -1,0 +1,27 @@
+
+
+
+_meta.script_name: collect-pos
+
+#_meta.script_name: new-diplo
+
+map:
+  _type: map
+
+#root: C:\Users\anwan\Nextcloud\Khan\projects\ludos\examples\diplomacy
+
+image_path: extra\vanilla_blank.gif
+edges_path: data\base_edges.yaml
+nodes_path: data\base_nodes.yaml
+
+#pos_path: <>out_path
+
+out_path: data\base_pos.yaml
+
+
+#base: False
+#text: False
+#retreat: False
+
+
+
