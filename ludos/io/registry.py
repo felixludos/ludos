@@ -8,7 +8,7 @@ from ..errors import RegistryCollisionError, InvalidValueError
 
 prt = get_printer(__name__)
 
-_game_registry = Registry()
+game_registry = Registry()
 def register_game(cls, name=None, path=None, info=None):
 	if name is None:
 		name = cls.__name__
@@ -23,7 +23,7 @@ def register_game(cls, name=None, path=None, info=None):
 	
 	info['cls'] = cls
 	
-	registry = _game_registry
+	registry = game_registry
 	
 	name = info['short_name']
 	if name in registry:
@@ -74,11 +74,11 @@ def register_object(game, name=None, cls=None, open=None, req=None):
 	if cls is not None:
 		name = cls.obj_type
 	
-	if game not in _game_registry:
+	if game not in game_registry:
 		prt.warning('Registering the GameObject {} for a game before registering the game {}'.format(name, game))
-		_game_registry[game] = {}
+		game_registry[game] = {}
 	
-	info = _game_registry[game]
+	info = game_registry[game]
 	
 	if 'objects' not in info:
 		info['objects'] = {}
@@ -110,11 +110,11 @@ def register_object_dec(game, name=None, open=None, req=None):
 	
 	
 def register_phase(game, cls, name=None, start=False):
-	if game not in _game_registry:
+	if game not in game_registry:
 		prt.warning('Registering the GamePhase {} for a game before registering the game {}'.format(name, game))
-		_game_registry[game] = {}
+		game_registry[game] = {}
 	
-	info = _game_registry[game]
+	info = game_registry[game]
 	
 	if start:
 		if 'start_phase' in info:
@@ -150,11 +150,11 @@ def register_phase_dec(game, start=False):
 
 
 def register_player_type(game, cls, name=None, open=None, default=False):
-	if game not in _game_registry:
+	if game not in game_registry:
 		prt.warning('Registering player type {} for a game before registering the game {}'.format(name, game))
-		_game_registry[game] = {}
+		game_registry[game] = {}
 	
-	info = _game_registry[game]
+	info = game_registry[game]
 
 	if name is None:
 		prt.warning(f'No name provided for player type: {cls}')

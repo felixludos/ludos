@@ -1,0 +1,343 @@
+adr:
+  name: Adriatic Sea
+  pos: [1107.480832291993, 1607.2019824281429]
+  type: sea
+aeg:
+  name: Aegean Sea
+  pos: [1512.1249151657403, 1834.9524771603615]
+  type: sea
+alb:
+  name: Albania
+  pos: [1222.461664583987, 1638.1583603529104]
+  type: coast
+ank:
+  name: Ankarra
+  pos: [1757.5647687121113, 1624.8913412422958]
+  sc: 1
+  type: coast
+apu:
+  name: Apulia
+  pos: [1083.1579639225329, 1660.2700588706016]
+  type: coast
+arm:
+  name: Armenia
+  pos: [1938.8806965571785, 1653.6365493152944]
+  type: coast
+bal:
+  name: Baltic Sea
+  pos: [1032.3010573318434, 939.4286871938714]
+  type: sea
+bar:
+  name: Barents Sea
+  pos: [1403.777592429054, 103.60648322514726]
+  type: sea
+bel:
+  name: Belgium
+  pos: [680.7250509005548, 1178.2350311849355]
+  sc: 1
+  type: coast
+ber:
+  name: Berlin
+  pos: [932.7984140022331, 1054.409519485865]
+  sc: 1
+  type: coast
+bla:
+  name: Black Sea
+  pos: [1633.7392570130414, 1461.2647722113816]
+  type: sea
+boh:
+  name: Bohemia
+  pos: [1005.767019110614, 1233.5142774791632]
+  type: land
+bot:
+  name: Gulf of Bothnia
+  pos: [1114.1143418473002, 733.7898909793439]
+  type: sea
+bre:
+  name: Brest
+  pos: [486.14210394487304, 1306.4828825875438]
+  type: coast
+bud:
+  name: Budapest
+  pos: [1237.9398535463706, 1326.383411253466]
+  sc: 1
+  type: land
+bul:
+  coast-pos:
+    ec: [1461.2680085750508, 1512.121678802071]
+    sc: [1428.1004607985142, 1576.2456045033755]
+  dirs: [ec, sc]
+  name: Bulgaria
+  pos: [1361.7653652454405, 1549.7115662821461]
+  sc: 1
+  type: coast
+bur:
+  name: Burgundy
+  pos: [691.7809001594003, 1348.4951097711569]
+  type: land
+cly:
+  name: Clyde
+  pos: [439.70753705772177, 802.3361563841866]
+  type: coast
+con:
+  name: Constaninople
+  pos: [1653.639785678963, 1616.0466618352193]
+  sc: 1
+  type: coast
+den:
+  name: Denmark
+  pos: [817.8175817102397, 921.7393283797185]
+  sc: 1
+  type: coast
+eas:
+  name: Eastern Mediterranean Sea
+  pos: [1613.8387283471193, 1921.1881013793568]
+  type: sea
+edi:
+  name: Edinburgh
+  pos: [475.0862546860276, 842.1372137160304]
+  sc: 1
+  type: coast
+eng:
+  name: English Channel
+  pos: [413.1734988364924, 1200.3467297026264]
+  type: sea
+fin:
+  name: Finland
+  pos: [1229.0951741392942, 574.5856616519679]
+  type: coast
+gal:
+  name: Galicia
+  pos: [1308.6972888029823, 1233.5142774791632]
+  type: land
+gas:
+  name: Gascony
+  pos: [497.1979532037185, 1483.3764707290727]
+  type: coast
+gre:
+  name: Greece
+  pos: [1295.4302696923673, 1680.1705875365237]
+  sc: 1
+  type: coast
+hel:
+  name: Helgoland Bight
+  pos: [764.7495052677809, 968.1738952668697]
+  type: sea
+hol:
+  name: Holland
+  pos: [702.836749418246, 1120.7446150389385]
+  sc: 1
+  type: coast
+ion:
+  name: Ionian Sea
+  pos: [1171.6047579932974, 1868.120024936898]
+  type: sea
+iri:
+  name: Irish Sea
+  pos: [307.03734595157516, 1120.7446150389385]
+  type: sea
+kie:
+  name: Kiel
+  pos: [824.4510912655469, 1058.8318591894033]
+  sc: 1
+  type: coast
+lon:
+  name: London
+  pos: [554.6883693497155, 1087.5770672624017]
+  sc: 1
+  type: coast
+lvn:
+  name: Livonia
+  pos: [1297.6414395441366, 899.6276298620273]
+  type: coast
+lvp:
+  name: Liverpool
+  pos: [477.2974245377966, 981.4409143774844]
+  sc: 1
+  type: coast
+lyo:
+  name: Gulf of Lyon
+  pos: [678.5138810487856, 1596.1461331692974]
+  type: sea
+mao:
+  name: Mid Atlantic Ocean
+  pos: [116.8767386994316, 1339.6504303640804]
+  type: sea
+mar:
+  name: Marseilles
+  pos: [698.4144097147077, 1490.0099802843802]
+  sc: 1
+  type: coast
+mos:
+  name: Moscow
+  pos: [1669.1179746413472, 875.3047614925672]
+  sc: 1
+  type: land
+mun:
+  name: Munich
+  pos: [899.6308662256968, 1271.104164959238]
+  sc: 1
+  type: land
+naf:
+  name: North Africa
+  pos: [488.35327379664227, 1941.0886300452787]
+  type: coast
+nao:
+  name: North Atlantic Ocean
+  pos: [189.84534380781224, 669.6659652780397]
+  type: sea
+nap:
+  name: Naples
+  pos: [1036.7233970353814, 1666.9035684259088]
+  sc: 1
+  type: coast
+nth:
+  name: Nothern Sea
+  pos: [634.2904840134036, 917.3169886761802]
+  type: sea
+nwg:
+  name: Norwegian Sea
+  pos: [643.1351634204798, 461.81599921174325]
+  type: sea
+nwy:
+  name: Norway
+  pos: [813.3952420067014, 718.3117020169602]
+  sc: 1
+  type: coast
+par:
+  name: Paris
+  pos: [601.1229362368667, 1299.8493730322366]
+  sc: 1
+  type: land
+pic:
+  name: Picardy
+  pos: [634.2904840134036, 1218.0360885167793]
+  type: coast
+pie:
+  name: Piedmont
+  pos: [804.550562599625, 1434.7307339901522]
+  type: coast
+por:
+  name: Portugal
+  pos: [169.94481514189033, 1607.2019824281429]
+  type: coast
+pru:
+  name: Prussia
+  pos: [1072.1021146636872, 1034.5089908199432]
+  type: coast
+rom:
+  name: Rome
+  pos: [937.2207537057716, 1580.6679442069135]
+  sc: 1
+  type: coast
+ruh:
+  name: Ruhr
+  pos: [766.9606751195502, 1218.0360885167793]
+  type: land
+rum:
+  name: Rumania
+  pos: [1397.1440828737464, 1405.9855259171538]
+  sc: 1
+  type: coast
+ser:
+  name: Serbia
+  pos: [1235.7286836946014, 1472.3206214702273]
+  sc: 1
+  type: land
+sev:
+  name: Sevastopol
+  pos: [1631.5280871612722, 1169.390351777859]
+  sc: 1
+  type: coast
+sil:
+  name: Silesia
+  pos: [1078.7356242189944, 1151.700992963706]
+  type: land
+ska:
+  name: Skagerrak
+  pos: [795.7058831925485, 833.2925343089539]
+  type: sea
+smy:
+  name: Smyrna
+  pos: [1622.6834077541957, 1735.4498338307512]
+  sc: 1
+  type: coast
+spa:
+  coast-pos:
+    nc: [362.3165922458029, 1518.7551883573785]
+    sc: [320.30436506218985, 1812.8407786426703]
+  dirs: [nc, sc]
+  name: Spain
+  pos: [373.37244150464835, 1638.1583603529104]
+  type: coast
+stp:
+  coast-pos:
+    nc: [1408.199932132592, 413.17026247282297]
+    sc: [1326.3866476171352, 685.1441542404236]
+  dirs: [nc, sc]
+  name: St. Petersburg
+  pos: [1465.6903482785888, 625.4425682426577]
+  sc: 1
+  type: coast
+swe:
+  name: Sweden
+  pos: [965.9659617787702, 707.2558527581148]
+  sc: 1
+  type: coast
+syr:
+  name: Syria
+  pos: [1850.433902486414, 1888.02055360282]
+  type: coast
+tri:
+  name: Trieste
+  pos: [1054.4127558495343, 1412.6190354724613]
+  sc: 1
+  type: coast
+tun:
+  name: Tunisia
+  pos: [804.550562599625, 1892.4428933063582]
+  sc: 1
+  type: coast
+tus:
+  name: Tuscany
+  pos: [877.5191677080056, 1525.3886979126858]
+  type: coast
+tyr:
+  name: Tyrolia
+  pos: [1007.9781889623832, 1313.116392142851]
+  type: land
+tys:
+  name: Tyrrhenian Sea
+  pos: [912.8978853363114, 1759.7727022002116]
+  type: sea
+ukr:
+  name: Ukraine
+  pos: [1443.5786497608979, 1180.4462010367045]
+  type: land
+ven:
+  name: Venice
+  pos: [901.8420360774658, 1399.3520163618464]
+  sc: 1
+  type: coast
+vie:
+  name: Vienna
+  pos: [1089.79147347784, 1304.2717127357746]
+  sc: 1
+  type: land
+wal:
+  name: Wales
+  pos: [470.66391498248936, 1107.4775959283238]
+  type: coast
+war:
+  name: Warsaw
+  pos: [1244.5733631016778, 1111.899935631862]
+  sc: 1
+  type: land
+wes:
+  name: Western Meditteranean Sea
+  pos: [579.0112377191756, 1781.8844007179027]
+  type: sea
+yor:
+  name: York
+  pos: [525.9431612767171, 1023.4531415610976]
+  type: coast

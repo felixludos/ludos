@@ -1,0 +1,14 @@
+
+_meta.script_name: diplo-traj
+
+root: data\classic
+
+players-path: players.yaml
+
+action-dir: data\van\traj
+
+state-dir: data\van
+
+map._type: map
+
+

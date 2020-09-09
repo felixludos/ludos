@@ -1,14 +1,235 @@
 import sys, os
 import time
 import pickle
+
+import omnifig as fig
+
 import yaml
 import json
 import humpack as hp
+from humpack.secure import Permission_Handler
 from collections import OrderedDict
 from ..mixins import Named
 from ..errors import WrappedException, InvalidValueError, RegistryCollisionError, NoActiveGameError, UnknownGameError, UnknownInterfaceError, UnknownPlayerError, UnknownUserError
-from .registry import _game_registry, get_trans
+from .registry import game_registry, get_trans
 from .transmit import send_http
+
+
+
+
+class ServerLockedError(Exception):
+	def __init__(self, user):
+		super().__init__(f'{user} can not join as the server is currently locked')
+		self.user = user
+
+class Ludos_Server:
+	
+	# roles: admin, mod, guest, spectator, player, advisor
+	_power = {'admin': 100, 'mod': 50, 'guest': 1,
+	          'spectator': 2, 'advisor': 3, 'player': 4}
+	
+	
+	def __init__(self, address=None, god=None, debug=False):
+		
+		self.address = address
+		self.debug = debug
+		self.god = god
+		
+		self.reset()
+		self.clear_config()
+	
+	def reset(self):
+		self.game = None
+		
+		self.ctrl = None
+		
+		self.locked = True
+		self.auto_join = True  # if user not yet added, but gets referenced
+		
+		self.auth = Permission_Handler(power_hierarchy=self._power, default_roles=['guest'], god=self.god)
+		
+		self.player_ids = OrderedDict()  # player_id -> user
+		self.advisor_ids = OrderedDict()  # advisor_id -> user
+		self.spectator_ids = OrderedDict()  # spectator_id -> user
+		
+		self.players = OrderedDict()  # user -> player_id
+		self.advisors = OrderedDict()  # user -> advisor_id
+		self.spectators = OrderedDict()  # user -> spectator_id
+		
+		self.clients = OrderedDict()
+		self.passive_clients = OrderedDict()
+	
+	# region Config
+	
+	def clear_config(self):
+		self.config = None
+		self.parents, self.params = [], {}
+	
+	def get_config(self):
+		if self.config is None:
+			self.config = fig.get_config(*self.parents, **self.params)
+		return self.config
+	
+	def update_params(self, params):
+		self.params.update(params)
+	
+	def clear_params(self):
+		self.params.clear()
+	
+	def set_parents(self, parents):
+		self.clear_parents()
+		self.extend_parents(parents)
+	
+	def extend_parents(self, parents):
+		self.parents.extend(parents)
+	
+	def clear_parents(self):
+		self.parents.clear()
+	
+	# endregion
+	
+	# region Users and Permissions
+	
+	def add_user(self, user, *roles, power=None):
+		if user not in self.auth:
+			if self.locked:
+				raise ServerLockedError(user)
+			return self.auth.new_user(user, *roles, power=power)
+		return user
+	
+	def update_user(self, user, *roles, power=None):
+		self.auth.update_user(user, *roles, power=power)
+	
+	def update_action(self, action, *roles, power=None):
+		self.auth.update_action(action, *roles, power=power)
+	
+	def authenticate(self, user, action=None):
+		return self.auth.validate(user, action=action)
+	
+	# endregion
+	
+	# region Clients
+	
+	def add_client(self, *users, config=None):
+		
+		if config is None:
+			config = self.get_config()
+		
+		if not len(users):
+			users = config.pull('users', silent=True)
+		
+		users = [self.authenticate(user) for user in users]
+		config.push('users', users)
+		
+		client = config.pull('client') if 'client' in config else config.pull_self()
+		
+		for user in users:
+			self.clients[user] = client
+			
+		lst = ', '.join(users)
+		return f'Added {client.get_type()} client for: {lst}'
+		
+	def remove_client(self, user):
+		user = self.authenticate(user)
+		if user in self.clients:
+			del self.clients[user]
+		
+	def get_client(self, user):
+		user = self.authenticate(user)
+		return self.clients.get(user, None)
+	
+	# endregion
+	
+	# region Server info
+	
+	def is_locked(self):
+		return self.locked
+		
+	def unlock(self):
+		self.locked = True
+	
+	def lock(self):
+		self.locked = False
+		
+		
+	def get_address(self):
+		return self.address
+	
+	def is_debug(self):
+		return self.debug
+
+
+	def run(self):
+		pass
+
+	# endregion
+	
+	# region Game Settings
+	
+	def get_available_games(self):
+		return list(game_registry.keys())
+	
+	def set_game(self, name):
+		
+		if name not in game_registry:
+			raise UnknownGameError(name)
+		
+		self.game = name
+		
+		return f'Game set to: {name}'
+	
+	# endregion
+	
+	# region Playing the Game
+	
+	def start_game(self, user): # new game
+		
+		self.init_game()
+		
+		self._passive_frontend_step()
+		
+		return f'{self.game} has started'
+	
+	def init_game(self):
+		
+		if len(self.players) not in self.info['num_players']:
+			msg = ', '.join(self.info.num_players)
+			raise Exception(f'Invalid number of players {len(self.players)}, '
+			                f'allowed for {self.info.name}: {msg}')
+		
+		for user, interface in self.interfaces.items():
+			interface.reset(user)
+		
+		player = next(iter(self.players.keys()))
+		
+		self.ctrl = self.ctrl_cls(debug=self.debug, player_names=list(self.players.keys()),
+		                          **self.settings)
+		self.ctrl.reset(player, seed=seed)
+	
+	def take_action(self, user, key, group, action):
+		
+		raise NotImplementedError
+	
+	def get_status(self, user):
+		raise NotImplementedError
+	
+	def get_log(self, user):
+		raise NotImplementedError
+	
+	def save_game(self):
+		raise NotImplementedError
+	
+	def load_game(self):
+		raise NotImplementedError
+	
+	def cheat(self, code=None, params={}):
+		pass
+	
+	# endregion
+	
+	pass
+	
+
 
 class Host(object):
 	def __init__(self, address, debug=False, auto_num_players=True, **settings):
@@ -50,7 +271,7 @@ class Host(object):
 		return self.roles
 	
 	def get_available_games(self):
-		return list(_game_registry.keys())
+		return list(game_registry.keys())
 		
 	def get_available_players(self):
 		all_players = list(self._get_game_info()['player_names'])
@@ -62,9 +283,9 @@ class Host(object):
 	def _get_game_info(self, name=None):
 		if name is None:
 			name = self.game
-		if name not in _game_registry:
+		if name not in game_registry:
 			raise UnknownGameError
-		return _game_registry[name]
+		return game_registry[name]
 		# return list(_game_registry[name].keys())
 	
 	def get_game_info(self, name=None):
@@ -72,10 +293,10 @@ class Host(object):
 	
 	def set_game(self, name):
 		
-		if name not in _game_registry:
+		if name not in game_registry:
 			raise UnknownGameError
 		
-		info = _game_registry[name]
+		info = game_registry[name]
 		cls = info['cls']
 		
 		self.game = name

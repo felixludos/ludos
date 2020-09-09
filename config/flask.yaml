@@ -1,0 +1,12 @@
+
+
+
+server:
+  _type: flask
+
+  host-ip: localhost
+
+  port: 5000
+
+
+

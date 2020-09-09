@@ -359,10 +359,10 @@ class DecideBackEdge(Edge):
 
 def analyze_game_flow(game):
 	
-	if game not in registry._game_registry:
+	if game not in registry.game_registry:
 		raise UnknownGameError(f'No game called {game} found. (Have you registerd it?)')
 	
-	info = registry._game_registry[game]
+	info = registry.game_registry[game]
 	
 	phases = {n: v['cls'] for n, v in info['phases'].items()}
 
@@ -473,7 +473,7 @@ def default_graph(game, name=None, directory='figures',
 	if nodes is None or edges is None:
 		nodes, edges = analyze_game_flow(game)
 	
-	info = registry._game_registry[game]
+	info = registry.game_registry[game]
 	pnames = list(info['phases'].keys())
 	
 	if include_default_attrs:

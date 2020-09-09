@@ -27,6 +27,7 @@ eng:
 bre:
   name: Brest
   type: coast
+  sc: 1
 
 gas:
   name: Gascony
@@ -100,15 +101,15 @@ mar:
   sc: 1
 
 lyo:
-  name: Gulf of Lyon
+  name: Gulf of Lyons
   type: sea
 
 hel:
-  name: Helgoland Bight
+  name: Heligoland Bight
   type: sea
 
 ska:
-  name: Skagerrak
+  name: Skagerrack
   type: sea
 
 bal:
@@ -316,12 +317,12 @@ gre:
   sc: 1
 
 con:
-  name: Constaninople
+  name: Constantinople
   type: coast
   sc: 1
 
 ank:
-  name: Ankarra
+  name: Ankara
   type: coast
   sc: 1
 
