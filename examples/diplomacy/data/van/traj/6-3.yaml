@@ -1,6 +1,0 @@
-England:
-- {loc: lvp, type: build, unit: fleet}
-France:
-- {loc: yor, type: destroy, unit: the}
-Italy:
-- {loc: nap, type: build, unit: fleet}

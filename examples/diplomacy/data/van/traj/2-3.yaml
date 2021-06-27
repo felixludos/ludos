@@ -1,6 +1,0 @@
-England:
-- {loc: edi, type: build, unit: fleet}
-France:
-- {loc: bre, type: build, unit: fleet}
-Germany:
-- {loc: kie, type: build, unit: fleet}
