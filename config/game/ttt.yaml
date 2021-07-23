@@ -1,0 +1,15 @@
+
+name: Tic Tac Toe
+
+length: short
+complexity: simple
+
+zero-sum: yes
+full-info: yes
+
+num_players: [2]
+
+player_names: [X, O]
+
+
+

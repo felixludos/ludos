@@ -6,3 +6,5 @@ extra/
 logs/
 examples/innovation/data
 examples/wise_otherwise/data
+anvil/
+.anvil-data/

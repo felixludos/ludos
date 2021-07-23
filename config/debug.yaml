@@ -1,7 +1,11 @@
 
 
-_meta.script_name: start-host
+#_meta.script_name: start-host
+#
+#parents: [flask]
 
-parents: [flask]
+#_meta.script_name: test-dummy
+_meta.script_name: uplink
+
 
 
