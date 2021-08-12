@@ -8,7 +8,7 @@ from gsm import dummy
 @fig.Script('test-dummy')
 def _test_dummy(A):
 	
-	T = gsm.GameTable()
+	T = gsm.GameRoom()
 	
 	T.get_available_games()
 	T.set_game('dummy')

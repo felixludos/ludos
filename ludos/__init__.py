@@ -45,13 +45,13 @@ def _uplink(A):
 	key = os.environ['ANVIL_UPLINK_KEY']
 	anvil.server.connect(key)
 	
-	T = gsm.GameTable()
+	T = gsm.GameRoom()
 	
 	@anvil.server.callable
 	def hard_reset():
 		print('Resetting table')
 		global T
-		T = gsm.GameTable()
+		T = gsm.GameRoom()
 	
 	@anvil.server.callable
 	def get_games():
