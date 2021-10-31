@@ -5,7 +5,10 @@
 #parents: [flask]
 
 #_meta.script_name: test-dummy
-_meta.script_name: uplink
+#_meta.script_name: uplink
+_meta.script_name: start-bot
+
+admins: [felixludos#9043]
 
 
 

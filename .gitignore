@@ -8,3 +8,5 @@ examples/innovation/data
 examples/wise_otherwise/data
 anvil/
 .anvil-data/
+.data
+ludos/games/wise_otherwise/data/
