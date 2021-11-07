@@ -11,4 +11,8 @@ _meta.script_name: start-bot
 admins: [felixludos#9043]
 
 
+#client._type: murder-bot
 
+client._type: wise-bot
+
+#seed: 7

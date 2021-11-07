@@ -4,6 +4,9 @@ import random
 from omnibelt import get_printer
 import omnifig as fig
 
+from .bot import DiscordBot
+from .compat import as_command, as_event
+
 prt = get_printer(__file__)
 
 _import_worked = False
