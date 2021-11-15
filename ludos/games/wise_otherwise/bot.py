@@ -2,20 +2,24 @@ from pathlib import Path
 import random
 import discord
 
-from omnibelt import load_yaml, load_txt
+from omnibelt import load_yaml, load_txt, unspecified_argument
 import omnifig as fig
 
 from ...interfaces.discord import DiscordBot, as_command, as_event
+
+# from tabulate import tabulate
 
 _DEFAULT_ROOT = str(Path(__file__).parents[0])
 
 @fig.Component('wise-bot')
 class WiseBot(DiscordBot):
-	def __init__(self, A, root=None, **kwargs):
-		if root is None:
+	def __init__(self, A, root=unspecified_argument, **kwargs):
+		if root is unspecified_argument:
 			root = A.pull('root', _DEFAULT_ROOT)
 		super().__init__(A, **kwargs)
-		self.lines = self._load_data(Path(root) / 'data')
+		if root is not None:
+			self.lines = self._load_data(Path(root) / 'data')
+			# self.lines = self._load_data(Path(root) / 'test-data')
 		# print(len(self.lines))
 		
 		
@@ -37,42 +41,26 @@ class WiseBot(DiscordBot):
 		return [line for ind in sorted(list(starts.keys())) for line in starts[ind]]
 	
 	
-	@as_command('status')
-	async def on_status(self, ctx):
-		await ctx.send(self._status)
+	# @as_command('ping')
+	# async def on_ping(self, ctx):
+	# 	role = ' (admin)' if str(ctx.author) in self.admins else ''
+	# 	await ctx.send(f'Hello, {ctx.author.display_name}{role}')
 	
 	
-	def _gen_title(self, line):
-		start = line['text']
-		origin = line['type'] if line['type'] == 'saying of India' else line['type'] + ' saying'
-		init = f' \nThere\'s an old **{origin}**: \n\n*{start}* ...\n '
+	def _gen_title(self):
+		start = self.question
+		if self.hint is None:
+			init = f'*{start}*'
+		else:
+			origin = self.hint if self.hint == 'saying of India' else self.hint + ' saying'
+			init = f' \nThere\'s an old **{origin}**: \n\n*{start}* ...\n '
 		return init
 	
 	
-	@as_command('start')
-	async def on_start(self, ctx):
-		if self._insufficient_permissions(ctx.author):
-			await ctx.send(f'{ctx.author.display_name} does not have sufficient permissions for this.')
-			return
-	
-		gameroom = discord.utils.get(self.guild.channels, name='GameRoom')
-		if gameroom is not None:
-			for channel in gameroom.channels:
-				await channel.delete()
-			await gameroom.delete()
-		self.gameroom = await self.guild.create_category_channel('GameRoom')
-		
-		# _players = ['bobmax', 'felixludos', 'Lauren', 'GooseOnTheLoose']
-		player_role = discord.utils.get(self.guild.roles, name='Player')
-		# _players = []
-		# _members = {member.display_name: member for member in self.get_all_members()}
-		# self._players = [_members[player] for player in _players]
-		self.players = [player for player in player_role.members if not player.bot]
-		for player in self.players:
-			await self._setup_player(player)
-		self.table = await self._create_channel('table', *self.players, remove_existing=True)
-		
-		self._line = None
+	_game_title = 'Wise and Otherwise'
+	async def _start_game(self):
+		self.question, self.answer, self.hint = None, None, None
+		# self._line = None
 		self._responses = {}
 		self._confirmed = {}
 		self._options = {}
@@ -80,13 +68,16 @@ class WiseBot(DiscordBot):
 		self._round_count = 0
 		self.votes = {}
 		
-		await self.table.send('Welcome to Wise and Otherwise!')
+		await self.table.send(f'Welcome to {self._game_title}!')
 		await self._start_round()
 		
 		
 	def _pick_query(self):
 		pick = random.randint(0, len(self.lines) - 1)
-		self._line = self.lines[pick]
+		line = self.lines[pick]
+		self.question = line['text']
+		self.answer = line['end']
+		self.hint = line['type']
 		del self.lines[pick]
 	
 	
@@ -96,13 +87,13 @@ class WiseBot(DiscordBot):
 	_number_emojis = ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
 	
 	
-	async def _submit_response(self, message):
+	async def _submit_response(self, message, full_fmt='\n*{start} {response}*\n'):
 		response = message.clean_content
 		self._responses[message.author] = message.clean_content
 		comm = self.interfaces[message.author]
 		await comm.send(f'{message.author.mention} Confirm your submission:')
-		start = self._line['text']
-		msg = await comm.send(f'\n*{start} {response}*\n')
+		start = self.question
+		msg = await comm.send(full_fmt.format(start=start, response=response))
 		await self.register_reaction_query(msg, self._confirm_response, self._accept_mark, self._reject_mark)
 		return 'done'
 
@@ -115,32 +106,53 @@ class WiseBot(DiscordBot):
 			del self._responses[user]
 			await self._request_response(user)
 		
-		self._status = 'Waiting for {} to submit responses'.format(', '.join(p.display_name for p in self.players
+		self._status = 'Waiting for {} to submit responses'.format(', '.join(p.display_name for p in self._waiting_for
 		                                                                     if p not in self._confirmed))
 		
-		if len(self.players) == len(self._confirmed):
+		if len(self._waiting_for) == len(self._confirmed):
 			await self._present_options()
 		return 'done'
 	
 	
-	async def _request_response(self, player):
+	async def _request_response(self, player, request='Compose an ending to the saying here'):
 		comm = self.interfaces[player]
-		await comm.send(f'{player.mention}: Compose an ending to the saying here')
+		await comm.send(f'{player.mention}: {request}')
 		await self.register_message_query(comm, player, self._submit_response)
 		
+		
+	@as_command('skip')
+	async def _skip_round(self, ctx):
+		if self._insufficient_permissions(ctx.author):
+			await ctx.send(f'{ctx.author.display_name} does not have sufficient permissions for this.')
+			return
+		
+		await self.table.send('**This round has been skipped**')
+		
+		for player in self.players:
+			await self.interfaces[player].send('**This round has been skipped**')
+		
+		await self._start_round()
+		
 	
-	async def _start_round(self):
+	async def _start_round(self, round_title=True, required_responses=None):
+		if required_responses is None:
+			required_responses = self.players
 		self._pick_query()
+		self._message_queries.clear()
 		self._responses.clear()
 		self._confirmed.clear()
 		
-		self._status = 'Waiting for {} to submit responses'.format(', '.join(p.display_name for p in self.players))
+		self._status = 'Waiting for {} to submit responses'.format(', '.join(p.display_name for p in required_responses))
 		
-		init = self._gen_title(self._line)
+		init = self._gen_title()
 		
-		self._round_count += 1
-		await self.table.send(f'Round {self._round_count} begins! Submit your responses.')
-		for player in self.players:
+		if round_title:
+			self._round_count += 1
+			await self.table.send(f'Round {self._round_count} begins! Submit your responses.')
+		
+		self._waiting_for = required_responses
+		
+		for player in required_responses:
 			await self.interfaces[player].send(init)
 			await self._request_response(player)
 	
@@ -151,12 +163,16 @@ class WiseBot(DiscordBot):
 			del self.votes[user]
 
 	
-	async def _present_options(self):
-		
-		options = [self._line['end'], *self._confirmed.values()]
+	def _prepare_options(self, options):
 		self._rng.shuffle(options)
+		return options
+	
+	
+	async def _present_options(self, fmt='{idx} ... *{ending}*'):
+
+		options = self._prepare_options([self.answer, *self._confirmed.values()])
 		
-		init = self._gen_title(self._line)
+		init = self._gen_title()
 		
 		self._options = {}
 		inds = []
@@ -164,15 +180,23 @@ class WiseBot(DiscordBot):
 		for idx, ending in zip(self._number_emojis[1:], options):
 			inds.append(idx)
 			self._options[idx] = ending
-			await self.table.send(f'{idx} ... *{ending}*')
+			await self.table.send(fmt.format(idx=idx, ending=ending))
 		
 		self.votes.clear()
+		await self._present_votes(inds)
 		
-		for player, comm in self.interfaces.items():
+		
+	async def _present_votes(self, inds, waiting_for=None):
+		if waiting_for is None:
+			waiting_for = self.players
+		self._waiting_for = waiting_for
+		
+		for player in waiting_for:
+			comm = self.interfaces[player]
 			msg = await comm.send(f'{player.mention}: Select the correct ending of the saying.')
 			await self.register_reaction_query(msg, self._count_vote, *inds)
 		
-		self._status = 'Waiting for {} to vote for an ending.'.format(', '.join(p.display_name for p in self.players))
+		self._status = 'Waiting for {} to vote for an ending.'.format(', '.join(p.display_name for p in self._waiting_for))
 		
 	
 	async def _count_vote(self, reaction, user):
@@ -182,10 +206,10 @@ class WiseBot(DiscordBot):
 			await old.remove(user)
 		self.votes[user] = reaction
 		
-		self._status = 'Waiting for {} to vote for an ending.'.format(', '.join(p.display_name for p in self.players
+		self._status = 'Waiting for {} to vote for an ending.'.format(', '.join(p.display_name for p in self._waiting_for
 		                                                                        if p not in self.votes))
 
-		if len(self.votes) == len(self.players):
+		if len(self.votes) == len(self._waiting_for):
 			self._reaction_queries.clear()
 			await self._resolve_round()
 		
@@ -194,26 +218,43 @@ class WiseBot(DiscordBot):
 		
 		picks = {player: self._options[vote.emoji] for player, vote in self.votes.items()}
 		
-		points = {player: 0 for player in self.players}
+		fooled = {player: [] for player in self.players}
+		correct = []
+		cycles = set()
 		
 		for player, pick in picks.items():
-		
-			result = []
+			if pick == self.answer:
+				correct.append(player)
 			
-			for author in [author for author, response in self._confirmed.items() if response == pick]:
+			foolers = {author for author, response in self._confirmed.items() if response == pick}
+			for author in foolers:
 				if author != player:
-					points[author] += 1
-					result.append(author)
-			
-			if len(result):
-				result = ['the ending of ' + ', '.join(a.display_name for a in result)]
+					fooled[author].append(player)
+				
+			if len(foolers) == 1 and player in foolers:
+				cycles.add(player)
 		
-			if pick == self._line['end']:
-				points[player] += 1
-				result.append('the correct ending')
+		await self._count_points(fooled, correct, cycles)
+		await self._end_round()
+		
+	
+	async def _count_points(self, fooled, correct, cycles):
+		
+		points = {player: len(fools) + int(player in correct) for player, fools in fooled.items()}
+
+		trust = {player: [fooler for fooler, fools in fooled.items() if player in fools]
+		         for player in self.players}
+		for player, picked in trust.items():
 			
+			result = ['the ending of ' + ', '.join(a.display_name for a in picked)]
+			if player in correct:
+				result.append('the correct ending')
+
 			result = ' and '.join(result)
 			await self.table.send(f'{player.display_name} picked {result}.')
+		
+		correct = [emo for emo, text in self._options.items() if text == self.answer][0]
+		await self.table.send(f'The correct ending is: {correct}')
 		
 		for player, score in points.items():
 			if player in self._scores:
@@ -221,12 +262,17 @@ class WiseBot(DiscordBot):
 			else:
 				self._scores[player] = score
 		
+	
+	async def _end_round(self, score_fmt='**{}** point/s'):
+		
 		await self.table.send(f'End of Round {self._round_count}.\n ')
 		
-		for player, score in self._scores.items():
-			await self.table.send(f'{player.display_name} has **{score}** point/s.')
+		for player, score in sorted(self._scores.items(), key=lambda x: x[1], reverse=True):
+			score = score_fmt.format(score)
+			await self.table.send(f'{player.display_name} has {score}.')
 		
-		await self.table.send(' ')
+		# await self.table.send(' ')
 		
 		await self._start_round()
+		
 		

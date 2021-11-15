@@ -5,7 +5,7 @@ from omnibelt import get_printer
 import omnifig as fig
 
 from .bot import DiscordBot
-from .compat import as_command, as_event
+from .compat import as_command, as_event, as_loop
 
 prt = get_printer(__file__)
 

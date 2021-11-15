@@ -59,9 +59,14 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 			return
 		
 		key = (message.channel, message.author)
-		if key in self._message_queries:
-			out = await self._message_queries[key](message)
-			if out is not None:
+		if not message.clean_content.startswith('.') and key in self._message_queries \
+				and self._message_queries[key] is not None:
+			callback = self._message_queries[key]
+			self._message_queries[key] = None
+			out = await callback(message)
+			if out is None:
+				self._message_queries[key] = callback
+			elif key in self._message_queries and self._message_queries[key] is None:
 				del self._message_queries[key]
 		
 		await self.process_commands(message)
@@ -74,13 +79,23 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 		
 		key = reaction.message
 		if key in self._reaction_queries:
-			out = await self._reaction_queries[key](reaction, user)
-			if out is not None:
+			callback = self._reaction_queries[key]
+			self._reaction_queries[key] = None
+			out = await callback(reaction, user)
+			if out is None:
+				self._reaction_queries[key] = callback
+			elif key in self._reaction_queries and self._reaction_queries[key] is None:
 				del self._reaction_queries[key]
 	
 	
 	def _insufficient_permissions(self, user):
 		return str(user) not in self.admins
+	
+	
+	@as_command('ping')
+	async def on_ping(self, ctx):
+		role = ' (admin)' if str(ctx.author) in self.admins else ''
+		await ctx.send(f'Hello, {ctx.author.display_name}{role}')
 	
 	
 	async def _create_channel(self, name, *members, reason=None, category=None,
@@ -148,7 +163,43 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 		# msg = await self.table.send(f'Ready')
 		# await msg.add_reaction(self._accept_mark)
 		# await msg.add_reaction(self._reject_mark)
+
+	
+	@as_command('start')
+	async def on_start(self, ctx):
+		if self._insufficient_permissions(ctx.author):
+			await ctx.send(f'{ctx.author.display_name} does not have sufficient permissions for this.')
+			return
 		
+		gameroom = discord.utils.get(self.guild.channels, name='GameRoom')
+		if gameroom is not None:
+			for channel in gameroom.channels:
+				await channel.delete()
+			await gameroom.delete()
+		self.gameroom = await self.guild.create_category_channel('GameRoom')
+		
+		# _players = ['bobmax', 'felixludos', 'Lauren', 'GooseOnTheLoose']
+		player_role = discord.utils.get(self.guild.roles, name='Player')
+		# _players = []
+		# _members = {member.display_name: member for member in self.get_all_members()}
+		# self._players = [_members[player] for player in _players]
+		self.players = [player for player in player_role.members if not player.bot]
+		for player in self.players:
+			await self._setup_player(player)
+		self.table = await self._create_channel('table', *self.players, remove_existing=True)
+
+		self._status = ''
+		await self._start_game()
+	
+	
+	@as_command('status')
+	async def on_status(self, ctx):
+		await ctx.send(self._status)
+	
+	
+	async def _start_game(self):
+		raise NotImplementedError
+
 	
 	@as_command('checkpoint')
 	async def on_checkpoint(self, ctx):
@@ -158,6 +209,60 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 		self.checkpoint()
 		await ctx.send(f'Bot state has been saved.')
 	
-			
+	
+	_game_list = {
+		'🗡️': 'Murder (6-10)',
+		'🧐': 'Unwise Wagers (3-10)',
+		'🖋️': 'Wise and Otherwise (3+)',
+		'⚗️': 'Innovation (2-4)',
+		'💀': 'Skull (3-6)',
+		'🎭': 'Coup (2-8)',
+		'💞': 'Love Letter (3-8)',
+		'🧙': 'Wizard (3-6)',
+		'📰': 'Letter Tycoon (2-5)',
+		'🤠': 'Colt Express (2-6)',
+		'🐺': 'Werewolf (8-12)',
+		'🔫': 'Bang! (2-7)',
+		# '🕌': 'Alhambra (2-6)',
+		'🙃': 'Other',
+	}
+	
+	@as_command('games')
+	async def _on_game_vote(self, ctx):
+		if self._insufficient_permissions(ctx.author):
+			await ctx.send(f'{ctx.author.display_name} does not have sufficient permissions for this.')
+			return
+		emojis = []
+		for emoji, name in self._game_list.items():
+			emojis.append(emoji)
+			await ctx.send(f'{emoji} {name}')
 		
+		msg = await ctx.send('Vote for the games you want to play next')
+		for emoji in emojis:
+			await msg.add_reaction(emoji)
+	
+	
+	@as_command('shuffle')
+	async def _on_shuffle(self, ctx):
+		if self._insufficient_permissions(ctx.author):
+			await ctx.send(f'{ctx.author.display_name} does not have sufficient permissions for this.')
+			return
+		players = list(discord.utils.get(self.guild.roles, name='Player').members)
+		random.shuffle(players)
+		await ctx.send('{}'.format(', '.join(p.display_name for p in players)))
+	
+	
+	_accept_mark = '✅'  # '✔️'
+	_reject_mark = '❎'  # '❌'
+	
+	_vote_yes = '👍'
+	_vote_no = '👎'
+	
+	_number_emojis = ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+
+
+# todo:
+# - skip option in wise and otherwise
+# - custom sayings in wise and otherwise
+
 

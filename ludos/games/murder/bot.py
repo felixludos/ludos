@@ -42,34 +42,7 @@ class MurderBot(DiscordBot):
 	
 	_number_emojis = ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
 	
-	@as_command('status')
-	async def on_status(self, ctx):
-		await ctx.send(self._status)
-	
-	
-	@as_command('start')
-	async def on_start(self, ctx):
-		if self._insufficient_permissions(ctx.author):
-			await ctx.send(f'{ctx.author.display_name} does not have sufficient permissions for this.')
-			return
-		
-		gameroom = discord.utils.get(self.guild.channels, name='GameRoom')
-		if gameroom is not None:
-			for channel in gameroom.channels:
-				await channel.delete()
-			await gameroom.delete()
-		self.gameroom = await self.guild.create_category_channel('GameRoom')
-		
-		# _players = ['bobmax', 'felixludos', 'Lauren', 'GooseOnTheLoose']
-		player_role = discord.utils.get(self.guild.roles, name='Player')
-		# _players = []
-		# _members = {member.display_name: member for member in self.get_all_members()}
-		# self._players = [_members[player] for player in _players]
-		self.players = [player for player in player_role.members if not player.bot]
-		for player in self.players:
-			await self._setup_player(player)
-		self.table = await self._create_channel('table', *self.players, remove_existing=True)
-		
+	async def _start_game(self):
 		num = len(self.players)
 		if num not in self._board_rewards:
 			await self.table.send(f'Wrong number of players: {num}')
@@ -170,11 +143,12 @@ class MurderBot(DiscordBot):
 		self._status = f'Waiting for {candidate.display_name} to select the next detective candidate.'
 	
 	
-	def _check_reshuffle_deck(self):
+	async def _check_reshuffle_deck(self):
 		if len(self._deck) < 3:
 			self._deck.extend(self._discard_pile)
 			self._rng.shuffle(self._deck)
 			self._discard_pile.clear()
+			await self.table.send(f'The deck of resolutions has been reshuffled ({len(self._deck)} cards).')
 	
 	
 	# reactions = message.reactions
@@ -183,11 +157,15 @@ class MurderBot(DiscordBot):
 	
 	async def _pick_detective(self, message):
 		
+		# if not len(message.mentions):
+		# 	await message.channel.send('You haven\'t mentioned anyone, write "@" followed by a player name')
+		
 		pick = discord.utils.get(self.players, display_name=message.clean_content)
+		# pick = message.mentions[0]
 		
 		if pick not in self._detective_options:
-			await message.channel.send('Invalid input, you should input one of these players: {}'
-			                           .format(', '.join(p.display_name for p in self._detective_options)))
+			await message.channel.send('Invalid input, you should mention one of these players: {}'
+			                           .format(', '.join(p.mention for p in self._detective_options)))
 			return
 		
 		self.candidates.append(pick)
@@ -260,7 +238,7 @@ class MurderBot(DiscordBot):
 			self._rejected_candidates += 1
 			if self._rejected_candidates == 3:
 				card = self._deck.pop()
-				self._check_reshuffle_deck()
+				await self._check_reshuffle_deck()
 				
 				await self.table.send(f'Due to three failed votes, the next resolution is enacted '
 				                      f'automatically, which is **{card}**.')
@@ -300,10 +278,8 @@ class MurderBot(DiscordBot):
 		await self.register_reaction_query(msg, self._picked_2_resolutions, *nums)
 		self._status = f'Waiting for {self.commissioner.display_name} to select 2 resolutions'
 	
-	@as_command('ping')
-	async def on_ping(self, ctx):
-		role = ' (admin)' if str(ctx.author) in self.admins else ''
-		await ctx.send(f'Hello, {ctx.author.display_name}{role}')
+	
+	
 	
 	async def _picked_2_resolutions(self, reaction, user):
 		self._resolution_picks.add(reaction)
@@ -402,7 +378,7 @@ class MurderBot(DiscordBot):
 		await self.table.send(f'A **{passed}** resolution has been passed!')
 		await self._check_victory(passed)
 		
-		self._check_reshuffle_deck()
+		await self._check_reshuffle_deck()
 		
 		if passed == 'red' and self._passed_resolutions['red'] > 0 \
 				and self._bonus_rewards[self._passed_resolutions['red'] - 1] is not None:
@@ -471,6 +447,12 @@ class MurderBot(DiscordBot):
 	
 	
 	async def _pick_special_commissioner(self, message):
+		
+		# if not len(message.mentions):
+		# 	await message.channel.send('You haven\'t mentioned anyone, write "@" followed by a player name')
+		#
+		# pick = message.mentions[0]
+		
 		pick = discord.utils.get(self.players, display_name=message.clean_content)
 		if pick not in self._investigation_options:
 			await message.channel.send('Invalid input, you should input one of these players: {}'
@@ -486,6 +468,12 @@ class MurderBot(DiscordBot):
 	
 	
 	async def _pick_investigation(self, message):
+		
+		# if not len(message.mentions):
+		# 	await message.channel.send('You haven\'t mentioned anyone, write "@" followed by a player name')
+		#
+		# pick = message.mentions[0]
+		
 		pick = discord.utils.get(self.players, display_name=message.clean_content)
 		if pick not in self._investigation_options:
 			await message.channel.send('Invalid input, you should input one of these players: {}'
@@ -503,6 +491,12 @@ class MurderBot(DiscordBot):
 	
 	
 	async def _execute_player(self, message):
+		
+		# if not len(message.mentions):
+		# 	await message.channel.send('You haven\'t mentioned anyone, write "@" followed by a player name')
+		#
+		# pick = message.mentions[0]
+		
 		pick = discord.utils.get(self.players, display_name=message.clean_content)
 		if pick not in self._execution_options:
 			await message.channel.send('Invalid input, you should input one of these players: {}'

@@ -1,14 +1,17 @@
 
+from functools import partial
+
 from omnibelt import get_printer, unspecified_argument
 import omnifig as fig
 
 prt = get_printer(__file__)
 
 import discord
-from discord.ext import commands
+from discord.ext import commands as command_util
+from discord.ext import tasks as tasks_util
 
 
-class OmniBot(fig.Cerifiable, fig.Configurable, commands.Bot):
+class OmniBot(fig.Cerifiable, fig.Configurable, command_util.Bot):
 	def __init__(self, A, command_prefix=unspecified_argument, description=unspecified_argument,
 	             intents=unspecified_argument,
 	             options=unspecified_argument, _req_kwargs=None, **kwargs):
@@ -30,7 +33,7 @@ class OmniBot(fig.Cerifiable, fig.Configurable, commands.Bot):
 			_req_kwargs['intents'] = intents
 		
 		super().__init__(A, _req_kwargs=_req_kwargs)
-		
+	
 		
 	@staticmethod
 	def as_command(name=None, **kwargs):
@@ -47,36 +50,66 @@ class OmniBot(fig.Cerifiable, fig.Configurable, commands.Bot):
 		return fn
 
 	
-	def __certify__(self, A, cmds=None, **kwargs):
-		if cmds is None:
-			cmds = A.pull('commands', [])
+	@staticmethod
+	def as_loop(**kwargs):
+		return tasks_util.loop(**kwargs)
+
+
+	@classmethod
+	def inherit_commands_events(cls):
+		cmds, events = {}, {}
+		for parent in cls.__bases__:
+			if issubclass(parent, OmniBot):
+				c, e = parent.inherit_commands_events()
+				cmds.update(c)
+				events.update(e)
+		
+		for key, val in cls.__dict__.items():
+			if hasattr(val, '_discord_command_kwargs'):
+				val._discord_command_kwargs['func'] = val
+				val._discord_command_kwargs['_bind_func'] = True
+				cmds[key] = val._discord_command_kwargs
+			if hasattr(val, '_discord_event_flag'):
+				events[key] = val
+		
+		return cmds, events
+		
+	
+	def __certify__(self, A, commands=None, **kwargs):
+		# events = []
+		# if A.pull('include-class-commands', True, silent=True):
+		
+		cmds, events = self.inherit_commands_events()
+		if commands is None:
+			commands = A.pull('commands', {})
+		cmds.update(commands)
 		
 		super().__certify__(A, **kwargs)
 		
-		events = []
-		
-		if A.pull('include-class-commands', True, silent=True):
-			for key, val in self.__class__.__dict__.items():
-				if hasattr(val, '_discord_command_kwargs'):
-					cmds.append(commands.Command(getattr(self, key), **val._discord_command_kwargs))
-				if hasattr(val, '_discord_event_flag'):
-					events.append(getattr(self, key))
-				# if isinstance(val, commands.Command):
-				# 	cmds.append(val)
-		
-		for cmd in cmds:
-			if not isinstance(cmd, commands.Command):
-				cmd = commands.Command(**cmd)
+		for name, cmd in cmds.items():
+			if not isinstance(cmd, command_util.Command):
+				if cmd.get('_bind_func', False):
+					cmd['func'] = cmd['func'].__get__(self, self.__class__)
+				if '_bind_func' in cmd:
+					del cmd['_bind_func']
+				if 'name' not in cmd:
+					cmd['name'] = name
+				cmd = command_util.Command(**cmd)
 			self.add_command(cmd)
-		for event in events:
+		for event in events.values():
+			event = event.__get__(self, self.__class__)
 			self.event(event)
+
+
 
 as_command = OmniBot.as_command
 as_event = OmniBot.as_event
+as_loop = OmniBot.as_loop
+
 
 
 @fig.Component('disord-command')
-class OmniCommand(fig.Cerifiable, fig.Configurable, commands.Command):
+class OmniCommand(fig.Cerifiable, fig.Configurable, command_util.Command):
 	def __init__(self, A, name=unspecified_argument, func=None, description=unspecified_argument,
 	             _req_kwargs=None, **kwargs):
 		
@@ -95,8 +128,8 @@ class OmniCommand(fig.Cerifiable, fig.Configurable, commands.Command):
 		super().__init__(A, _req_kwargs=_req_kwargs, **kwargs)
 	
 	
-	def _(self, *args, **kwargs):
-		raise NotImplementedError
+	# def _(self, *args, **kwargs):
+	# 	raise NotImplementedError
 
 
 

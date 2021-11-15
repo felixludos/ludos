@@ -13,6 +13,9 @@ admins: [felixludos#9043]
 
 #client._type: murder-bot
 
-client._type: wise-bot
+#client._type: wise-bot
+#client._type: sheriff-bot
+
+client._type: unwise-bot
 
 #seed: 7
