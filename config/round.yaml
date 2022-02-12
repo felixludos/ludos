@@ -14,10 +14,7 @@ server-name: games
 
 #client._type: murder-bot
 #client._type: wise-bot
-#client._type: unwise-bot
-#client._type: dixit-bot
-#client._type: mysterium-bot
-client._type: mysticdialogue-bot
+client._type: unwise-bot
 
 #client._type: sheriff-bot
 

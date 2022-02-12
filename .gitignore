@@ -10,3 +10,5 @@ anvil/
 .anvil-data/
 .data
 ludos/games/wise_otherwise/data/
+ludos/games/dixit/data/
+ludos/games/mysterium/data/

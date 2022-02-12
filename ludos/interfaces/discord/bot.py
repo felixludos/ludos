@@ -41,17 +41,18 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 		self._roles = {}
 		self._message_queries = {}
 		self._reaction_queries = {}
+		self._reaction_remove_queries = {}
 	
 	
 	async def register_message_query(self, channel, user, callback):
 		self._message_queries[channel, user] = callback
 	
-	async def register_reaction_query(self, message, callback, *options):
-		# reactions = []
+	async def register_reaction_query(self, message, callback, *options, remove_callback=None):
 		for option in options:
 			await message.add_reaction(option)
-		# reactions.append()
 		self._reaction_queries[message] = callback
+		if remove_callback is not None:
+			self._reaction_remove_queries[message] = remove_callback
 	
 	@as_event
 	async def on_message(self, message):
@@ -73,12 +74,32 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 	
 	
 	@as_event
+	async def on_reaction_remove(self, reaction, user):
+		if user == self.user:
+			return
+		
+		key = reaction.message
+		if key not in self._reaction_queries:
+			del self._reaction_remove_queries[key]
+		if key in self._reaction_remove_queries and self._reaction_remove_queries[key] is not None:
+			callback = self._reaction_remove_queries[key]
+			self._reaction_remove_queries[key] = None
+			out = await callback(reaction, user)
+			if out is None:
+				self._reaction_remove_queries[key] = callback
+			elif key in self._reaction_queries and self._reaction_remove_queries[key] is None:
+				del self._reaction_remove_queries[key]
+		if key not in self._reaction_queries:
+			del self._reaction_remove_queries[key]
+	
+
+	@as_event
 	async def on_reaction_add(self, reaction, user):
 		if user == self.user:
 			return
 		
 		key = reaction.message
-		if key in self._reaction_queries:
+		if key in self._reaction_queries and self._reaction_queries[key] is not None:
 			callback = self._reaction_queries[key]
 			self._reaction_queries[key] = None
 			out = await callback(reaction, user)
@@ -166,7 +187,7 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 
 	
 	@as_command('start')
-	async def on_start(self, ctx):
+	async def on_start(self, ctx, *args):
 		if self._insufficient_permissions(ctx.author):
 			await ctx.send(f'{ctx.author.display_name} does not have sufficient permissions for this.')
 			return
@@ -189,7 +210,7 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 		self.table = await self._create_channel('table', *self.players, remove_existing=True)
 
 		self._status = ''
-		await self._start_game()
+		await self._start_game(ctx, *args)
 	
 	
 	@as_command('status')
@@ -197,7 +218,7 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 		await ctx.send(self._status)
 	
 	
-	async def _start_game(self):
+	async def _start_game(self, ctx, *args):
 		raise NotImplementedError
 
 	
@@ -211,18 +232,22 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 	
 	
 	_game_list = {
+		'🔮': 'Mysterium (3+)',
+		'👁‍🗨': 'Mystic Dialogue (2+)',
+		'🖌': 'Dixit (3+)',
 		'🗡️': 'Murder (6-10)',
-		'🧐': 'Unwise Wagers (3-10)',
+		'🧐': 'Unwise Wagers (3+)',
 		'🖋️': 'Wise and Otherwise (3+)',
+		'👀': 'Spot It! (2+)',
 		'⚗️': 'Innovation (2-4)',
 		'💀': 'Skull (3-6)',
 		'🎭': 'Coup (2-8)',
 		'💞': 'Love Letter (3-8)',
 		'🧙': 'Wizard (3-6)',
 		'📰': 'Letter Tycoon (2-5)',
-		'🤠': 'Colt Express (2-6)',
+		# '🤠': 'Colt Express (2-6)',
 		'🐺': 'Werewolf (8-12)',
-		'🔫': 'Bang! (2-7)',
+		# '🔫': 'Bang! (2-7)',
 		# '🕌': 'Alhambra (2-6)',
 		'🙃': 'Other',
 	}
@@ -233,11 +258,14 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 			await ctx.send(f'{ctx.author.display_name} does not have sufficient permissions for this.')
 			return
 		emojis = []
+		lines = []
 		for emoji, name in self._game_list.items():
 			emojis.append(emoji)
-			await ctx.send(f'{emoji} {name}')
+			lines.append(f'{emoji} {name}')
+			# await ctx.send(f'{emoji} {name}')
 		
-		msg = await ctx.send('Vote for the games you want to play next')
+		lines.append('Vote for the games you want to play next')
+		msg = await ctx.send('\n'.join(lines))
 		for emoji in emojis:
 			await msg.add_reaction(emoji)
 	
@@ -254,12 +282,11 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 	
 	_accept_mark = '✅'  # '✔️'
 	_reject_mark = '❎'  # '❌'
-	
+
 	_vote_yes = '👍'
 	_vote_no = '👎'
 	
-	_number_emojis = ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
-
+	_number_emojis = ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '⏹', '⏺', '▶️', '⏫', '⏸']
 
 # todo:
 # - skip option in wise and otherwise

@@ -2,7 +2,7 @@ from pathlib import Path
 import random
 import discord
 
-from omnibelt import load_yaml, load_txt
+from omnibelt import load_yaml, load_txt, unspecified_argument
 import omnifig as fig
 
 from ...interfaces.discord import DiscordBot, as_command, as_event
@@ -13,7 +13,12 @@ _DEFAULT_ROOT = str(Path(__file__).parents[0])
 
 @fig.Component('unwise-bot')
 class UnwiseBot(WiseBot):
-	
+	def __init__(self, A, **kwargs):
+		super().__init__(A, **kwargs)
+		del self.lines
+		
+		self._question_file = self._root / 'unwise_questions.txt'
+		
 	_initial_capital = 20.
 
 	def _parse_number(self, money):
@@ -25,15 +30,16 @@ class UnwiseBot(WiseBot):
 
 
 	_game_title = 'Unwise Wagers!'
-	async def _start_game(self):
+	async def _start_game(self, ctx, *args):
 		# self._bids = {}
-		await super()._start_game()
+		await super()._start_game(ctx, *args)
 		self.deltas = {}
-		await self.table.send(f'Everyone starts with **${self._initial_capital}**.')
+		await self.table.send(f'Everyone starts with **${self._initial_capital:.2f}**.')
 
 
 	async def _start_round(self):
 		self._message_queries.clear()
+		self._reaction_queries.clear()
 		self._responses.clear()
 		self._confirmed.clear()
 		if not len(self._scores):
@@ -166,6 +172,11 @@ class UnwiseBot(WiseBot):
 	
 	
 	def _prepare_options(self, options):
+		
+		if self._question_file is not None:
+			with self._question_file.open('a') as f:
+				f.write(f'{self.question}\n{repr(options)}\n{self.question_master.display_name}\n\n')
+		
 		try:
 			options = [x[1] for x in sorted([(self._parse_number(o),o) for o in options])]
 		except ValueError:
@@ -201,6 +212,8 @@ class UnwiseBot(WiseBot):
 		
 		for fooler, fools in fooled.items():
 			earnings = sum(self._bids[fool] for fool in fools)
+			# if self._confirmed[fooler] != self.answer:
+			# 	pass
 			treat += earnings/2
 			if fooler not in commissions:
 				commissions[fooler] = 0.
@@ -297,7 +310,8 @@ class UnwiseBot(WiseBot):
 			await self.table.send(f'{player.display_name} bets ${bid:.2f}.')
 			self._scores[player] -= bid
 			self.deltas[player] -= bid
-		await super()._present_votes(self._inds, waiting_for=[p for p in self.players if p != self.question_master])
+		await super()._present_votes(self._inds, waiting_for=[p for p in self.players if p != self.question_master],
+		                             request='Select the correct answer to the question.')
 	
 	
 	async def _end_round(self, score_fmt='**{}** point/s'):

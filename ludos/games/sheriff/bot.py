@@ -153,14 +153,30 @@ class SheriffBot(DiscordBot):
 		self._remaining_rounds -= 1
 		await self._deal_cards()
 		await self._assign_sheriff()
+		
+		await self._prep_trade_cards()
 
 		# await self._prep_round()
 		# self.sheriff_timer.start()
 		
 	
-	async def _trade_cards(self):
+	async def _prep_trade_cards(self):
+		self._status = 'Waiting for {} to replace cards'.format(', '.join(p.display_name for p in self.merchants))
 		
+		for player in self.merchants:
+			comm = self.interfaces[player]
+			hand = self.hands[player]
+			
+			msg = await comm.send(f'{player.mention} You may choose which of your cards to replace.')
+			await self.register_reaction_query(msg, self._replace_cards,
+			                                   *self._number_emojis[1:len(hand)], self._accept_mark)
+	
+	
+	async def _replace_cards(self, reaction, user):
 		
+		if reaction.emoji == self._accept_mark:
+			
+			raise NotImplementedError
 		
 		pass
 		
@@ -170,24 +186,28 @@ class SheriffBot(DiscordBot):
 	
 	
 	async def _deal_cards(self):
-		bonus = lambda info: '' if info is None else f' ({info})'
+		bonus = lambda info: '' if info is None else f' - {info}'
 		for player, hand in self.hands.items():
 			hand.extend(self.deck.pop() for _ in range(max(0, 6-len(hand))))
 			await self.interfaces[player].send(
-				'Your hand:{}'.format('\n  - '.join(f'{res}{bonus(self._bonus_info.get(res,None))}'
-				                                    for res in hand)))
+				'Your hand:{}'.format('\n  - '.join(['', *[f'{res} (v: {self._bank_resource_value[res]}, '
+				                                           f'c: {self._bank_resource_costs[res]})'
+				                                           f'{bonus(self._bank_bonus_info.get(res,None))}'
+				                                    for res in sorted(hand)]])))
 	
 	
 	async def _assign_sheriff(self):
 		if self.sheriff is None:
-			# self.sheriff = random.choice(self.players)
-			self.sheriff = self.players[0]
+			self.sheriff = random.choice(self.players)
+			# self.sheriff = self.players[0]
 		else:
 			idx = self.players.index(self.sheriff)
 			idx = (idx+1)%len(self.players)
 			self.sheriff = self.players[idx]
 		
 		await self.table.send(f'The sheriff is now {self.sheriff.mention}')
+		
+		self.merchants = [player for player in self.players if player != self.sheriff]
 		
 		
 	

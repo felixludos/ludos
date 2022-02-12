@@ -17,8 +17,10 @@ class WiseBot(DiscordBot):
 		if root is unspecified_argument:
 			root = A.pull('root', _DEFAULT_ROOT)
 		super().__init__(A, **kwargs)
+		self._root = Path(root) / 'data'
+		# self._root = Path(root) / 'test-data'
 		if root is not None:
-			self.lines = self._load_data(Path(root) / 'data')
+			self.lines = self._load_data(self._root)
 			# self.lines = self._load_data(Path(root) / 'test-data')
 		# print(len(self.lines))
 		
@@ -58,7 +60,7 @@ class WiseBot(DiscordBot):
 	
 	
 	_game_title = 'Wise and Otherwise'
-	async def _start_game(self):
+	async def _start_game(self, ctx, *args):
 		self.question, self.answer, self.hint = None, None, None
 		# self._line = None
 		self._responses = {}
@@ -79,12 +81,6 @@ class WiseBot(DiscordBot):
 		self.answer = line['end']
 		self.hint = line['type']
 		del self.lines[pick]
-	
-	
-	_accept_mark = '✅'  # '✔️'
-	_reject_mark = '❎'  # '❌'
-
-	_number_emojis = ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
 	
 	
 	async def _submit_response(self, message, full_fmt='\n*{start} {response}*\n'):
@@ -186,14 +182,14 @@ class WiseBot(DiscordBot):
 		await self._present_votes(inds)
 		
 		
-	async def _present_votes(self, inds, waiting_for=None):
+	async def _present_votes(self, inds, waiting_for=None, request='Select the correct ending of the saying.'):
 		if waiting_for is None:
 			waiting_for = self.players
 		self._waiting_for = waiting_for
 		
 		for player in waiting_for:
 			comm = self.interfaces[player]
-			msg = await comm.send(f'{player.mention}: Select the correct ending of the saying.')
+			msg = await comm.send(f'{player.mention}: {request}')
 			await self.register_reaction_query(msg, self._count_vote, *inds)
 		
 		self._status = 'Waiting for {} to vote for an ending.'.format(', '.join(p.display_name for p in self._waiting_for))
@@ -246,9 +242,9 @@ class WiseBot(DiscordBot):
 		         for player in self.players}
 		for player, picked in trust.items():
 			
-			result = ['the ending of ' + ', '.join(a.display_name for a in picked)]
+			result = ['the ending of ' + ', '.join(a.display_name for a in picked)] if len(picked) else []
 			if player in correct:
-				result.append('the correct ending')
+				result.append('the __correct__ ending')
 
 			result = ' and '.join(result)
 			await self.table.send(f'{player.display_name} picked {result}.')

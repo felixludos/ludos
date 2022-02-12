@@ -34,15 +34,8 @@ class MurderBot(DiscordBot):
 	_notify_murderer = True
 	_secret_votes = False
 	
-	_accept_mark = '✅'  # '✔️'
-	_reject_mark = '❎'  # '❌'
 	
-	_vote_yes = '👍'
-	_vote_no = '👎'
-	
-	_number_emojis = ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
-	
-	async def _start_game(self):
+	async def _start_game(self, ctx, *args):
 		num = len(self.players)
 		if num not in self._board_rewards:
 			await self.table.send(f'Wrong number of players: {num}')
@@ -165,7 +158,7 @@ class MurderBot(DiscordBot):
 		
 		if pick not in self._detective_options:
 			await message.channel.send('Invalid input, you should mention one of these players: {}'
-			                           .format(', '.join(p.mention for p in self._detective_options)))
+			                           .format(', '.join(p.display_name for p in self._detective_options)))
 			return
 		
 		self.candidates.append(pick)
