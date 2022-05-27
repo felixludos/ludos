@@ -69,8 +69,8 @@ def calc_tiling(N, H=None, W=None, prefer_tall=False):
 
 
 def get_tmp_img_path(img, root, ident='0'):
-	path = root / f'{ident}.png'
-	img.save(path)
+	path = root / f'{ident}.jpg'
+	img.save(path, optimize=True, quality=95)
 	return path
 	
 
@@ -84,6 +84,7 @@ def load_concat_imgs(*imgpaths, H=None, W=None, scale=None, prefer_tall=False):
 			img = image.resize((int(w * scale), int(h * scale)), Image.ANTIALIAS)
 			scaled.append(img)
 		images = scaled
+		
 	
 	if len(images) == 1:
 		return images[0]
@@ -100,7 +101,7 @@ def load_concat_imgs(*imgpaths, H=None, W=None, scale=None, prefer_tall=False):
 			if im is not None:
 				new_im.paste(im, (j * mW, i * mH))
 	
-	thW, thH = 4000, 3000
+	thW, thH = 6000, 4000
 	w, h = new_im.size
 	if h > thH:
 		scale = thH / h
@@ -109,5 +110,6 @@ def load_concat_imgs(*imgpaths, H=None, W=None, scale=None, prefer_tall=False):
 	if w > thW:
 		scale = thW / w
 		new_im = new_im.resize((int(w * scale), int(h * scale)), Image.ANTIALIAS)
+	# new_im = new_im.resize((thW, thH), Image.ANTIALIAS)
 	return new_im
 

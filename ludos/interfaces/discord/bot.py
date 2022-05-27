@@ -79,7 +79,7 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 			return
 		
 		key = reaction.message
-		if key not in self._reaction_queries:
+		if key not in self._reaction_queries and key in self._reaction_remove_queries:
 			del self._reaction_remove_queries[key]
 		if key in self._reaction_remove_queries and self._reaction_remove_queries[key] is not None:
 			callback = self._reaction_remove_queries[key]
@@ -232,23 +232,26 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 	
 	
 	_game_list = {
-		'🔮': 'Mysterium (3+)',
-		'👁‍🗨': 'Mystic Dialogue (2+)',
-		'🖌': 'Dixit (3+)',
-		'🗡️': 'Murder (6-10)',
-		'🧐': 'Unwise Wagers (3+)',
-		'🖋️': 'Wise and Otherwise (3+)',
-		'👀': 'Spot It! (2+)',
-		'⚗️': 'Innovation (2-4)',
-		'💀': 'Skull (3-6)',
-		'🎭': 'Coup (2-8)',
-		'💞': 'Love Letter (3-8)',
-		'🧙': 'Wizard (3-6)',
-		'📰': 'Letter Tycoon (2-5)',
+		'🖌': 'Dixit (3+) (Discord)',
+		'🔮': 'Mysterium (3+) (Discord)',
+		'🗡️': 'Murder (6-10) (Discord)',
+		'🧐': 'Unwise Wagers (3+) (Discord)',
+		'👑': 'Aristocracy (2-5) (Telecave)',
+		'🗯️': 'Bluff! (2+) (Telecave)',
+		'👀': 'Spot It! (2+) (Telecave)',
+		'💀': 'Skull (3-6) (BGA)',
+		'🎭': 'Coup (2-8) (BGA)',
+		# '💞': 'Love Letter (3-8)',
+		'🧙': 'Wizard (3-6) (BGA)',
+		# '📰': 'Letter Tycoon (2-5) (BGA)',
 		# '🤠': 'Colt Express (2-6)',
-		'🐺': 'Werewolf (8-12)',
+		# '🐺': 'Werewolf (8-12)',
 		# '🔫': 'Bang! (2-7)',
 		# '🕌': 'Alhambra (2-6)',
+		# '👁‍🗨': 'Mystic Dialogue (2+) (Discord)',
+		# '🏠': 'Catan (3-4) (settler.io)',
+		'⚗️': 'Innovation (2-4) (BGA)',
+		# '🖋️': 'Wise and Otherwise (3+)',
 		'🙃': 'Other',
 	}
 	

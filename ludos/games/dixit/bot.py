@@ -70,6 +70,7 @@ class DixitBot(DiscordBot):
 		for image in images:
 			w, h = image.size
 			h = 300 / w * h
+			# img = image
 			img = image.resize((300, int(h)), Image.ANTIALIAS)
 			img = img.crop((0, 0, 300, 450))
 			# img = image.resize((int(w*scale), int(h*scale)), Image.ANTIALIAS)
@@ -94,7 +95,7 @@ class DixitBot(DiscordBot):
 	def _get_tmp_img_path(self, img, ident=None):
 		if ident is None:
 			ident= '0'
-		path = self._tmproot / f'{ident}.png'
+		path = self._tmproot / f'{ident}.jpg'
 		img.save(path)
 		return path
 		
@@ -110,7 +111,7 @@ class DixitBot(DiscordBot):
 		self.storyteller = self.players[self.story_idx % len(self.players)]
 		self.story_idx += 1
 		
-		await self.table.send(f'Round {self._round_counter}! {self.storyteller.display_name} is the storyteller now.')
+		await self.table.send(f'**Round {self._round_counter}!** {self.storyteller.display_name} is the storyteller now.')
 		
 		for player, hand in self.hands.items():
 			if len(hand) < self._num_hand_cards:
@@ -225,7 +226,7 @@ class DixitBot(DiscordBot):
 		
 		if len(correct) and len(wrong):
 			# good story
-			lines.append(f'Good story! {len(correct)} players picked the correct card.')
+			lines.append(f'**Good story!** {len(correct)} players picked the correct card.')
 			for player in sorted(self.players, key=lambda p: (p in correct, p in wrong, str(p)), reverse=True):
 				if player == self.storyteller:
 					self.score[player] += 3
@@ -240,9 +241,9 @@ class DixitBot(DiscordBot):
 		else:
 			# bad story
 			if len(correct):
-				lines.append(f'Bad story! All players picked the correct card.')
+				lines.append(f'**Bad story!** All players picked the correct card.')
 			else:
-				lines.append(f'Bad story! No players picked the correct card.')
+				lines.append(f'**Bad story!** No players picked the correct card.')
 			for player in self.players:
 				if player != self.storyteller:
 					self.score[player] += 2

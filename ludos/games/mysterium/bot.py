@@ -81,6 +81,7 @@ class MysteriumBot(DiscordBot):
 	
 	async def _start_game(self, ctx):
 		self.case_seq = ['person', 'location', 'object']
+		# self.case_seq = ['person', 'location', 'story']
 		# self.case_seq = ['person']
 		
 		self._ghost_hand_size = 7
@@ -92,9 +93,8 @@ class MysteriumBot(DiscordBot):
 		self._det_supports = 3
 		
 		self.round = 0
-		
-		distractors = 2
 
+		distractors = None
 		if distractors is None:
 			distractors = {1:3, 2: 4, 3: 3, 4: 4,
 			              5: 4, 6: 4, 7: 3,
@@ -125,6 +125,8 @@ class MysteriumBot(DiscordBot):
 		await self.interfaces[self.ghost].send('\n'.join(
 			['__Solutions__ (top secret)', *[det.display_name for det in self.detectives]]
 		), file=discord.File(str(solpath)))
+
+		# await self._show_leads(self.case_seq[0]) # TESTING
 
 		await self._prep_ghost_round()
 
@@ -250,6 +252,7 @@ class MysteriumBot(DiscordBot):
 		if self.truth is not None and user in self.votes and user not in self.ready:
 			del self.votes[user]
 	
+	
 	async def _update_ghost_vision(self, reaction, user):
 		if reaction.emoji == self._raven_icon:
 			self.ravens -= 1
@@ -322,9 +325,12 @@ class MysteriumBot(DiscordBot):
 			prev = ind
 			
 			comm = self.interfaces[det]
-			visionpath = get_tmp_img_path(load_concat_imgs(*vision, H=1), self._tmproot, ident='cat')
-			await comm.send(f'Round {self.round} vision for *{cat.capitalize()}*',
-			                file=discord.File(str(visionpath)))
+			if len(vision):
+				visionpath = get_tmp_img_path(load_concat_imgs(*vision, H=1), self._tmproot, ident='cat')
+				await comm.send(f'Round {self.round} vision for *{cat.capitalize()}*',
+				                file=discord.File(str(visionpath)))
+			else:
+				await comm.send(f'Round {self.round} vision for *{cat.capitalize()}*\n**__NO VISION__**')
 			
 			msg = await self.table.send(f'Vote on **{det.display_name}**\'s case')
 			self.det_msgs[msg] = det
@@ -332,6 +338,7 @@ class MysteriumBot(DiscordBot):
 			await self.register_reaction_query(msg, self._detective_pick, *nums, self._accept_mark)
 		
 		self._status = f'Waiting for {len(self.detectives)} detectives to vote on their cases.'
+		self.detective_timer.cancel()
 		self.detective_timer.start()
 		
 	
@@ -345,7 +352,7 @@ class MysteriumBot(DiscordBot):
 			return
 		
 		if det == user and reaction.emoji == self._accept_mark:
-			self.ready.add(det);
+			self.ready.add(det)
 			self._status = f'Waiting for {len(self.detectives)-len(self.ready)} detectives to vote on their cases.'
 			if len(self.ready) == len(self.det_msgs):
 				self._reaction_queries.clear()
@@ -365,7 +372,7 @@ class MysteriumBot(DiscordBot):
 		if self.detective_timer.current_loop == self._time_in_minutes:
 			await self.table.send(f'{self.guild.default_role}: **Time is up!**')
 			self.detective_timer.stop()
-			await self._resolve_detectives()
+			await self._resolve_detectives(True)
 		elif self.detective_timer.current_loop == 0:
 			await self.table.send(f'{self.guild.default_role}: You have {self._time_in_minutes} '
 			                      f'minutes to vote for your case and support another detective\'s.')
@@ -375,8 +382,9 @@ class MysteriumBot(DiscordBot):
 			await self.table.send(f'**{self._time_in_minutes - self.detective_timer.current_loop}** minutes remaining!')
 
 
-	async def _resolve_detectives(self):
-		self.detective_timer.cancel()
+	async def _resolve_detectives(self, times_up=False):
+		if not times_up:
+			self.detective_timer.cancel()
 		self._reaction_queries.clear()
 		
 		def _extract_vote(cat, reaction):

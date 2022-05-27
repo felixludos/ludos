@@ -38,41 +38,15 @@ class MysticDialogueBot(DiscordBot):
 			self._rng.shuffle(deck)
 	
 	
-	# @as_command('start')
-	# async def on_start(self, ctx):
-	# 	if self._insufficient_permissions(ctx.author):
-	# 		await ctx.send(f'{ctx.author.display_name} does not have sufficient permissions for this.')
-	# 		return
-	#
-	# 	gameroom = discord.utils.get(self.guild.channels, name='GameRoom')
-	# 	if gameroom is not None:
-	# 		for channel in gameroom.channels:
-	# 			await channel.delete()
-	# 		await gameroom.delete()
-	# 	self.gameroom = await self.guild.create_category_channel('GameRoom')
-	#
-	# 	# _players = ['bobmax', 'felixludos', 'Lauren', 'GooseOnTheLoose']
-	# 	player_role = discord.utils.get(self.guild.roles, name='Player')
-	# 	# _players = []
-	# 	# _members = {member.display_name: member for member in self.get_all_members()}
-	# 	# self._players = [_members[player] for player in _players]
-	# 	self.players = [player for player in player_role.members if not player.bot]
-	# 	for player in self.players:
-	# 		await self._setup_player(player)
-	#
-	# 	self.table = await self._create_channel('table', *self.players, remove_existing=True, private=True)
-	#
-	# 	self._status = ''
-	# 	await self._start_game(ctx)
-
 	async def _setup_player(self, member):
 		pass
+	
 	
 	async def _start_game(self, ctx):
 		self.components = ['person', 'location']
 		
-		self._num_ghosts = {}
-		self._num_mystics = {}
+		self._num_ghosts = { 'ma':0,}
+		self._num_mystics = {'felix':0, }
 		self._default_num_ghosts = 1
 		self._default_num_mystics = 1
 
@@ -81,10 +55,6 @@ class MysticDialogueBot(DiscordBot):
 		self._default_mystic_distractors = 5
 		self._default_ghost_distractors = 3
 		self._max_hand_size = 7
-
-		self._default_mystic_distractors = 10
-		self._default_ghost_distractors = 8
-		self._max_hand_size = 12
 		
 		
 		players = [player.display_name for player in self.players]
@@ -100,24 +70,32 @@ class MysticDialogueBot(DiscordBot):
 		ghost_options = {player: self._num_ghosts.get(player.display_name, self._default_num_ghosts)
 		                 for player, num in zip(players, gcount) if num > 0}
 		pairs = {}
-		for mystic in players:
+		for mystic in sorted(players, reverse=True,
+		                     key=lambda p: (self._num_mystics.get(p.display_name, self._default_num_mystics),
+		                                    self._num_ghosts.get(p.display_name, self._default_num_ghosts))):
 			ghosts = []
 			for _ in range(self._num_mystics.get(mystic.display_name, self._default_num_mystics)):
 				options = [(num, ghost not in ghosts, ghost)
 				           for ghost, num in ghost_options.items() if ghost != mystic]
 				assert len(options)
-				_, _, ghost = next(iter(sorted(options, reverse=True)))
+				_, _, ghost = next(iter(sorted(options, reverse=True, key=lambda x: (x[0], x[1], x[2] not in pairs, x[2].display_name))))
 				ghosts.append(ghost)
 				ghost_options[ghost] -= 1
 				if ghost_options[ghost] == 0:
 					del ghost_options[ghost]
 			pairs[mystic] = ghosts
 
+		mcount = {player:1 for player in players}
+		gcount = {player: 1 for player in players}
+
 		cases = []
 		for mystic, ghosts in pairs.items():
-			for i, ghost in enumerate(ghosts):
-				mystic_channel = await self._create_channel(f'mystic-{mystic.display_name}-{i+1}', mystic, private=True)
-				ghost_channel = await self._create_channel(f'ghost-{ghost.display_name}-{i+1}', ghost, private=True)
+			for ghost in ghosts:
+				mystic_channel = await self._create_channel(f'mystic-{mystic.display_name}-{mcount.get(mystic)}', mystic, private=True)
+				ghost_channel = await self._create_channel(f'ghost-{ghost.display_name}-{gcount.get(ghost)}', ghost, private=True)
+				
+				mcount[mystic] += 1
+				gcount[ghost] += 1
 				
 				cases.append( self.DialogueCase(self, mystic_channel, ghost_channel, mystic, ghost,
 				                                mystic_distractors=self._mystics_distractors.get(
@@ -126,7 +104,7 @@ class MysticDialogueBot(DiscordBot):
 					                                ghost.display_name, self._default_ghost_distractors),
 				                                hand_size=self._max_hand_size, seed=self._rng.getrandbits(32),
 				                                mystic_component=self.components[0],
-				                                ghost_component=self.components[1]) )
+				                                ghost_component=self.components[1], ID=len(cases)))
 		
 		self.cases = cases
 		
@@ -157,7 +135,7 @@ class MysticDialogueBot(DiscordBot):
 			count = len([1 for s, v, _ in self.results[ctx.author] if s])
 			total = len(self.results[ctx.author])
 			
-			av = f' (with an average of {sum(cost)/count:1.1f} messages)' if count>0 else ''
+			av = f' (with an average of {cost/count:1.1f} messages)' if count>0 else ''
 			await ctx.send(f'You have succeeded {count}/{total}{av}')
 			
 
@@ -166,9 +144,10 @@ class MysticDialogueBot(DiscordBot):
 		def __init__(self, game, mystic_channel, ghost_channel, mystic, ghost,
 		             mystic_distractors=5, ghost_distractors=3,
 		             mystic_component='person', ghost_component='location',
-		             hand_size=7, seed=None):
+		             hand_size=7, seed=None, ID=None,):
 			self._rng = random.Random(seed)
 			self.game = game
+			self.ID = ID
 			self.case_num = 0
 			self.vision_msg = None
 			
@@ -177,9 +156,11 @@ class MysticDialogueBot(DiscordBot):
 			self.ghost = self.PlayerInfo('ghost', ghost_channel, ghost, ghost_component, ghost_distractors+1,
 			                              hand_size, self.game, self._rng)
 			
-			limit = max(self.mystic.num, self.ghost.num)
-			self.mystic.vocab = self._rng.sample(self.game.casecards[self.mystic.component], k=limit)
-			self.ghost.vocab = self._rng.sample(self.game.casecards[self.ghost.component], k=limit)
+			# limit = max(self.mystic.num, self.ghost.num)
+			# self.mystic.vocab = self._rng.sample(self.game.casecards[self.mystic.component], k=limit)
+			# self.ghost.vocab = self._rng.sample(self.game.casecards[self.ghost.component], k=limit)
+			self.mystic.vocab = self.game.casecards[self.mystic.component].copy()
+			self.ghost.vocab = self.game.casecards[self.ghost.component].copy()
 			
 			
 		class PlayerInfo:
@@ -226,7 +207,7 @@ class MysticDialogueBot(DiscordBot):
 			self._rng.shuffle(self.mystic.options)
 			self._rng.shuffle(self.ghost.pairs)
 			
-			promptpath = get_tmp_img_path(load_concat_imgs(self.mystic.prompt), self.game.tmproot, ident='prompt')
+			promptpath = get_tmp_img_path(load_concat_imgs(self.mystic.prompt), self.game.tmproot, ident=f'prompt{self.ID}')
 			await self.mystic.channel.send(f'Use your mystical powers to communicate this *{self.mystic.component}* '
 			                               f'to the spirits.', file=discord.File(str(promptpath)))
 			
@@ -237,7 +218,7 @@ class MysticDialogueBot(DiscordBot):
 			                               f'the mystic to find the corresponding *{self.ghost.component}*',
 			                               file=discord.File(str(pairspath)))
 			
-			optpath = get_tmp_img_path(load_concat_imgs(*self.mystic.options, H=1), self.game.tmproot, ident='options')
+			optpath = get_tmp_img_path(load_concat_imgs(*self.mystic.options, H=1), self.game.tmproot, ident=f'options{self.ID}')
 			msg = await self.mystic.channel.send(f'The spirits will guide you towards the correct '
 			                                     f'*{self.ghost.component}*, given the {self.mystic.component} above. '
 				                               f'Once you are confident you know the correct *{self.ghost.component}*, '
@@ -264,7 +245,6 @@ class MysticDialogueBot(DiscordBot):
 					                              f'{self.cost} transmissions)')
 				
 				else:
-					
 					solpath = get_tmp_img_path(load_concat_imgs(self.solution), self.game.tmproot, ident='solution')
 					await self.mystic.channel.send(f'You chose the **wrong** {self.ghost.component}, the correct one was',
 					                               file=discord.File(str(solpath)))
@@ -294,7 +274,7 @@ class MysticDialogueBot(DiscordBot):
 		async def _prompt_vision(self):
 			self.active.fill_hand()
 			
-			handpath = get_tmp_img_path(load_concat_imgs(*self.active.hand, H=1), self.game.tmproot, ident='hand')
+			handpath = get_tmp_img_path(load_concat_imgs(*self.active.hand, H=1), self.game.tmproot, ident=f'hand{self.ID}')
 			msg = await self.active.channel.send(f'{self.active.player.mention} Select what cards to send to '
 			                                     f'the {self.passive.role}', file=discord.File(str(handpath)))
 			
@@ -329,8 +309,8 @@ class MysticDialogueBot(DiscordBot):
 			self._rng.shuffle(vision)
 			
 			if len(vision):
-				visionpath = get_tmp_img_path(load_concat_imgs(*vision, H=1), self.game.tmproot, ident='vision')
-				await self.passive.channel.send(f'The {self.active.role} has offers this vision to identify '
+				visionpath = get_tmp_img_path(load_concat_imgs(*vision, H=1), self.game.tmproot, ident=f'vision{self.ID}')
+				await self.passive.channel.send(f'The {self.active.role} has offered this vision to identify '
 				                                f'the *{self.active.component}*', file=discord.File(str(visionpath)))
 			else:
 				await self.passive.channel.send(f'**The {self.active.role} remains silent.**')
