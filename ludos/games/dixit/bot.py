@@ -129,6 +129,7 @@ class DixitBot(DiscordBot):
 		self.story = message.clean_content
 		await self.table.send(f'The story prompt is:\n\n*{self.story}*\n')
 		await self._prompt_visions()
+		return True
 		
 		
 	async def _prompt_visions(self):

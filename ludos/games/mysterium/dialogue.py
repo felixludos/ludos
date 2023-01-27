@@ -43,18 +43,26 @@ class MysticDialogueBot(DiscordBot):
 	
 	
 	async def _start_game(self, ctx):
-		self.components = ['person', 'location']
+		self.components = ['person', 'object']
 		
-		self._num_ghosts = { 'ma':0,}
-		self._num_mystics = {'felix':0, }
+		self._num_ghosts = {
+			# 'felix':0,
+			'lauren': 0,
+			'ma':0
+		}
+		self._num_mystics = {
+			# 'amanda':0,
+			'josh':0,
+			'felix': 0,
+		}
 		self._default_num_ghosts = 1
 		self._default_num_mystics = 1
 
 		self._mystics_distractors = {}
 		self._ghost_distractors = {}
 		self._default_mystic_distractors = 5
-		self._default_ghost_distractors = 3
-		self._max_hand_size = 7
+		self._default_ghost_distractors = 5
+		self._max_hand_size = 10
 		
 		
 		players = [player.display_name for player in self.players]

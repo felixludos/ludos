@@ -239,6 +239,8 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 		'👑': 'Aristocracy (2-5) (Telecave)',
 		'🗯️': 'Bluff! (2+) (Telecave)',
 		'👀': 'Spot It! (2+) (Telecave)',
+		'🚂': 'Ferro Carril (4-6) (Telecave)',
+		'🤹': 'A l\'Honneur (2-6) (Telecave)', # 🔦
 		'💀': 'Skull (3-6) (BGA)',
 		'🎭': 'Coup (2-8) (BGA)',
 		# '💞': 'Love Letter (3-8)',
@@ -248,10 +250,12 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 		# '🐺': 'Werewolf (8-12)',
 		# '🔫': 'Bang! (2-7)',
 		# '🕌': 'Alhambra (2-6)',
-		# '👁‍🗨': 'Mystic Dialogue (2+) (Discord)',
-		# '🏠': 'Catan (3-4) (settler.io)',
+		'🏷': 'Ticket to Ride (2-5) (BGA)',
+		'🏠': 'Catan (3-4) (settler.io)',
 		'⚗️': 'Innovation (2-4) (BGA)',
-		# '🖋️': 'Wise and Otherwise (3+)',
+		'♠️': 'Bridge (4) (BBO)',
+		'👁‍🗨': 'Mystic Dialogue (2+) (Discord)',
+		'🖋️': 'Wise and Otherwise (3+) (Discord)',
 		'🙃': 'Other',
 	}
 	
