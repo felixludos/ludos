@@ -11,12 +11,10 @@ from ...interfaces.discord import DiscordBot, as_command, as_event
 
 _DEFAULT_ROOT = str(Path(__file__).parents[0])
 
-@fig.Component('wise-bot')
+@fig.component('wise-bot')
 class WiseBot(DiscordBot):
-	def __init__(self, A, root=unspecified_argument, **kwargs):
-		if root is unspecified_argument:
-			root = A.pull('root', _DEFAULT_ROOT)
-		super().__init__(A, **kwargs)
+	def __init__(self, root=_DEFAULT_ROOT, **kwargs):
+		super().__init__(**kwargs)
 		self._root = Path(root) / 'data'
 		# self._root = Path(root) / 'test-data'
 		if root is not None:

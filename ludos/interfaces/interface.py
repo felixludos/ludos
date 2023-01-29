@@ -5,11 +5,11 @@ import omnifig as fig
 
 
 
-class Interface(fig.Cerifiable, fig.Configurable):
-	def __init__(self, A, root=unspecified_argument, **kwargs):
+class Interface(fig.Certifiable, fig.Configurable):
+	def __init__(self, root=unspecified_argument, **kwargs):
 		if root is unspecified_argument:
-			root = A.pull('path', fig.get_current_project().get_path()/'.data')
-		super().__init__(A, **kwargs)
+			root = fig.get_current_project().root / '.data'
+		super().__init__(**kwargs)
 		
 		self.root = Path(root) / self.interface_name
 		create_dir(self.root)
@@ -30,6 +30,8 @@ class Interface(fig.Cerifiable, fig.Configurable):
 					setattr(self, name, self.load_data(name))
 				except FileNotFoundError:
 					pass
+		
+		return self
 		
 		
 	def register_buffer(self, name, data):

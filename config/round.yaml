@@ -2,7 +2,7 @@
 
 #_meta.script_name: start-host
 #
-#parents: [flask]
+#_base: [flask]
 
 #_meta.script_name: test-dummy
 #_meta.script_name: uplink

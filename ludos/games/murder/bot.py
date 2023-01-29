@@ -6,7 +6,7 @@ from ...interfaces.discord import DiscordBot, as_command, as_event
 
 
 
-@fig.Component('murder-bot')
+@fig.component('murder-bot')
 class MurderBot(DiscordBot):
 	
 	@as_event

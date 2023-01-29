@@ -16,21 +16,15 @@ class AdminError(Exception):
 
 
 
-@fig.Component('discord-bot')
+@fig.component('discord-bot')
 class DiscordBot(Interface, OmniBot, name='discord'):
-	def __init__(self, A, admins=None, intents=unspecified_argument, seed=unspecified_argument, **kwargs):
+	def __init__(self, admins=(), intents=unspecified_argument, seed=None, **kwargs):
 		
 		if intents is unspecified_argument:
 			intents = discord.Intents.default()
 			intents.members = True
 			
-		if admins is None:
-			admins = A.pull('admins', [])
-		
-		if seed is unspecified_argument:
-			seed = A.pull('seed', None)
-		
-		super().__init__(A, intents=intents, **kwargs)
+		super().__init__(intents=intents, **kwargs)
 		self.register_buffer('admins', set(admins))
 		
 		self._rng = random.Random()

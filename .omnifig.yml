@@ -4,6 +4,5 @@ name: ludos
 
 py_info: ludos/_info.py
 
-#src: startup.py
-package: ludos
+module: ludos
 

@@ -2,7 +2,7 @@
 
 #_meta.script_name: start-host
 #
-#parents: [flask]
+#_base: [flask]
 
 #_meta.script_name: test-dummy
 #_meta.script_name: uplink
@@ -13,9 +13,9 @@ admins: [felixludos#9043]
 server-name: games
 
 #client._type: murder-bot
-#client._type: wise-bot
+client._type: wise-bot
 #client._type: unwise-bot
-client._type: dixit-bot
+#client._type: dixit-bot
 #client._type: mysterium-bot
 #client._type: mysticdialogue-bot
 

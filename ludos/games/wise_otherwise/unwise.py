@@ -11,10 +11,10 @@ from .bot import WiseBot
 _DEFAULT_ROOT = str(Path(__file__).parents[0])
 
 
-@fig.Component('unwise-bot')
+@fig.component('unwise-bot')
 class UnwiseBot(WiseBot):
-	def __init__(self, A, **kwargs):
-		super().__init__(A, **kwargs)
+	def __init__(self, **kwargs):
+		super().__init__(**kwargs)
 		del self.lines
 		
 		self._question_file = self._root / 'unwise_questions.txt'

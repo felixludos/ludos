@@ -14,12 +14,10 @@ from .util import Deck, tile_elements, calc_tiling, get_tmp_img_path, load_conca
 _DEFAULT_ROOT = str(Path(__file__).parents[0])
 
 
-@fig.Component('mysticdialogue-bot')
+@fig.component('mysticdialogue-bot')
 class MysticDialogueBot(DiscordBot):
-	def __init__(self, A, root=unspecified_argument, **kwargs):
-		if root is unspecified_argument:
-			root = A.pull('root', _DEFAULT_ROOT)
-		super().__init__(A, **kwargs)
+	def __init__(self, root=_DEFAULT_ROOT, **kwargs):
+		super().__init__(**kwargs)
 		self._root = Path(root) / 'data'
 		self._load_data(self._root)
 		self.tmproot = self._root / 'tmp'

@@ -11,12 +11,10 @@ from .util import tile_elements, get_tmp_img_path, load_concat_imgs
 _DEFAULT_ROOT = str(Path(__file__).parents[0])
 
 
-@fig.Component('mysterium-bot')
+@fig.component('mysterium-bot')
 class MysteriumBot(DiscordBot):
-	def __init__(self, A, root=unspecified_argument, **kwargs):
-		if root is unspecified_argument:
-			root = A.pull('root', _DEFAULT_ROOT)
-		super().__init__(A, **kwargs)
+	def __init__(self, root=_DEFAULT_ROOT, **kwargs):
+		super().__init__(**kwargs)
 		self._root = Path(root) / 'data'
 		self._load_data(self._root)
 		self._tmproot = self._root / 'tmp'

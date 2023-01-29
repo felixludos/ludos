@@ -7,7 +7,7 @@ from ...interfaces.discord import DiscordBot, as_command, as_event, as_loop
 
 
 
-@fig.Component('sheriff-bot')
+@fig.component('sheriff-bot')
 class SheriffBot(DiscordBot):
 	
 	_initial_money = 50

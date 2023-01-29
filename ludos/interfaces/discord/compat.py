@@ -11,20 +11,11 @@ from discord.ext import commands as command_util
 from discord.ext import tasks as tasks_util
 
 
-class OmniBot(fig.Cerifiable, fig.Configurable, command_util.Bot):
-	def __init__(self, A, command_prefix=unspecified_argument, description=unspecified_argument,
-	             intents=unspecified_argument,
+class OmniBot(fig.Certifiable, fig.Configurable, command_util.Bot):
+	def __init__(self, command_prefix='.', description=None, intents=unspecified_argument,
 	             options=unspecified_argument, _req_kwargs=None, **kwargs):
-		
-		if command_prefix is unspecified_argument:
-			command_prefix = A.pull('command-prefix', '.')
-		
-		if description is unspecified_argument:
-			description = A.pull('description', None)
-			
 		if options is unspecified_argument:
-			options = A.pull('options', {})
-		
+			options = {}
 		if _req_kwargs is None:
 			_req_kwargs = {}
 		_req_kwargs.update({'command_prefix':command_prefix, 'description':description, **options})
@@ -32,8 +23,8 @@ class OmniBot(fig.Cerifiable, fig.Configurable, command_util.Bot):
 		if intents is not unspecified_argument:
 			_req_kwargs['intents'] = intents
 		
-		super().__init__(A, _req_kwargs=_req_kwargs)
-	
+		super().__init__(**_req_kwargs)
+		
 		
 	@staticmethod
 	def as_command(name=None, **kwargs):
@@ -99,7 +90,8 @@ class OmniBot(fig.Cerifiable, fig.Configurable, command_util.Bot):
 		for event in events.values():
 			event = event.__get__(self, self.__class__)
 			self.event(event)
-
+		
+		return self
 
 
 as_command = OmniBot.as_command
@@ -108,24 +100,17 @@ as_loop = OmniBot.as_loop
 
 
 
-@fig.Component('disord-command')
-class OmniCommand(fig.Cerifiable, fig.Configurable, command_util.Command):
-	def __init__(self, A, name=unspecified_argument, func=None, description=unspecified_argument,
-	             _req_kwargs=None, **kwargs):
-		
-		if name is unspecified_argument:
-			name = A.pull('name', None)
+@fig.component('disord-command')
+class OmniCommand(fig.Certifiable, fig.Configurable, command_util.Command):
+	def __init__(self, name=None, func=None, description=None, _req_kwargs=None, **kwargs):
 		
 		if func is None:
-			func = A.pull('func', getattr(self, '_'))
+			func = getattr(self, '_')
 			
-		if description is unspecified_argument:
-			description = A.pull('description', None)
-
 		if _req_kwargs is None:
 			_req_kwargs = {}
 		_req_kwargs.update(dict(name=name, func=func, description=description,))
-		super().__init__(A, _req_kwargs=_req_kwargs, **kwargs)
+		super().__init__(**_req_kwargs)
 	
 	
 	# def _(self, *args, **kwargs):
