@@ -235,6 +235,7 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 		'👀': 'Spot It! (2+) (Telecave)',
 		'🚂': 'Ferro Carril (4-6) (Telecave)',
 		'🤹': 'A l\'Honneur (2-6) (Telecave)', # 🔦
+		'🤺': 'J\'Accuse (5-10) (Telecave)',
 		'💀': 'Skull (3-6) (BGA)',
 		'🎭': 'Coup (2-8) (BGA)',
 		# '💞': 'Love Letter (3-8)',
