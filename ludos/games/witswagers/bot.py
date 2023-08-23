@@ -21,11 +21,12 @@ class WitsBot(DiscordBot):
 	
 	_number_of_candidates = 7
 	
-	_prob_cats = {'trivia': 0.6, 'math': 0., 'year': 0.3}
+	_prob_cats = {'trivia': 7, 'math': 0, 'year': 4}
 	
 	_starting_money = 0
 	_author_reward = 3
 	
+	_cut_millions = True
 	_display_estimate_authors = True
 	_payouts = {
 		1: [2],
@@ -71,9 +72,17 @@ class WitsBot(DiscordBot):
 			fuel -= 1
 			try:
 				pick = random.choices(list(self._prob_cats.keys()), list(self._prob_cats.values()))[0]
-				question = self.request_question(pick)
-				question['answer'] = int(question['answer'])
-				yield question
+				info = self.request_question(pick)
+				question = info['question']
+				answer = int(info['answer'])
+				
+				if self._cut_millions and answer > 1e7:
+					question = question.replace('What', 'What (in millions)') #+ ' (hint: >10 million)'
+					answer = int(answer / 1e6)
+				
+				info['question'] = question
+				info['answer'] = answer
+				yield info
 			except (requests.HTTPError, ValueError):
 				pass
 		raise ValueError('Could not generate enough questions')
