@@ -227,6 +227,7 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 	
 	_game_list = {
 		'🖌': 'Dixit (3+) (Discord)',
+		'📈': 'Wits and Wagers (3+) (Discord)',
 		'🔮': 'Mysterium (3+) (Discord)',
 		'🗡️': 'Murder (6-10) (Discord)',
 		'🧐': 'Unwise Wagers (3+) (Discord)',
