@@ -1,5 +1,5 @@
 from pathlib import Path
-import random
+import random, math
 import requests
 import discord
 
@@ -16,6 +16,32 @@ BASE_URL = "http://numbersapi.com/"
 OPTIONS = ['trivia', 'math', 'date', 'year']
 
 
+def human_readable_number(num, significant_figures=1, units=None):
+	# Default units if not provided
+	if units is None:
+		units = {
+			"T": 1_000_000_000_000,
+			"B": 1_000_000_000,
+			"M": 1_000_000,
+			"K": 1_000,
+			"": 1
+		}
+	
+	# Helper function to format number with significant figures
+	def format_sig_figs(n, sig_figs):
+		format_str = "{:." + str(sig_figs) + "g}"
+		return format_str.format(n)
+	
+	# Sort units from largest to smallest
+	sorted_units = sorted(units.items(), key=lambda x: x[1], reverse=True)
+	
+	for unit, threshold in sorted_units:
+		if abs(num) >= threshold:
+			return format_sig_figs(num / threshold, significant_figures) + unit
+	
+	return str(num)
+
+
 @fig.component('wits-bot')
 class WitsBot(DiscordBot):
 	
@@ -26,7 +52,9 @@ class WitsBot(DiscordBot):
 	_starting_money = 0
 	_author_reward = 3
 	
-	_cut_millions = True
+	_round_to_sigfigs = 4
+	_units = {'K': 1e3, 'M': 1e6, 'B': 1e9, 'T': 1e12, 'Q': 1e15}
+	
 	_display_estimate_authors = True
 	_payouts = {
 		1: [2],
@@ -38,6 +66,23 @@ class WitsBot(DiscordBot):
 		7: [5, 4, 3, 2, 3, 4, 5],
 	}
 	_all_too_high_payout = 6
+	
+	
+	def as_number(self, value):
+		return int(value * (10 ** self._round_to_digits))
+	
+	def parse_number(self, raw: str):
+		raw = raw.replace('$','').strip().lower()
+		for unit, value in self._units.items():
+			if raw.endswith(unit.lower()):
+				raw = raw[:-len(unit)].strip()
+				return float(raw) * value
+		return float(raw)
+	
+	def present_number(self, num):
+		if isinstance(num, int):
+			return str(num)
+		return human_readable_number(num, significant_figures=self.sigfigs, units=self._units)
 	
 	@staticmethod
 	def get_number_fact(option='trivia', number='random'):
@@ -76,9 +121,14 @@ class WitsBot(DiscordBot):
 				question = info['question']
 				answer = int(info['answer'])
 				
-				if self._cut_millions and answer > 1e7:
-					question = question.replace('What', 'What (in millions)') #+ ' (hint: >10 million)'
-					answer = int(answer / 1e6)
+				if info['cat'] == 'year':
+					info['sigfigs'] = len(str(answer))
+				else:
+					info['sigfigs'] = self._round_to_sigfigs
+				
+				# if self._cut_millions and answer > 1e7:
+				# 	question = question.replace('What', 'What (in millions)') #+ ' (hint: >10 million)'
+				# 	answer = int(answer / 1e6)
 				
 				info['question'] = question
 				info['answer'] = answer
@@ -153,7 +203,7 @@ class WitsBot(DiscordBot):
 		self.master = self.player_order[self.round_count % len(self.players)]
 		
 		await self.table.send(f'Round {self.round_count} begins! '
-		                      f'{self.master.display_name} must select the next question.')
+							  f'{self.master.display_name} must select the next question.')
 		
 		candidates = [candidate for _, candidate in zip(range(self._number_of_candidates), self.generate_question())]
 		assert len(self._number_emojis) > len(candidates), f'Not enough emojis for {len(candidates)} candidates'
@@ -184,13 +234,18 @@ class WitsBot(DiscordBot):
 		self.question = pick['question']
 		self.answer = pick['answer']
 		self.question_type = pick['cat']
+		self.sigfigs = pick['sigfigs']
+		self.cat = pick['cat']
+		
+		if self.cat != 'year':
+			self.answer = float(self.answer)
 		
 		self.estimates.clear()
 		await self.table.send(f'**{self.question}**')
 		
 		for player in self.players:
 			comm = self.interfaces[player]
-			await comm.send(f'**{self.question}**\n{player.mention} Provide your estimate (enter a whole number only).')
+			await comm.send(f'**{self.question}**\n{player.mention} Provide your estimate (enter a number only).')
 			await self.register_message_query(comm, player, self.submit_estimate)
 		
 		self.missing_responses = set(self.players)
@@ -199,14 +254,17 @@ class WitsBot(DiscordBot):
 	
 	async def submit_estimate(self, message):
 		try:
-			num = int(message.clean_content)
+			num = self.parse_number(message.clean_content)
 		except ValueError:
 			await message.channel.send(f'Invalid estimate: {message.clean_content} '
-			                           f'(write a whole number without any letters)')
+									   f'(write a number without any letters)')
 			return
 		
+		if self.cat == 'year':
+			num = int(num)
+		
 		self.estimates[message.author] = num
-		await message.channel.send(f'Your estimate of **{num}** has been recorded.')
+		await message.channel.send(f'Your estimate of **{self.present_number(num)}** has been recorded.')
 		
 		self.missing_responses.discard(message.author)
 		if len(self.missing_responses) == 0:
@@ -246,9 +304,9 @@ class WitsBot(DiscordBot):
 			payouts = self._payouts[6 if N % 2 == 0 else 7].copy()
 			payouts = [5]*((N-6)//2) + payouts + [5]*((N-6)//2)
 		
-		lines = [f'{self._number_emojis[0]} All too high. ({self._all_too_high_payout}:1)']
+		lines = [f'{self._number_emojis[0]} All too high ({self._all_too_high_payout}:1)']
 		for emoji, (estimate, authors, winner), payout in zip(self._number_emojis[1:], option_order, payouts):
-			line = [emoji, f'**{estimate}**', f'({payout}:1)']
+			line = [emoji, f'**{self.present_number(estimate)}**', f'({payout}:1)']
 			if self._display_estimate_authors:
 				line.append(f'*({", ".join(a.display_name for a in authors)})*')
 			lines.append(' '.join(line))
@@ -256,8 +314,9 @@ class WitsBot(DiscordBot):
 		
 		await self.table.send('\n'.join(lines))
 		
-		counts = [self._number_emojis[2], self._number_emojis[3], self._number_emojis[4],
-		          self._number_emojis[5], self._number_emojis[10]]
+		counts = [self._number_emojis[1], self._number_emojis[2],
+				  self._number_emojis[3], self._number_emojis[4],
+				  self._number_emojis[5], self._number_emojis[10]]
 		
 		bet_msg = await self.table.send(f'{self.guild.default_role} Place extra your bets (1 free if none selected)')
 		await self.register_reaction_query(bet_msg, self.submit_bets, *counts, remove_callback=self.remove_bet)
@@ -310,7 +369,7 @@ class WitsBot(DiscordBot):
 	async def resolve_bets(self):
 		self.collecting_bets = False
 		
-		lines = [f'The correct answer is **{self.answer}**.\n']
+		lines = [f'The correct answer is **{self.present_number(self.answer)}**.\n']
 		
 		winning_emoji = [emoji for emoji, (winner, estimate, payout, authors) in self.bet_options.items() if winner][0]
 		payout = self.bet_options[winning_emoji][2]
@@ -334,7 +393,7 @@ class WitsBot(DiscordBot):
 				results[player] += bet * payout
 			elif risk > 0:
 				terms.append(f'and lost **{risk}**')
-				results[player] -= change
+				results[player] -= risk
 			
 			if player in winning_authors:
 				results[player] += self._author_reward
