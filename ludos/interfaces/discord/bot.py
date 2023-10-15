@@ -18,9 +18,9 @@ class AdminError(Exception):
 
 @fig.component('discord-bot')
 class DiscordBot(Interface, OmniBot, name='discord'):
-	def __init__(self, admins=(), intents=unspecified_argument, seed=None, **kwargs):
+	def __init__(self, admins=(), intents=None, seed=None, **kwargs):
 		
-		if intents is unspecified_argument:
+		if intents is None:
 			intents = discord.Intents.default()
 			intents.members = True
 			
@@ -83,7 +83,7 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 				self._reaction_remove_queries[key] = callback
 			elif key in self._reaction_queries and self._reaction_remove_queries[key] is None:
 				del self._reaction_remove_queries[key]
-		if key not in self._reaction_queries:
+		if key not in self._reaction_queries and key in self._reaction_remove_queries:
 			del self._reaction_remove_queries[key]
 	
 
@@ -225,7 +225,7 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 		await ctx.send(f'Bot state has been saved.')
 	
 	
-	_game_list = {
+	_game_list = { # 20 is max (due to limit on reactions)
 		'🖌': 'Dixit (3+) (Discord)',
 		'📈': 'Wits and Wagers (3+) (Discord)',
 		'🔮': 'Mysterium (3+) (Discord)',
@@ -234,8 +234,8 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 		'👑': 'Aristocracy (2-5) (Telecave)',
 		'🗯️': 'Bluff! (2+) (Telecave)',
 		'👀': 'Spot It! (2+) (Telecave)',
-		'🚂': 'Ferro Carril (4-6) (Telecave)',
-		'🤹': 'A l\'Honneur (2-6) (Telecave)', # 🔦
+		# '🚂': 'Ferro Carril (4-6) (Telecave)',
+		# '🤹': 'A l\'Honneur (2-6) (Telecave)', # 🔦
 		'🤺': 'J\'Accuse (5-10) (Telecave)',
 		'💀': 'Skull (3-6) (BGA)',
 		'🎭': 'Coup (2-8) (BGA)',
@@ -246,10 +246,10 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 		# '🐺': 'Werewolf (8-12)',
 		# '🔫': 'Bang! (2-7)',
 		# '🕌': 'Alhambra (2-6)',
-		'🏷': 'Ticket to Ride (2-5) (BGA)',
-		'🏠': 'Catan (3-4) (settler.io)',
-		'⚗️': 'Innovation (2-4) (BGA)',
-		'♠️': 'Bridge (4) (BBO)',
+		# '🏷': 'Ticket to Ride (2-5) (BGA)',
+		# '🏠': 'Catan (3-4) (settler.io)',
+		# '⚗️': 'Innovation (2-4) (BGA)',
+		# '♠️': 'Bridge (4) (BBO)',
 		'👁‍🗨': 'Mystic Dialogue (2+) (Discord)',
 		'🖋️': 'Wise and Otherwise (3+) (Discord)',
 		'🙃': 'Other',
@@ -290,6 +290,10 @@ class DiscordBot(Interface, OmniBot, name='discord'):
 	_vote_no = '👎'
 	
 	_number_emojis = ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '⏹', '⏺', '▶️', '⏫', '⏸']
+
+	_heart_emojis = '❤️🧡💛💚🩵💙💜🩷🤍🖤🩶🤎'
+
+	_shape_emojis = '🔴🟡🟢🔵🟤🟣🟠⚪⚫🟥🟨🟩🟦🟫🟪🟧⬜⬛🔷🔶🔺'
 
 # todo:
 # - skip option in wise and otherwise

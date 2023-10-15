@@ -6,8 +6,8 @@ import omnifig as fig
 
 
 class Interface(fig.Certifiable, fig.Configurable):
-	def __init__(self, root=unspecified_argument, **kwargs):
-		if root is unspecified_argument:
+	def __init__(self, root=None, **kwargs):
+		if root is None:
 			root = fig.get_current_project().root / '.data'
 		super().__init__(**kwargs)
 		

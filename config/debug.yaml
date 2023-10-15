@@ -18,7 +18,8 @@ server-name: games
 #client._type: dixit-bot
 #client._type: mysterium-bot
 #client._type: mysticdialogue-bot
-client._type: wits-bot
+#client._type: wits-bot
+client._type: witi-bot
 
 #client._type: sheriff-bot
 

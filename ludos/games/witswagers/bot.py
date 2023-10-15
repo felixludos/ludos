@@ -30,7 +30,13 @@ def human_readable_number(num, significant_figures=1, units=None):
 	# Helper function to format number with significant figures
 	def format_sig_figs(n, sig_figs):
 		format_str = "{:." + str(sig_figs) + "g}"
-		return format_str.format(n)
+		val = format_str.format(n)
+		# remove trailing 0s
+		if '.' in val:
+			val = val.rstrip("0")
+		# remove trailing .
+		val = val.rstrip(".")
+		return val
 	
 	# Sort units from largest to smallest
 	sorted_units = sorted(units.items(), key=lambda x: x[1], reverse=True)
@@ -44,12 +50,14 @@ def human_readable_number(num, significant_figures=1, units=None):
 
 @fig.component('wits-bot')
 class WitsBot(DiscordBot):
-	
-	_number_of_candidates = 7
+
+	_pure_accuracy = False
+
+	_number_of_candidates = 10
 	
 	_prob_cats = {'trivia': 7, 'math': 0, 'year': 4}
 	
-	_starting_money = 0
+	_starting_money = 20
 	_author_reward = 3
 	
 	_round_to_sigfigs = 4
@@ -112,7 +120,7 @@ class WitsBot(DiscordBot):
 	
 	
 	def generate_question(self):
-		fuel = 10
+		fuel = self._number_of_candidates * 3
 		while fuel > 0:
 			fuel -= 1
 			try:
@@ -145,6 +153,7 @@ class WitsBot(DiscordBot):
 		self.bets = {}
 		self.bet_options = {}
 		self.votes = {}
+		self.ranges = {}
 		self.money = {player: self._starting_money for player in self.players}
 		
 		self._all_too_high_payout -= max(0, 4 - len(self.players))
@@ -161,6 +170,8 @@ class WitsBot(DiscordBot):
 		self.question, self.answer, self.question_type = None, None, None
 		
 		await self.table.send(f'Welcome to {self.game_title}!')
+		if self._starting_money > 0:
+			await self.table.send(f'Each player starts with {self._starting_money} for betting.')
 		await self.start_round()
 	
 	
@@ -192,7 +203,7 @@ class WitsBot(DiscordBot):
 			await ctx.send(f'{ctx.author.display_name} does not have sufficient permissions for this.')
 			return
 		
-		user = discord.utils.get(self.players, display_name=message.clean_content)
+		user = discord.utils.get(self.players, display_name=player)
 		num = int(delta)
 		self.money[user] += num
 		await ctx.send(f'{user.display_name} now has {self.money[user]}.')
@@ -241,7 +252,6 @@ class WitsBot(DiscordBot):
 			self.answer = float(self.answer)
 		
 		self.estimates.clear()
-		await self.table.send(f'**{self.question}**')
 		
 		for player in self.players:
 			comm = self.interfaces[player]
@@ -282,16 +292,21 @@ class WitsBot(DiscordBot):
 		
 		self.authors = {}
 		for author, estimate in self.estimates.items():
-			self.authors.setdefault(estimate, []).append(author)
+			self.authors.setdefault(self.present_number(estimate), []).append(author)
 		for estimate, authors in self.authors.items():
 			self.authors[estimate] = sorted(authors, key=lambda x: x.display_name)
-		
-		option_order = sorted(self.authors.items(), key=lambda x: (x[0], tuple((a.display_name for a in x[1]))))
-		
+
+		option_order = sorted(self.authors.items(), key=lambda x: (self.parse_number(x[0]),
+		                                                           tuple((a.display_name for a in x[1]))))
+		await self.table.send(f'**{self.question}**')
+
+		# mids = [self.parse_number(estimate) for estimate, authors in option_order]
+		# lims = [self.present_number(mid1/2 + mid2/2) for mid1, mid2 in zip(mids[:-1], mids[1:])]
+
 		correct = self.answer
 		best = None
 		for estimate, authors in reversed(option_order):
-			if estimate <= correct:
+			if self.parse_number(estimate) <= correct:
 				best = estimate
 				break
 		
@@ -306,7 +321,7 @@ class WitsBot(DiscordBot):
 		
 		lines = [f'{self._number_emojis[0]} All too high ({self._all_too_high_payout}:1)']
 		for emoji, (estimate, authors, winner), payout in zip(self._number_emojis[1:], option_order, payouts):
-			line = [emoji, f'**{self.present_number(estimate)}**', f'({payout}:1)']
+			line = [emoji, f'**{estimate}**', f'({payout}:1)']
 			if self._display_estimate_authors:
 				line.append(f'*({", ".join(a.display_name for a in authors)})*')
 			lines.append(' '.join(line))
@@ -314,11 +329,12 @@ class WitsBot(DiscordBot):
 		
 		await self.table.send('\n'.join(lines))
 		
-		counts = [self._number_emojis[1], self._number_emojis[2],
-				  self._number_emojis[3], self._number_emojis[4],
-				  self._number_emojis[5], self._number_emojis[10]]
+		counts = [self._number_emojis[2], self._number_emojis[3],
+				  self._number_emojis[4], self._number_emojis[5],
+				  self._number_emojis[10]]
 		
-		bet_msg = await self.table.send(f'{self.guild.default_role} Place extra your bets (1 free if none selected)')
+		bet_msg = await self.table.send(f'{self.guild.default_role} Place your extra bets '
+										f'(sum of all selected + 1 free)')
 		await self.register_reaction_query(bet_msg, self.submit_bets, *counts, remove_callback=self.remove_bet)
 		
 		msg = await self.table.send(f'{self.guild.default_role} Select the best estimate to bet on')
@@ -369,19 +385,31 @@ class WitsBot(DiscordBot):
 	async def resolve_bets(self):
 		self.collecting_bets = False
 		
-		lines = [f'The correct answer is **{self.present_number(self.answer)}**.\n']
-		
-		winning_emoji = [emoji for emoji, (winner, estimate, payout, authors) in self.bet_options.items() if winner][0]
+		winning_emoji = [emoji for emoji, (winner, estimate, payout, authors) in self.bet_options.items() if winner]
+		if len(winning_emoji) == 0:
+			winning_emoji = self._number_emojis[0]
+			self.bet_options[self._number_emojis[0]] = (True, None, self._all_too_high_payout, [])
+		else:
+			winning_emoji = winning_emoji[0]
 		payout = self.bet_options[winning_emoji][2]
 		winning_authors = self.bet_options[winning_emoji][3]
 		
 		players = [player for player in sorted(self.players, key=lambda p: p.display_name)]
 		winners = [player for player, rct in self.votes.items() if rct.emoji == winning_emoji]
 		
+		lines = []
+		
+		if len(winners):
+			lines.append(f'{", ".join(w.display_name for w in winners)} guessed correctly!\n')
+		else:
+			lines.append(f'No one guessed correctly!\n')
+		
+		lines.append(f'The correct answer is **{self.present_number(self.answer)}**.\n')
+		
 		results = {}
 		
 		for player in players:
-			bet = max(1, min(self.money[player], self.bets.get(player, 1)))
+			bet = 1 + max(0, min(self.money[player], self.bets.get(player, 0)))
 			risk = max(bet - 1, 0)
 			
 			terms = [f'{player.display_name} bet {bet}']
@@ -399,7 +427,7 @@ class WitsBot(DiscordBot):
 				results[player] += self._author_reward
 				terms.append(f'(gaining **{self._author_reward}** bonus)')
 
-			self.money[player] = max(results[player]+self.money[player], 0)
+			self.money[player] = max(results[player] + self.money[player], 0)
 			
 			lines.append(' '.join(terms))
 			

@@ -12,17 +12,19 @@ from discord.ext import tasks as tasks_util
 
 
 class OmniBot(fig.Certifiable, fig.Configurable, command_util.Bot):
-	def __init__(self, command_prefix='.', description=None, intents=unspecified_argument,
-	             options=unspecified_argument, _req_kwargs=None, **kwargs):
-		if options is unspecified_argument:
+	def __init__(self, command_prefix='.', description=None, intents=None,
+	             options=None, _req_kwargs=None, **kwargs):
+		if options is None:
 			options = {}
 		if _req_kwargs is None:
 			_req_kwargs = {}
 		_req_kwargs.update({'command_prefix':command_prefix, 'description':description, **options})
-		
+
+		intents = discord.Intents.default()
+		intents.members = True
 		if intents is not unspecified_argument:
 			_req_kwargs['intents'] = intents
-		
+
 		super().__init__(**_req_kwargs)
 		
 		
