@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import random, math
 import requests
@@ -117,11 +118,23 @@ class WitiBot(DiscordBot):
 		assert index > 0, f"Invalid fact: {fact!r}"
 		answer = fact[:index]
 		question = f'What{fact[index:-1]}?'
-		return {'cat': option, 'question': question, 'answer': answer}
+		return {'cat': option, 'question': question, 'answer': answer, 'original': fact}
 	
 	
 	def generate_question(self):
 		fuel = self._number_of_candidates * 3
+
+		gold_path = _DEFAULT_ROOT / 'data' / 'gold_facts.jsonl'
+		if gold_path.exists():
+			old_gold = set()
+			raw = load_txt(gold_path)
+			for line in raw.split('\n'):
+				if len(line):
+					info = json.loads(line)
+					old_gold.add(info['question'])
+		else:
+			old_gold = {}
+
 		while fuel > 0:
 			fuel -= 1
 			try:
@@ -129,7 +142,11 @@ class WitiBot(DiscordBot):
 				info = self.request_question(pick)
 				question = info['question']
 				answer = int(info['answer'])
-				
+
+				if question in old_gold:
+					fuel += 1
+					continue
+
 				if info['cat'] == 'year':
 					info['sigfigs'] = len(str(answer))
 				else:
@@ -249,6 +266,11 @@ class WitiBot(DiscordBot):
 		self.question_type = pick['cat']
 		self.sigfigs = pick['sigfigs']
 		self.cat = pick['cat']
+
+		path = _DEFAULT_ROOT / 'data' / 'gold_facts.jsonl'
+		with path.open('a') as f:
+			info = {'type': self.question_type, 'question': self.question, 'answer': self.answer}
+			f.write(f'{json.dumps(info)}\n')
 		
 		if self.cat != 'year':
 			self.answer = float(self.answer)
@@ -276,7 +298,8 @@ class WitiBot(DiscordBot):
 			num = int(num)
 		
 		self.estimates[message.author] = num
-		await message.channel.send(f'Your estimate of **{self.present_number(num)}** has been recorded.')
+		await message.channel.send(f'Your estimate of **{self.present_number(num)}** has been recorded. '
+								   f'Enter a new one to update your guess.')
 		
 		self.missing_responses.discard(message.author)
 		if len(self.missing_responses) == 0:
@@ -338,7 +361,7 @@ class WitiBot(DiscordBot):
 
 			bounds = [self.present_number(b) for b in bs]
 			# self.bounds = bounds
-			ranges = [f'Less than **{bounds[0]}**',
+			ranges = [f'Up to **{bounds[0]}**',
 					  *[f'More than **{a}** and up to **{b}**' for a, b in zip(bounds[:-1], bounds[1:])],
 					  f'More than **{bounds[-1]}**']
 
@@ -350,7 +373,8 @@ class WitiBot(DiscordBot):
 					in enumerate(zip(bet_emojis, ranges, option_order, payouts)):
 				line = [emoji, rg, f'({payout}:1)']
 				if self._display_estimate_authors:
-					line.append(f'*({", ".join(a.display_name for a in authors)})*')
+					line.append(f'*({", ".join(a.display_name for a in authors)}: {middle})*')
+				# line.append(f'()')
 				lines.append(' '.join(line))
 				bet_options[emoji] = (i == gold, middle, payout, authors)
 
@@ -391,7 +415,7 @@ class WitiBot(DiscordBot):
 	async def remove_ready(self, reaction, user):
 		if not self.collecting_bets:
 			return True
-		if reaction.emoji == self._accept_mark:
+		if user in self.players and reaction.emoji == self._accept_mark:
 			self.missing_responses.add(user)
 
 		self._status = f'Waiting for {", ".join(p.display_name for p in self.missing_responses)}'
@@ -464,18 +488,18 @@ class WitiBot(DiscordBot):
 				picks = self.votes[player]
 				bet = max(0, min(self.bets.get(player, 0), self.money[player]//len(picks)))
 				risk = bet * len(picks)
-				assert risk < self.money[player], f'Invalid bet: {bet} * {len(picks)} = {risk} >= {self.money[player]}'
+				assert risk <= self.money[player], f'Invalid bet: {bet} * {len(picks)} = {risk} >= {self.money[player]}'
 
 				terms = [f'{player.display_name} bet', f'{bet} on' if bet > 0 else 'on',
 						 f'{len(picks)} estimate{"s" if len(picks) > 1 else ""}']
 
 				results[player] = 0
 
-				bet = max(bet, 1) # "free" token
+				bet += 1 #max(bet, 1) # "free" token
 
 				if player in winners:
 					winnings = max(bet, 1) * payout
-					loss = risk - bet
+					loss = risk - max(bet-1, 0)
 				else:
 					winnings = 0
 					loss = risk
